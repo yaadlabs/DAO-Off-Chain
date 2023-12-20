@@ -26,7 +26,6 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
-  , adaToken
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
@@ -113,7 +112,7 @@ buildDynamicConfig dynamicConfig configTokenName (txInput /\ txInputWithScript) 
       configValidatorHash = validatorHash appliedConfigValidator
 
       nftConfig :: Value
-      nftConfig = Value.singleton configSymbol adaToken one
+      nftConfig = Value.singleton configSymbol configTokenName one
 
       configDatum :: Datum
       configDatum = Datum $ toData dynamicConfig
