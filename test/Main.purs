@@ -12,6 +12,7 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Test.Utils (exitCode, interruptOnSignal)
+import Dao.Workflow.CreateConfig (createConfig)
 import Data.Posix.Signal (Signal(SIGINT))
 import Effect.Aff
   ( Milliseconds(Milliseconds)
@@ -21,7 +22,7 @@ import Effect.Aff
   )
 import JS.BigInt (fromInt) as BigInt
 import Mote (group, test)
-import Dao.Workflow.CreateConfig (createConfig)
+import Test.SampleData (sampleDynamicConfig, sampleNftTokenName)
 import Test.Spec.Runner (defaultConfig)
 
 main :: Effect Unit
@@ -43,4 +44,4 @@ suite = do
           ]
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
-          createConfig
+          void $ createConfig sampleDynamicConfig sampleNftTokenName
