@@ -13,10 +13,10 @@ import Contract.Scripts
   , applyArgs
   )
 import Ctl.Internal.Types.Scripts (plutusV2Script)
-import ScriptArguments.Types (NftConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 import Scripts.Utils (scriptStringToJson, toJsonBytes')
 
-unappliedVotePolicy :: NftConfig -> Contract MintingPolicy
+unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy
 unappliedVotePolicy voteParams = do
   appliedVotePolicy <- liftContractE $ voteMintingPolicyScript `applyArgs`
     [ toData voteParams ]

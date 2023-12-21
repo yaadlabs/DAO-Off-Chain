@@ -1,4 +1,7 @@
--- | Value related helpers
+{-|
+Module: Dao.Utils.Value
+Description: Value related helpers
+-}
 module Dao.Utils.Value
   ( mkTokenName
   ) where

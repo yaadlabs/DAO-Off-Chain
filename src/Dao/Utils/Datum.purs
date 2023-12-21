@@ -1,4 +1,7 @@
--- | Datum related helpers
+{-|
+Module: Dao.Utils.Datum
+Description: Helpers for dealing with datums
+-}
 module Dao.Utils.Datum
   ( getInlineDatumFromTxOutWithRefScript
   ) where

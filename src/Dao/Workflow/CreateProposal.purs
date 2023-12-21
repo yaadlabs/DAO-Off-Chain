@@ -4,12 +4,22 @@ Description: Contract for creating a proposal
 -}
 module Dao.Workflow.CreateProposal (createProposal) where
 
-import Contract.Prelude
-
 import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), fromData, toData, unitRedeemer)
+import Contract.Prelude
+  ( type (/\)
+  , bind
+  , discard
+  , mconcat
+  , one
+  , pure
+  , show
+  , ($)
+  , (+)
+  , (/\)
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
@@ -33,6 +43,8 @@ import Dao.Utils.Datum
 import Dao.Utils.Query (findUtxoByValue)
 import Dao.Utils.Value (mkTokenName)
 import Data.Map as Map
+import Data.Maybe (Maybe(Nothing))
+import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)

@@ -1,12 +1,14 @@
--- | Query helpers
+{-|
+Module: Dao.Utils.Query
+Description: Query helpers
+-}
 module Dao.Utils.Query
   ( findUtxoByValue
   , getAllWalletUtxos
   ) where
 
-import Contract.Prelude
-
 import Contract.Monad (Contract, liftedM)
+import Contract.Prelude (type (/\), otherwise, pure, (<<<), (==))
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
