@@ -2,6 +2,7 @@ module ScriptArguments.Types
   ( NftConfig(..)
   , ConfigurationValidatorConfig(..) 
   , IndexNftConfig(..)
+  , TallyNftConfig(..)
   ) where
 
 import Prelude
@@ -112,3 +113,41 @@ derive instance Newtype IndexNftConfig _
 derive newtype instance Eq IndexNftConfig
 
 derive newtype instance Show IndexNftConfig
+
+newtype TallyNftConfig = TallyNftConfig
+  { tncConfigNftCurrencySymbol :: CurrencySymbol
+  , tncConfigNftTokenName :: TokenName
+  , tncIndexNftPolicyId :: CurrencySymbol
+  , tncIndexNftTokenName :: TokenName
+  }
+    
+instance
+  HasPlutusSchema TallyNftConfig
+    ( "TallyNftConfig"
+        :=
+          ( "tncConfigNftCurrencySymbol" := I CurrencySymbol
+              :+ "tncConfigNftTokenName"
+              := I TokenName
+              :+ "tncIndexNftPolicyId"
+              := I CurrencySymbol
+              :+ "tncIndexNftTokenName"
+              := I TokenName
+              :+ PNil
+          )
+        @@ Z
+        :+ PNil
+    )
+
+instance ToData TallyNftConfig where
+  toData = genericToData
+
+instance FromData TallyNftConfig where
+  fromData = genericFromData
+
+derive instance Generic TallyNftConfig _
+
+derive instance Newtype TallyNftConfig _
+
+derive newtype instance Eq TallyNftConfig
+
+derive newtype instance Show TallyNftConfig

@@ -13,10 +13,10 @@ import Contract.Scripts
   , applyArgs
   )
 import Ctl.Internal.Types.Scripts (plutusV2Script)
-import ScriptArguments.Types (NftConfig)
+import ScriptArguments.Types (TallyNftConfig)
 import Scripts.Utils (scriptStringToJson, toJsonBytes')
 
-unappliedTallyPolicy :: NftConfig -> Contract MintingPolicy
+unappliedTallyPolicy :: TallyNftConfig -> Contract MintingPolicy
 unappliedTallyPolicy configParams = do
   appliedTallyPolicy <- liftContractE $ tallyMintingPolicyScript `applyArgs`
     [ toData configParams ]
