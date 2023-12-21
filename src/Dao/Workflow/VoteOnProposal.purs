@@ -2,7 +2,7 @@
 Module: Dao.Workflow.VoteOnProposal
 Description: Contract for voting on a proposal
 -}
-module Dao.Workflow.VoteOnProposal where
+module Dao.Workflow.VoteOnProposal (voteOnProposal) where
 
 import Contract.Address (scriptHashAddress)
 import Contract.Chain (currentTime)
