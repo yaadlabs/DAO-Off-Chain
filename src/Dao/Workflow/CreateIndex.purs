@@ -1,3 +1,8 @@
+{-|
+Module: Dao.Workflow.CreateIndex
+Description: Contract for creating index datum
+  and locking it at UTXO at index validator marked by index NFT
+-}
 module Dao.Workflow.CreateIndex (createIndex) where
 
 import Contract.Log (logInfo')
@@ -29,7 +34,7 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Utils (getAllWalletUtxos)
+import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
 import Data.Newtype (unwrap)

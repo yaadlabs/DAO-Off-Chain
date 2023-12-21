@@ -1,3 +1,8 @@
+{-|
+Module: Dao.Workflow.CreateConfig
+Description: Contract for creating dynamic config datum
+  and locking it at UTXO at config validator marked by config NFT
+-}
 module Dao.Workflow.CreateConfig (createConfig) where
 
 import Contract.Log (logInfo')
@@ -29,7 +34,7 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Utils (getAllWalletUtxos)
+import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
