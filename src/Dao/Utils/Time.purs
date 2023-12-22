@@ -2,11 +2,17 @@
 Module: Dao.Utils.Time
 Description: Helpers for dealing with time
 -}
-module Dao.Utils.Time where
+module Dao.Utils.Time
+  ( currentEra
+  , mkOnchainTimeRange
+  , mkValidityRange
+  , mkTimeRangeWithinSummary
+  , oneMinute
+  ) where
 
 import Contract.Prelude
 
-import Contract.Chain (ChainTip(ChainTip), Tip(Tip), getTip)
+import Contract.Chain (ChainTip(ChainTip), Tip(Tip), currentTime, getTip)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Time
@@ -24,6 +30,18 @@ import Ctl.Internal.Types.Interval
   ( Interval(FiniteInterval)
   )
 import JS.BigInt as BigInt
+
+-- | Make validity range from current time for specified period of time
+mkValidityRange :: POSIXTime -> Contract POSIXTimeRange
+mkValidityRange timePeriod = do
+  currentTime' <- currentTime
+  let
+    endTime = currentTime' + timePeriod
+
+    timeRange :: POSIXTimeRange
+    timeRange = FiniteInterval currentTime' endTime
+
+  mkTimeRangeWithinSummary timeRange
 
 -- | Get current era
 currentEra :: Contract EraSummary
@@ -102,3 +120,6 @@ mkOnchainTimeRange'' pTime = do
   eraSummaries <- getEraSummaries
   sysStart <- getSystemStart
   liftEffect $ pure $ toOnchainPosixTimeRange eraSummaries sysStart pTime
+
+oneMinute :: Int
+oneMinute = 1000 * 60

@@ -5,7 +5,6 @@ Description: Contract for voting on a proposal
 module Dao.Workflow.VoteOnProposal (voteOnProposal) where
 
 import Contract.Address (scriptHashAddress)
-import Contract.Chain (currentTime)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
@@ -18,16 +17,11 @@ import Contract.Prelude
   , pure
   , ($)
   , (*)
-  , (+)
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
-import Contract.Time
-  ( Interval(FiniteInterval)
-  , POSIXTime(POSIXTime)
-  , POSIXTimeRange
-  )
+import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -44,7 +38,7 @@ import Contract.Value
   )
 import Contract.Value (singleton) as Value
 import Dao.Utils.Query (findUtxoByValue)
-import Dao.Utils.Time (mkOnchainTimeRange, mkTimeRangeWithinSummary)
+import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Vote
@@ -97,7 +91,7 @@ voteOnProposal validatorConfig voteInfo tallyInfo voteDatum = do
   appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
 
-  timeRange <- mkVoteValidityRange
+  timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
   let
@@ -155,16 +149,3 @@ voteOnProposal validatorConfig voteInfo tallyInfo voteDatum = do
   getTallyUtxo ({ tallySymbol, tallyTokenName }) =
     findUtxoByValue
       (Value.singleton tallySymbol tallyTokenName one)
-
-  mkVoteValidityRange :: Contract POSIXTimeRange
-  mkVoteValidityRange = do
-    currentTime' <- currentTime
-    let
-      -- Five minutes
-      timePeriod = POSIXTime (fromInt $ 1000 * 60 * 5)
-      endTime = currentTime' + timePeriod
-
-      timeRange :: POSIXTimeRange
-      timeRange = FiniteInterval currentTime' endTime
-
-    mkTimeRangeWithinSummary timeRange

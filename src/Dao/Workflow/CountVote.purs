@@ -5,11 +5,10 @@ Description: Contract for counting a vote on a proposal
 module Dao.Workflow.CountVote (countVote) where
 
 import Contract.Address (scriptHashAddress)
-import Contract.Chain (currentTime)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData
-  ( Datum(Datum)
+  ( Datum
   , Redeemer(Redeemer)
   , toData
   , unitRedeemer
@@ -23,16 +22,11 @@ import Contract.Prelude
   , pure
   , ($)
   , (*)
-  , (+)
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
-import Contract.Time
-  ( Interval(FiniteInterval)
-  , POSIXTime(POSIXTime)
-  , POSIXTimeRange
-  )
+import Contract.Scripts (Validator, ValidatorHash, validatorHash)
+import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -45,25 +39,22 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
-  , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
 import Dao.Utils.Datum (getInlineDatumFromTxOutWithRefScript)
 import Dao.Utils.Query (findUtxoByValue)
-import Dao.Utils.Time (mkOnchainTimeRange, mkTimeRangeWithinSummary)
+import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Count)
-  , VoteDatum
   )
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.VotePolicy (unappliedVotePolicy)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
 type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
@@ -80,7 +71,7 @@ countVote validatorConfig voteInfo tallyInfo = do
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedVoteValidator :: Validator <- unappliedConfigValidator
+  appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
 
   let
@@ -119,6 +110,9 @@ countVote validatorConfig voteInfo tallyInfo = do
   voteDatum :: Datum <-
     liftContractM "No Inline vote datum at OutputDatum" $
       getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
+
+  timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
+  onchainTimeRange <- mkOnchainTimeRange timeRange
 
   let
     voteNft :: Value
@@ -161,6 +155,7 @@ countVote validatorConfig voteInfo tallyInfo = do
         , Constraints.mustReferenceOutput configUtxoTxInput
         , Constraints.mustSpendScriptOutput tallyUtxoTxInput unitRedeemer
         , Constraints.mustSpendScriptOutput voteUtxoTxInput countRedeemer
+        , Constraints.mustValidateIn onchainTimeRange
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
@@ -193,16 +188,3 @@ countVote validatorConfig voteInfo tallyInfo = do
   getVoteUtxo ({ voteSymbol, voteTokenName }) =
     findUtxoByValue
       (Value.singleton voteSymbol voteTokenName one)
-
-  mkVoteValidityRange :: Contract POSIXTimeRange
-  mkVoteValidityRange = do
-    currentTime' <- currentTime
-    let
-      -- Five minutes
-      timePeriod = POSIXTime (fromInt $ 1000 * 60 * 5)
-      endTime = currentTime' + timePeriod
-
-      timeRange :: POSIXTimeRange
-      timeRange = FiniteInterval currentTime' endTime
-
-    mkTimeRangeWithinSummary timeRange
