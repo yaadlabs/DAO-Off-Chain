@@ -4,11 +4,16 @@ Description: Contract for cancelling a vote on a proposal
 -}
 module Dao.Workflow.CancelVote where
 
-import Contract.Address (scriptHashAddress)
+import Contract.Address
+  ( PaymentPubKeyHash
+  , scriptHashAddress
+  )
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData
-  ( Redeemer(Redeemer)
+  ( Datum
+  , Redeemer(Redeemer)
+  , fromData
   , toData
   )
 import Contract.Prelude
@@ -39,11 +44,15 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Datum (getInlineDatumFromTxOutWithRefScript)
 import Dao.Utils.Query (findUtxoByValue)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
+import Data.Newtype (unwrap)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
+  , VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
 import ScriptArguments.Types
@@ -87,6 +96,17 @@ cancelVote validatorConfig voteInfo = do
     liftedM "Could not find config UTXO" $ getVoteUtxo voteInfo
       voteValidatorUtxoMap
 
+  voteDatum' :: Datum <-
+    liftContractM "No Inline vote datum at OutputDatum" $
+      getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
+  voteDatum :: VoteDatum <-
+    liftContractM "Could not convert datum" $ fromData (unwrap voteDatum')
+
+  voteOwnerKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key"
+      $ addressToPaymentPubKeyHash
+      $ (unwrap voteDatum).voteOwner
+
   let
     voteSymbol :: CurrencySymbol
     voteSymbol = scriptCurrencySymbol appliedVotePolicy
@@ -114,6 +134,7 @@ cancelVote validatorConfig voteInfo = do
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustReferenceOutput configUtxoTxInput
         , Constraints.mustSpendScriptOutput voteUtxoTxInput cancelRedeemer
+        , Constraints.mustBeSignedBy voteOwnerKey
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
