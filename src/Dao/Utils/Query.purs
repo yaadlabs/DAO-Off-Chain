@@ -8,7 +8,7 @@ module Dao.Utils.Query
   ) where
 
 import Contract.Monad (Contract, liftedM)
-import Contract.Prelude (type (/\), otherwise, pure, (<<<), (==))
+import Contract.Prelude (type (/\), otherwise, pure, (#), (<<<), (==))
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
@@ -38,8 +38,8 @@ findUtxoByValue' ::
 findUtxoByValue' value utxoMap =
   mapMaybe op utxoMap
   where
-  op ts@(TransactionOutputWithRefScript { output: txOut, scriptRef: _ })
-    | (unwrap txOut).amount == value = Just ts
+  op ts@(TransactionOutputWithRefScript { output })
+    | (output # unwrap # _.amount) == value = Just ts
     | otherwise = Nothing
 
 -- | Return the first UTXO in the given 'UtxoMap'

@@ -2,7 +2,7 @@
 Module: Dao.Workflow.CancelVote
 Description: Contract for cancelling a vote on a proposal
 -}
-module Dao.Workflow.CancelVote where
+module Dao.Workflow.CancelVote (cancelVote) where
 
 import Contract.Address
   ( PaymentPubKeyHash
@@ -24,6 +24,7 @@ import Contract.Prelude
   , negate
   , one
   , pure
+  , (#)
   , ($)
   , (/\)
   )
@@ -100,12 +101,14 @@ cancelVote validatorConfig voteInfo = do
     liftContractM "No Inline vote datum at OutputDatum" $
       getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
   voteDatum :: VoteDatum <-
-    liftContractM "Could not convert datum" $ fromData (unwrap voteDatum')
+    liftContractM "Could not convert datum" $ fromData $ voteDatum' # unwrap
 
   voteOwnerKey :: PaymentPubKeyHash <-
     liftContractM "Could not convert address to key"
       $ addressToPaymentPubKeyHash
-      $ (unwrap voteDatum).voteOwner
+      $ voteDatum
+      # unwrap
+      # _.voteOwner
 
   let
     voteSymbol :: CurrencySymbol

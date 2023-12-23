@@ -56,8 +56,8 @@ currentEra = do
           Nothing -> true
   logInfo' (show eraSummaries)
   logInfo' (show currSlot)
-  liftContractM "Could not find era sumamry" $ find findSummary $ unwrap
-    eraSummaries
+  liftContractM "Could not find era sumamry" $ find findSummary $ eraSummaries #
+    unwrap
 
 getCurrentSlot :: Contract Slot
 getCurrentSlot = getTip
@@ -76,9 +76,10 @@ mkTimeRangeWithinSummary desiredRange = do
         ("Could not convert to start-end range: " <> show i)
         Nothing
   era <- currentEra
-  let params = unwrap (unwrap era).parameters
-  slotLength <- liftContractM "Could not get slot length" $ BigInt.fromNumber $
-    unwrap params.slotLength
+  let params = era # unwrap # _.parameters # unwrap
+  slotLength <- liftContractM "Could not get slot length" $ BigInt.fromNumber
+    $ params.slotLength
+    # unwrap
   let
     offset = unwrap params.safeZone * slotLength
     endTime = desiredStart + POSIXTime offset

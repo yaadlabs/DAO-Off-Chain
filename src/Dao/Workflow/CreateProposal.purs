@@ -16,6 +16,7 @@ import Contract.Prelude
   , one
   , pure
   , show
+  , (#)
   , ($)
   , (+)
   , (/\)
@@ -92,7 +93,7 @@ createProposal tallyConfig tallyStateDatum = do
     liftContractM "No Inline index datum at OutputDatum" $
       getInlineDatumFromTxOutWithRefScript indexUtxoTxOutRefScript
   oldIndexDatum :: IndexNftDatum <-
-    liftContractM "Could not convert datum" $ fromData (unwrap oldIndexDatum')
+    liftContractM "Could not convert datum" $ fromData $ oldIndexDatum' # unwrap
 
   appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
 
@@ -118,11 +119,7 @@ createProposal tallyConfig tallyStateDatum = do
     tallyNft = Value.singleton tallySymbol tallyTokenName one
 
     indexNft :: Value
-    indexNft =
-      let
-        txOut = (unwrap indexUtxoTxOutRefScript).output
-      in
-        (unwrap txOut).amount
+    indexNft = indexUtxoTxOutRefScript # unwrap # _.output # unwrap # _.amount
 
     lookups :: Lookups.ScriptLookups
     lookups =

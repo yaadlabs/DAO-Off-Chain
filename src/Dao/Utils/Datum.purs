@@ -7,6 +7,7 @@ module Dao.Utils.Datum
   ) where
 
 import Contract.PlutusData (Datum)
+import Contract.Prelude ((#))
 import Contract.Transaction
   ( OutputDatum(OutputDatum)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
@@ -20,6 +21,6 @@ getInlineDatumFromTxOutWithRefScript ::
   TransactionOutputWithRefScript -> Maybe Datum
 getInlineDatumFromTxOutWithRefScript
   (TransactionOutputWithRefScript { output }) =
-  case (unwrap output).datum of
+  case output # unwrap # _.datum of
     OutputDatum datum' -> Just datum'
     _ -> Nothing
