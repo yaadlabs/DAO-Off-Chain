@@ -10,4 +10,4 @@ import Scripts.Utils (mkScript)
 
 alwaysSucceedsValidatorScript :: Contract Validator
 alwaysSucceedsValidatorScript = pure $ Validator $ mkScript
-  "./scripts/Json/AlwaysSucceedsValidator.json"
+  "./scripts/Json/Optimised/AlwaysSucceedsValidator.json"

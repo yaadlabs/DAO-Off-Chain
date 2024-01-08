@@ -1,7 +1,7 @@
-module Test.SampleData where
+module Test.Data.Config (sampleConfigParams) where
 
 import Contract.Value (adaSymbol, adaToken)
-import Dao.Components.Config.Params (ConfigParams)
+import Dao.Component.Config.Params (ConfigParams)
 import JS.BigInt as BigInt
 
 sampleConfigParams :: ConfigParams

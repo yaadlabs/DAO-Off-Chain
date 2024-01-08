@@ -1,5 +1,6 @@
 module Scripts.ConfigValidator
   ( unappliedConfigValidator
+  , unappliedConfigValidatorDebug
   ) where
 
 import Contract.Monad (Contract)
@@ -10,4 +11,9 @@ import Scripts.Utils (mkUnappliedValidator)
 
 unappliedConfigValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator
-  "./scripts/Json/ConfigValidator.json"
+  "./scripts/Json/Optimised/ConfigValidator.json"
+
+unappliedConfigValidatorDebug ::
+  ConfigurationValidatorConfig -> Contract Validator
+unappliedConfigValidatorDebug = mkUnappliedValidator
+  "./scripts/Json/Debug/ConfigValidator.json"

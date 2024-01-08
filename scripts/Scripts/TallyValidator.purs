@@ -11,4 +11,4 @@ import Scripts.Utils (mkUnappliedValidator)
 
 unappliedTallyValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedTallyValidator = mkUnappliedValidator
-  "./scripts/Json/TallyValidator.json"
+  "./scripts/Json/Optimised/TallyValidator.json"

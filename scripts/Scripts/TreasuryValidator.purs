@@ -9,4 +9,4 @@ import Scripts.Utils (mkUnappliedValidator)
 
 unappliedTreasuryValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedTreasuryValidator = mkUnappliedValidator
-  "./scripts/Json/TreasuryValidator.json"
+  "./scripts/Json/Optimised/TreasuryValidator.json"

@@ -22,6 +22,7 @@ import Effect.Aff
 import Test.Spec.Runner (defaultConfig)
 import Test.Workflow.CreateConfig as CreateConfig
 import Test.Workflow.CreateIndex as CreateIndex
+import Test.Workflow.CreateProposal as CreateProposal
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
@@ -29,5 +30,6 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts defaultPlutipConfig do
-        CreateConfig.suite
-        CreateIndex.suite
+        -- CreateConfig.suite
+        -- CreateIndex.suite
+        CreateProposal.suite

@@ -15,7 +15,7 @@ import Contract.Test.Plutip
 import Dao.Workflow.CreateConfig (createConfig)
 import JS.BigInt (fromInt) as BigInt
 import Mote (group, test)
-import Test.SampleData (sampleConfigParams)
+import Test.Data.Config (sampleConfigParams)
 
 suite :: TestPlanM PlutipTest Unit
 suite = do

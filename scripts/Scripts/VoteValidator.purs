@@ -9,4 +9,4 @@ import Scripts.Utils (mkUnappliedValidator)
 
 unappliedVoteValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedVoteValidator = mkUnappliedValidator
-  "./scripts/Json/VoteValidator.json"
+  "./scripts/Json/Optimised/VoteValidator.json"

@@ -8,4 +8,5 @@ import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
 import Scripts.Utils (mkUnappliedPolicy)
 
 unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy
-unappliedVotePolicy = mkUnappliedPolicy "./scripts/Json/VotePolicy.json"
+unappliedVotePolicy = mkUnappliedPolicy
+  "./scripts/Json/Optimised/VotePolicy.json"
