@@ -1,17 +1,30 @@
-module ScriptArguments.Types 
+module ScriptArguments.Types
   ( NftConfig(..)
-  , ConfigurationValidatorConfig(..) 
+  , ConfigurationValidatorConfig(..)
   , IndexNftConfig(..)
   , TallyNftConfig(..)
   ) where
 
 import Prelude
-import Contract.Value (CurrencySymbol, TokenName)
+
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  , genericFromData
+  , genericToData
+  )
 import Contract.Transaction (TransactionInput)
+import Contract.Value (CurrencySymbol, TokenName)
+import Ctl.Internal.Plutus.Types.DataSchema
+  ( class HasPlutusSchema
+  , type (:+)
+  , type (:=)
+  , type (@@)
+  , I
+  , PNil
+  )
 import Ctl.Internal.Serialization.Hash (ScriptHash)
-import Ctl.Internal.Plutus.Types.DataSchema (class HasPlutusSchema, type (:+), type (:=), type (@@), I, PNil)
 import Ctl.Internal.TypeLevel.Nat (Z)
-import Contract.PlutusData (class FromData, class ToData, genericFromData, genericToData)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 
@@ -120,7 +133,7 @@ newtype TallyNftConfig = TallyNftConfig
   , tncIndexNftPolicyId :: CurrencySymbol
   , tncIndexNftTokenName :: TokenName
   }
-    
+
 instance
   HasPlutusSchema TallyNftConfig
     ( "TallyNftConfig"

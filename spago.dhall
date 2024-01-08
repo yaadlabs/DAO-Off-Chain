@@ -24,6 +24,8 @@ You can edit this file as you like.
   , "maybe"
   , "mote"
   , "newtype"
+  , "node-buffer"
+  , "node-fs"
   , "ordered-collections"
   , "partial"
   , "posix-types"
@@ -33,7 +35,6 @@ You can edit this file as you like.
   , "spec"
   , "strings"
   , "tuples"
-  , "typelevel"
   , "uint"
   , "unfoldable"
   ]

@@ -19,7 +19,7 @@ import Contract.Prelude
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, ValidatorHash, validatorHash)
+import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -44,6 +44,8 @@ import ScriptArguments.Types (IndexNftConfig(IndexNftConfig))
 import Scripts.IndexPolicy (unappliedIndexPolicy)
 import Scripts.IndexValidator (indexValidatorScript)
 
+-- | Contract for creating index datum and locking 
+-- it at UTXO at index validator marked by index NFT
 createIndex :: TokenName -> Contract (TransactionHash /\ CurrencySymbol)
 createIndex indexTokenName = do
   logInfo' "Entering createIndex transaction"
@@ -81,9 +83,11 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
   do
     logInfo' "Entering buildIndex transaction"
 
+    indexValidator :: Validator <- indexValidatorScript
+
     let
       indexValidatorHash :: ValidatorHash
-      indexValidatorHash = validatorHash indexValidatorScript
+      indexValidatorHash = validatorHash indexValidator
 
       indexPolicyParams :: IndexNftConfig
       indexPolicyParams = IndexNftConfig

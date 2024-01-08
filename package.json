@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start-blockfrost-runtime": "nix run -L .#ctl-dao-blockfrost-runtime",
-    "test": "spago run --main Test.Dao.Main",
+    "test": "spago run --main Test.Plutip",
     "blockfrost-test": "source ./test/blockfrost.env && spago run --main Dao.Test.Blockfrost",
     "blockfrost-local-test": "source ./test/blockfrost-local.env && spago run --main Dao.Test.Blockfrost",
     "e2e-serve": "make e2e-serve",

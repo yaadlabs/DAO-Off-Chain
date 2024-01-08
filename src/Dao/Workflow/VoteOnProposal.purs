@@ -41,12 +41,15 @@ import Dao.Utils.Query (findUtxoByValue)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
+-- import ScriptArguments.Types
+--   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+--   )
+import LambdaBuffers.ApplicationTypes.Arguments
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
-  )
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)

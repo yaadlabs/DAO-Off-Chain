@@ -8,7 +8,10 @@ module Dao.Utils.Value
 
 import Contract.Prelude ((>>=))
 import Contract.Prim.ByteArray (hexToByteArray)
-import Contract.Value (TokenName, mkTokenName) as Value
+import Contract.Value
+  ( TokenName
+  , mkTokenName
+  ) as Value
 import Data.Maybe (Maybe)
 
 mkTokenName :: String -> Maybe Value.TokenName

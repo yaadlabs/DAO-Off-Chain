@@ -47,11 +47,14 @@ import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
+import LambdaBuffers.ApplicationTypes.Arguments
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  , TallyNftConfig(TallyNftConfig)
+  ( -- ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+    TallyNftConfig(TallyNftConfig)
   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.IndexValidator (indexValidatorScript)
@@ -69,6 +72,7 @@ createProposal tallyConfig tallyStateDatum = do
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
+  indexValidator :: Validator <- indexValidatorScript
 
   let
     configValidatorAddress = scriptHashAddress
@@ -78,7 +82,7 @@ createProposal tallyConfig tallyStateDatum = do
 
   let
     indexValidatorAddress = scriptHashAddress
-      (validatorHash indexValidatorScript)
+      (validatorHash indexValidator)
       Nothing
   indexValidatorUtxoMap <- utxosAt indexValidatorAddress
 
@@ -110,7 +114,7 @@ createProposal tallyConfig tallyStateDatum = do
     tallySymbol = scriptCurrencySymbol appliedTallyPolicy
 
     indexValidatorHash :: ValidatorHash
-    indexValidatorHash = validatorHash indexValidatorScript
+    indexValidatorHash = validatorHash indexValidator
 
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = validatorHash appliedTallyValidator
