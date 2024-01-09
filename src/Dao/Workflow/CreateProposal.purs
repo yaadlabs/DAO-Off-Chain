@@ -10,12 +10,14 @@ import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), fromData, toData, unitRedeemer)
 import Contract.Prelude
   ( type (/\)
+  , Unit
   , bind
   , discard
   , mconcat
   , one
   , pure
   , show
+  , unit
   , (#)
   , ($)
   , (+)
@@ -39,12 +41,16 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Component.Config.Query (ConfigInfo, getConfigInfo)
 import Dao.Component.Index.Query (IndexInfo, getIndexInfo)
 import Dao.Utils.Datum
   ( getInlineDatumFromTxOutWithRefScript
   )
-import Dao.Utils.Query (findUtxoByValue)
+import Dao.Utils.Query
+  ( QueryType(Spend, Reference)
+  , UtxoInfo
+  , findUtxoBySymbol
+  , findUtxoByValue
+  )
 import Dao.Utils.Value (mkTokenName)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
@@ -53,6 +59,7 @@ import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import ScriptArguments.Types
@@ -66,6 +73,7 @@ import Scripts.ConfigValidator
 import Scripts.IndexValidator (indexValidatorScript, indexValidatorScriptDebug)
 import Scripts.TallyPolicy (unappliedTallyPolicy, unappliedTallyPolicyDebug)
 import Scripts.TallyValidator (unappliedTallyValidator)
+import Type.Proxy (Proxy(Proxy))
 
 createProposal ::
   CurrencySymbol ->
@@ -88,8 +96,16 @@ createProposal
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
 
-  configInfo :: ConfigInfo <- getConfigInfo configSymbol appliedConfigValidator
-  indexInfo :: IndexInfo <- getIndexInfo indexSymbol
+  configInfo <- findUtxoBySymbol (Proxy :: Proxy DynamicConfigDatum) Reference
+    configSymbol
+    appliedConfigValidator
+  indexInfo <- findUtxoBySymbol (Proxy :: Proxy IndexNftDatum) Spend indexSymbol
+    indexValidator
+  indexInfo' :: IndexInfo <- getIndexInfo indexSymbol
+
+  logInfo' $ "configInfo: " <> show configInfo
+  logInfo' $ "indexInfo: " <> show indexInfo
+  logInfo' $ "indexInfo'" <> show indexInfo'
 
   let
     tallyConfig = mkTallyConfig configSymbol indexSymbol configTokenName
@@ -98,7 +114,7 @@ createProposal
 
   let
     updatedIndexDatum :: IndexNftDatum
-    updatedIndexDatum = incrementIndexDatum indexInfo.indexDatum
+    updatedIndexDatum = incrementIndexDatum indexInfo.datum
 
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
@@ -139,7 +155,7 @@ createProposal
             indexValidatorHash
             (Datum $ toData updatedIndexDatum)
             Constraints.DatumInline
-            indexInfo.indexValue
+            indexInfo.value
         , configInfo.constraints
         , indexInfo.constraints
         ]

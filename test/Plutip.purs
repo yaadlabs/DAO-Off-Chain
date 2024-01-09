@@ -8,7 +8,8 @@ import Contract.Prelude
 
 import Contract.Test.Mote (interpretWithConfig)
 import Contract.Test.Plutip
-  ( defaultPlutipConfig
+  ( PlutipConfig
+  , defaultPlutipConfig
   , testPlutipContracts
   )
 import Contract.Test.Utils (exitCode, interruptOnSignal)
@@ -33,3 +34,6 @@ main = interruptOnSignal SIGINT =<< launchAff do
         -- CreateConfig.suite
         -- CreateIndex.suite
         CreateProposal.suite
+
+-- plutipConfig :: PlutipConfig
+-- plutipConfig = defaultConfig { suppressLogs = false }

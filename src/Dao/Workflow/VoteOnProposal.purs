@@ -37,7 +37,12 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Utils.Query (findUtxoByValue)
+import Dao.Utils.Query
+  ( QueryType(Reference)
+  , UtxoInfo
+  , findUtxoBySymbol
+  , findUtxoByValue
+  )
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
@@ -47,6 +52,8 @@ import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
@@ -55,41 +62,36 @@ import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.VotePolicy (unappliedVotePolicy)
 import Scripts.VoteValidator (unappliedVoteValidator)
+import Type.Proxy (Proxy(Proxy))
 
 type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
 
 voteOnProposal ::
-  ConfigurationValidatorConfig ->
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
   VoteInfo ->
-  TallyInfo ->
   VoteDatum ->
   Contract (TransactionHash /\ CurrencySymbol)
-voteOnProposal validatorConfig voteInfo tallyInfo voteDatum = do
+voteOnProposal configSymbol tallySymbol configTokenName voteInfo voteDatum = do
   logInfo' "Entering voteOnProposal transaction"
+
+  let
+    validatorConfig = ConfigurationValidatorConfig
+      { cvcConfigNftCurrencySymbol: configSymbol
+      , cvcConfigNftTokenName: configTokenName
+      }
 
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
-
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
-
-  (configUtxoTxInput /\ _) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-  (tallyUtxoTxInput /\ _) <-
-    liftedM "Could not find index UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
+  configInfo <- findUtxoBySymbol (Proxy :: Proxy DynamicConfigDatum) Reference
+    configSymbol
+    appliedConfigValidator
+  tallyInfo <- findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Reference
+    tallySymbol
+    appliedTallyValidator
 
   appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
@@ -114,6 +116,8 @@ voteOnProposal validatorConfig voteInfo tallyInfo voteDatum = do
     lookups =
       mconcat
         [ Lookups.mintingPolicy appliedVotePolicy
+        , configInfo.lookups
+        , tallyInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -125,30 +129,11 @@ voteOnProposal validatorConfig voteInfo tallyInfo voteDatum = do
             (Datum $ toData voteDatum)
             Constraints.DatumInline
             voteNft
-        , Constraints.mustReferenceOutput configUtxoTxInput
-        , Constraints.mustReferenceOutput tallyUtxoTxInput
         , Constraints.mustValidateIn onchainTimeRange
+        , configInfo.constraints
+        , tallyInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
   pure (txHash /\ voteSymbol)
-  where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
-
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
