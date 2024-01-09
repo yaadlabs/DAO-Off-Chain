@@ -18,7 +18,9 @@ import Contract.PlutusData
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
 import Contract.Transaction
-  ( TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  ( TransactionInput
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  , TransactionUnspentOutput(TransactionUnspentOutput)
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
@@ -54,9 +56,9 @@ getIndexInfo indexSymbol = do
 
   let
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == indexSymbol) $ symbols (unwrap txOut.output).amount
+      any (_ == indexSymbol) $ symbols (txOut.output # unwrap # _.amount)
 
-  (txIn /\ TransactionOutputWithRefScript indexUtxo) <-
+  (txIn /\ txOut@(TransactionOutputWithRefScript indexUtxo)) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter hasNft
@@ -68,13 +70,12 @@ getIndexInfo indexSymbol = do
     constraints' = Constraints.mustSpendScriptOutput txIn unitRedeemer
 
     lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $
-      Map.singleton txIn (TransactionOutputWithRefScript indexUtxo)
+    lookups' = Lookups.unspentOutputs $ Map.singleton txIn txOut
 
     indexValue :: Value
-    indexValue = (unwrap indexUtxo.output).amount
+    indexValue = indexUtxo.output # unwrap # _.amount
 
-  case (unwrap indexUtxo.output).datum of
+  case indexUtxo.output # unwrap # _.datum of
     OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
       Just (indexDatum :: IndexNftDatum) -> do
         pure

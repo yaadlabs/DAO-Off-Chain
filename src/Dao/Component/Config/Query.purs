@@ -51,7 +51,7 @@ getConfigInfo configSymbol configValidator = do
 
   let
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == configSymbol) $ symbols (unwrap txOut.output).amount
+      any (_ == configSymbol) $ symbols (txOut.output # unwrap # _.amount)
 
   (txIn /\ TransactionOutputWithRefScript configUtxo) <-
     liftContractM "Cannot find UTxO with NFT"
@@ -69,9 +69,9 @@ getConfigInfo configSymbol configValidator = do
       Map.singleton txIn (TransactionOutputWithRefScript configUtxo)
 
     configValue :: Value
-    configValue = (unwrap configUtxo.output).amount
+    configValue = configUtxo.output # unwrap # _.amount
 
-  case (unwrap configUtxo.output).datum of
+  case configUtxo.output # unwrap # _.datum of
     OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
       Just (configDatum :: DynamicConfigDatum) -> do
         pure
