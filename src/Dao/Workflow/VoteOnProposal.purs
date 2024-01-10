@@ -4,9 +4,8 @@ Description: Contract for voting on a proposal
 -}
 module Dao.Workflow.VoteOnProposal (voteOnProposal) where
 
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
+import Contract.Monad (Contract)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prelude
   ( type (/\)
@@ -24,12 +23,9 @@ import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -37,35 +33,25 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Utils.Query
-  ( QueryType(Reference)
-  , UtxoInfo
-  , findUtxoBySymbol
-  , findUtxoByValue
-  )
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
-import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
-import Scripts.ConfigValidator (unappliedConfigValidator)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.VotePolicy (unappliedVotePolicy)
 import Scripts.VoteValidator (unappliedVoteValidator)
-import Type.Proxy (Proxy(Proxy))
 
 type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
 
+-- | Contract for voting on a specific proposal
 voteOnProposal ::
   CurrencySymbol ->
   CurrencySymbol ->
@@ -76,6 +62,7 @@ voteOnProposal ::
 voteOnProposal configSymbol tallySymbol configTokenName voteInfo voteDatum = do
   logInfo' "Entering voteOnProposal transaction"
 
+  -- Make the scripts
   let
     validatorConfig = ConfigurationValidatorConfig
       { cvcConfigNftCurrencySymbol: configSymbol
@@ -83,19 +70,17 @@ voteOnProposal configSymbol tallySymbol configTokenName voteInfo voteDatum = do
       }
 
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
-
-  configInfo <- findUtxoBySymbol (Proxy :: Proxy DynamicConfigDatum) Reference
-    configSymbol
-    appliedConfigValidator
-  tallyInfo <- findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Reference
-    tallySymbol
-    appliedTallyValidator
-
   appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
 
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+    appliedConfigValidator
+  tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol appliedTallyValidator
+
+  -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
