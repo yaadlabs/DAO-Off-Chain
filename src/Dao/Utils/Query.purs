@@ -64,10 +64,10 @@ import Data.Newtype (unwrap)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import Type.Proxy (Proxy(Proxy))
 
-type UtxoInfo (dat :: Type) =
+type UtxoInfo (datum' :: Type) =
   { lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
-  , datum :: dat
+  , datum :: datum'
   , value :: Value
   }
 
@@ -75,6 +75,7 @@ data QueryType = Spend | Reference
 
 derive instance Eq QueryType
 
+-- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
 findUtxoBySymbol ::
   forall (dat :: Type).
   FromData dat =>
@@ -83,7 +84,7 @@ findUtxoBySymbol ::
   CurrencySymbol ->
   Validator ->
   Contract (UtxoInfo dat)
-findUtxoBySymbol _ spendOrReference configSymbol validatorScript = do
+findUtxoBySymbol _ spendOrReference symbol validatorScript = do
   logInfo' "Entering findUtxoBySymbol contract"
 
   let
@@ -93,7 +94,7 @@ findUtxoBySymbol _ spendOrReference configSymbol validatorScript = do
 
   let
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == configSymbol) $ symbols (txOut.output # unwrap # _.amount)
+      any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
   (txIn /\ TransactionOutputWithRefScript txOut) <-
     liftContractM "Cannot find UTxO with NFT"
