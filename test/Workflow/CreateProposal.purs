@@ -35,21 +35,20 @@ suite = do
           ]
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
-          (createConfigTxHash /\ createConfigSymbol /\ configTokenName) <-
+          (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
-          (createIndexTxHash /\ createIndexSymbol /\ indexTokenName) <-
+          (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
           sampleTallyStateDatum' <- sampleTallyStateDatum
 
+          let proposalParams = { configSymbol, indexSymbol, configTokenName, indexTokenName }
+
           -- pure unit
           void $
             createProposal
-              createConfigSymbol
-              createIndexSymbol
-              configTokenName
-              indexTokenName
+              proposalParams 
               sampleTallyStateDatum'
