@@ -5,7 +5,6 @@ Description: Query helpers
 module Dao.Utils.Query
   ( UtxoInfo
   , QueryType(..)
-  , findUtxoByValue
   , getAllWalletUtxos
   , findUtxoBySymbol
   ) where
@@ -24,21 +23,17 @@ import Contract.PlutusData
   , OutputDatum(OutputDatum)
   , Redeemer
   , fromData
-  , unitRedeemer
   )
 import Contract.Prelude
   ( class Eq
-  , type (/\)
   , any
   , bind
   , discard
-  , otherwise
   , pure
   , show
   , (#)
   , ($)
   , (/\)
-  , (<<<)
   , (<>)
   , (==)
   )
@@ -49,7 +44,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
+import Contract.Utxos (utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , Value
@@ -57,13 +52,11 @@ import Contract.Value
   )
 import Contract.Wallet (getWalletUtxos)
 import Data.Array (filter, head)
-import Data.Array as Array
-import Data.Map (Map, mapMaybe, toUnfoldable)
+import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import Type.Proxy (Proxy(Proxy))
+import Type.Proxy (Proxy)
 
 type UtxoInfo (datum' :: Type) =
   { lookups :: Lookups.ScriptLookups
@@ -130,34 +123,6 @@ findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
           }
       Nothing -> throwContractError "Cannot parse config datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
-
--- | Find the UTXO in the given 'UtxoMap'
--- | that holds the given 'Value'
-findUtxoByValue ::
-  Value ->
-  UtxoMap ->
-  Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-findUtxoByValue value = pure <<< getFirstTxInputInMap <<< findUtxoByValue' value
-
--- | Returns 'UtxoMap' containing only the entry that holds the given 'Value'
--- | and the 'unitDatum'. Will return empty map if the UTXO is not found.
-findUtxoByValue' ::
-  Value ->
-  UtxoMap ->
-  UtxoMap
-findUtxoByValue' value utxoMap =
-  mapMaybe op utxoMap
-  where
-  op ts@(TransactionOutputWithRefScript { output })
-    | (output # unwrap # _.amount) == value = Just ts
-    | otherwise = Nothing
-
--- | Return the first UTXO in the given 'UtxoMap'
--- | as (TransactionInput, TransactionOutputWithRefScript) pair
--- | Returns 'Nothing' if the map is empty
-getFirstTxInputInMap ::
-  UtxoMap -> Maybe (TransactionInput /\ TransactionOutputWithRefScript)
-getFirstTxInputInMap = Array.head <<< toUnfoldable
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::
