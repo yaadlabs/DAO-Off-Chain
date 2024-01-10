@@ -6,6 +6,7 @@ module Dao.Component.Index.Query
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
+import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
@@ -21,7 +22,10 @@ referenceIndexUtxo ::
   Contract IndexInfo
 referenceIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering referenceIndexUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy IndexNftDatum) Reference
+  findUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Reference
+    unitRedeemer
     indexSymbol
     indexValidator
 
@@ -31,6 +35,9 @@ spendIndexUtxo ::
   Contract IndexInfo
 spendIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering spendIndexUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy IndexNftDatum) Spend
+  findUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Spend
+    unitRedeemer
     indexSymbol
     indexValidator

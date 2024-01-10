@@ -22,6 +22,7 @@ import Contract.PlutusData
   ( class FromData
   , Datum(Datum)
   , OutputDatum(OutputDatum)
+  , Redeemer
   , fromData
   , unitRedeemer
   )
@@ -81,10 +82,11 @@ findUtxoBySymbol ::
   FromData dat =>
   Proxy dat ->
   QueryType ->
+  Redeemer ->
   CurrencySymbol ->
   Validator ->
   Contract (UtxoInfo dat)
-findUtxoBySymbol _ spendOrReference symbol validatorScript = do
+findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
   logInfo' "Entering findUtxoBySymbol contract"
 
   let
@@ -107,7 +109,7 @@ findUtxoBySymbol _ spendOrReference symbol validatorScript = do
     constraints' :: Constraints.TxConstraints
     constraints' =
       case spendOrReference of
-        Spend -> Constraints.mustSpendScriptOutput txIn unitRedeemer
+        Spend -> Constraints.mustSpendScriptOutput txIn redeemer
         Reference -> Constraints.mustReferenceOutput txIn
 
     lookups' :: Lookups.ScriptLookups

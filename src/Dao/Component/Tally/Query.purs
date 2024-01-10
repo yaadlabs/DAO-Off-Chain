@@ -6,6 +6,7 @@ module Dao.Component.Tally.Query
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
+import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
@@ -21,7 +22,10 @@ referenceTallyUtxo ::
   Contract TallyInfo
 referenceTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering referenceTallyUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Reference
+  findUtxoBySymbol
+    (Proxy :: Proxy TallyStateDatum)
+    Reference
+    unitRedeemer
     tallySymbol
     tallyValidator
 
@@ -31,6 +35,9 @@ spendTallyUtxo ::
   Contract TallyInfo
 spendTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering spendTallyUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Spend
+  findUtxoBySymbol
+    (Proxy :: Proxy TallyStateDatum)
+    Spend
+    unitRedeemer
     tallySymbol
     tallyValidator

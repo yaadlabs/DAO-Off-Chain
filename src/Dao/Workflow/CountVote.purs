@@ -4,55 +4,35 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract)
 import Contract.PlutusData
-  ( Datum
-  , Redeemer(Redeemer)
+  ( Datum(Datum)
   , toData
-  , unitRedeemer
   )
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
   , pure
   , ($)
   , (*)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  )
-import Contract.Value (singleton) as Value
-import Dao.Utils.Datum (getInlineDatumFromTxOutWithRefScript)
-import Dao.Utils.Query (findUtxoByValue)
+import Contract.Value (CurrencySymbol)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
+import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (fromInt)
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
+import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Count)
   )
@@ -60,86 +40,46 @@ import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
-type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
-
+-- | Contract for vote count
 countVote ::
   ConfigurationValidatorConfig ->
-  VoteInfo ->
-  TallyInfo ->
+  CurrencySymbol ->
+  CurrencySymbol ->
+  CurrencySymbol ->
   Contract TransactionHash
-countVote validatorConfig voteInfo tallyInfo = do
+countVote validatorConfig configSymbol voteSymbol tallySymbol = do
   logInfo' "Entering countVote transaction"
 
+  -- Make the scripts
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+    appliedConfigValidator
+  tallyInfo :: TallyInfo <- spendTallyUtxo tallySymbol appliedTallyValidator
+  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Count voteSymbol
+    appliedVoteValidator
 
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
-
-    voteValidatorAddress = scriptHashAddress
-      (validatorHash appliedVoteValidator)
-      Nothing
-
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
-  voteValidatorUtxoMap <- utxosAt voteValidatorAddress
-
-  (configUtxoTxInput /\ _) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-
-  (tallyUtxoTxInput /\ tallyUtxoTxOutRefScript) <-
-    liftedM "Could not find tally UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
-
-  (voteUtxoTxInput /\ voteUtxoTxOutRefScript) <-
-    liftedM "Could not find vote UTXO" $ getVoteUtxo voteInfo
-      voteValidatorUtxoMap
-
-  tallyStateDatum :: Datum <-
-    liftContractM "No Inline tally datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript tallyUtxoTxOutRefScript
-
-  voteDatum :: Datum <-
-    liftContractM "No Inline vote datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
-
+  -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
   let
-    voteNft :: Value
-    voteNft = Value.singleton voteInfo.voteSymbol voteInfo.voteTokenName one
-
-    tallyNft :: Value
-    tallyNft = Value.singleton tallyInfo.tallySymbol tallyInfo.tallyTokenName
-      one
-
     voteValidatorHash :: ValidatorHash
     voteValidatorHash = validatorHash appliedVoteValidator
 
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = validatorHash appliedTallyValidator
 
-    countRedeemer :: Redeemer
-    countRedeemer = Redeemer $ toData VoteActionRedeemer'Count
-
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
-      [ Lookups.unspentOutputs $ Map.singleton tallyUtxoTxInput
-          tallyUtxoTxOutRefScript
-      , Lookups.unspentOutputs $ Map.singleton voteUtxoTxInput
-          voteUtxoTxOutRefScript
+      [ configInfo.lookups
+      , voteInfo.lookups
+      , tallyInfo.lookups
       ]
 
     constraints :: Constraints.TxConstraints
@@ -147,47 +87,20 @@ countVote validatorConfig voteInfo tallyInfo = do
       mconcat
         [ Constraints.mustPayToScript
             voteValidatorHash
-            voteDatum
+            (Datum $ toData $ voteInfo.datum)
             Constraints.DatumInline
-            voteNft
+            voteInfo.value
         , Constraints.mustPayToScript
             tallyValidatorHash
-            tallyStateDatum
+            (Datum $ toData $ tallyInfo.datum)
             Constraints.DatumInline
-            tallyNft
-        , Constraints.mustReferenceOutput configUtxoTxInput
-        , Constraints.mustSpendScriptOutput tallyUtxoTxInput unitRedeemer
-        , Constraints.mustSpendScriptOutput voteUtxoTxInput countRedeemer
+            tallyInfo.value
+        , configInfo.constraints
+        , voteInfo.constraints
+        , tallyInfo.constraints
         , Constraints.mustValidateIn onchainTimeRange
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
-  where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
-
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
-
-  getVoteUtxo ::
-    VoteInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getVoteUtxo ({ voteSymbol, voteTokenName }) =
-    findUtxoByValue
-      (Value.singleton voteSymbol voteTokenName one)

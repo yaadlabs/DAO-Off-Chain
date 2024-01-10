@@ -6,6 +6,7 @@ module Dao.Component.Config.Query
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
+import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
@@ -24,6 +25,7 @@ referenceConfigUtxo configSymbol configValidator = do
   findUtxoBySymbol
     (Proxy :: Proxy DynamicConfigDatum)
     Reference
+    unitRedeemer
     configSymbol
     configValidator
 
@@ -36,5 +38,6 @@ spendConfigUtxo configSymbol configValidator = do
   findUtxoBySymbol
     (Proxy :: Proxy DynamicConfigDatum)
     Spend
+    unitRedeemer
     configSymbol
     configValidator
