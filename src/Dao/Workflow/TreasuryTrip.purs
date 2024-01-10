@@ -4,138 +4,84 @@ Description: Contract for disbursing treasury funds based on a trip proposal
 -}
 module Dao.Workflow.TreasuryTrip (treasuryTrip) where
 
-import Contract.Address (Address, scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
-import Contract.PlutusData
-  ( Datum(Datum)
-  , Redeemer(Redeemer)
-  , toData
-  , unitDatum
-  , unitRedeemer
-  )
+import Contract.Monad (Contract)
+import Contract.PlutusData (unitDatum)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
   , pure
-  , ($)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
-  , Value
   )
-import Contract.Value (singleton) as Value
-import Dao.Utils.Query (findUtxoByValue)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
-import JS.BigInt as BigInt
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
+import Dao.Component.Config.Params (mkValidatorConfig)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Component.Treasury.Params (TreasuryParams)
+import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
-type TreasuryInfo =
-  { treasurySymbol :: CurrencySymbol
-  , treasuryTokenName :: TokenName
-  , travelAgentAddress :: Address
-  , travellerAddress :: Address
-  }
-
+-- | Contract for disbursing treasury funds based on a trip proposal
 treasuryTrip ::
-  ConfigurationValidatorConfig ->
-  TallyInfo ->
-  TreasuryInfo ->
-  DynamicConfigDatum ->
+  TreasuryParams ->
+  CurrencySymbol ->
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
   Contract TransactionHash
-treasuryTrip validatorConfig tallyInfo treasuryInfo newDynamicConfigDatum = do
+treasuryTrip
+  treasuryParams
+  configSymbol
+  tallySymbol
+  treasurySymbol
+  configTokenName = do
   logInfo' "Entering treasuryTrip transaction"
 
+  -- Make the scripts
+  let validatorConfig = mkValidatorConfig configSymbol configTokenName
   appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+    appliedConfigValidator
+  tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol appliedTallyValidator
+  treasuryInfo :: TreasuryInfo <-
+    spendTreasuryUtxo
+      ( ProposalType'Trip
+          treasuryParams.travelAgentAddress
+          treasuryParams.travellerAddress
+          treasuryParams.totalCost
+      )
+      treasurySymbol
+      appliedTreasuryValidator
 
   let
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
-
-  let
-    treasuryValidatorAddress = scriptHashAddress
-      (validatorHash appliedTreasuryValidator)
-      Nothing
-  treasuryValidatorUtxoMap <- utxosAt treasuryValidatorAddress
-
-  (configUtxoTxInput /\ configUtxoTxOutRefScript) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-
-  (treasuryUtxoTxInput /\ treasuryUtxoTxOutRefScript) <-
-    liftedM "Could not find treasury UTXO" $ getTreasuryUtxo treasuryInfo
-      treasuryValidatorUtxoMap
-
-  (tallyUtxoTxInput /\ _) <-
-    liftedM "Could not find tally UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
-
-  let
-    -- TODO: Just a placeholder
-    totalCost :: BigInt.BigInt
-    totalCost = BigInt.fromInt 5
-
-    newConfigDatum :: Datum
-    newConfigDatum = Datum $ toData newDynamicConfigDatum
-
-    treasuryNft :: Value
-    treasuryNft = Value.singleton (treasuryInfo.treasurySymbol)
-      (treasuryInfo.treasuryTokenName)
-      one
-
     treasuryValidatorHash :: ValidatorHash
     treasuryValidatorHash = validatorHash appliedTreasuryValidator
-
-    treasuryRedeemer :: Redeemer
-    treasuryRedeemer = Redeemer $ toData $ ProposalType'Trip
-      (treasuryInfo.travelAgentAddress)
-      (treasuryInfo.travellerAddress)
-      totalCost
 
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
-        [ Lookups.unspentOutputs $ Map.singleton treasuryUtxoTxInput
-            treasuryUtxoTxOutRefScript
+        [ configInfo.lookups
+        , tallyInfo.lookups
+        , treasuryInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -145,39 +91,12 @@ treasuryTrip validatorConfig tallyInfo treasuryInfo newDynamicConfigDatum = do
             treasuryValidatorHash
             unitDatum
             Constraints.DatumInline
-            treasuryNft
-        , Constraints.mustSpendScriptOutput treasuryUtxoTxInput treasuryRedeemer
-        , Constraints.mustReferenceOutput tallyUtxoTxInput
-        , Constraints.mustReferenceOutput configUtxoTxInput
+            treasuryInfo.value
+        , treasuryInfo.constraints
+        , configInfo.constraints
+        , tallyInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
-  where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
-
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
-
-  getTreasuryUtxo ::
-    TreasuryInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTreasuryUtxo ({ treasurySymbol, treasuryTokenName }) =
-    findUtxoByValue
-      (Value.singleton treasurySymbol treasuryTokenName one)
