@@ -4,21 +4,15 @@ Description: Contract for cancelling a vote on a proposal
 -}
 module Dao.Workflow.CancelVote (cancelVote) where
 
-import Contract.Address
-  ( PaymentPubKeyHash
-  , scriptHashAddress
-  )
+import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData
-  ( Datum
-  , Redeemer(Redeemer)
-  , fromData
+  ( Redeemer(Redeemer)
   , toData
   )
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , negate
@@ -26,102 +20,66 @@ import Contract.Prelude
   , pure
   , (#)
   , ($)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
-  , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
-import Dao.Utils.Datum (getInlineDatumFromTxOutWithRefScript)
-import Dao.Utils.Query (findUtxoByValue)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
 import Data.Newtype (unwrap)
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
+import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
-  , VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.VotePolicy (unappliedVotePolicy)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
-type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
-
+-- | Contract for cancelling a vote
 cancelVote ::
   ConfigurationValidatorConfig ->
-  VoteInfo ->
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
   Contract TransactionHash
-cancelVote validatorConfig voteInfo = do
+cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
   logInfo' "Entering cancelVote transaction"
 
+  -- Make the scripts
   appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+    appliedConfigValidator
+  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel voteSymbol
+    appliedVoteValidator
 
-  let
-    voteValidatorAddress = scriptHashAddress
-      (validatorHash appliedVoteValidator)
-      Nothing
-  voteValidatorUtxoMap <- utxosAt voteValidatorAddress
-
-  (configUtxoTxInput /\ _) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-
-  (voteUtxoTxInput /\ voteUtxoTxOutRefScript) <-
-    liftedM "Could not find config UTXO" $ getVoteUtxo voteInfo
-      voteValidatorUtxoMap
-
-  voteDatum' :: Datum <-
-    liftContractM "No Inline vote datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
-  voteDatum :: VoteDatum <-
-    liftContractM "Could not convert datum" $ fromData $ voteDatum' # unwrap
-
+  -- Extract the vote owner from the vote datum
   voteOwnerKey :: PaymentPubKeyHash <-
     liftContractM "Could not convert address to key"
       $ addressToPaymentPubKeyHash
-      $ voteDatum
+      $ voteInfo.datum
       # unwrap
       # _.voteOwner
 
   let
-    voteSymbol :: CurrencySymbol
-    voteSymbol = scriptCurrencySymbol appliedVotePolicy
-
     burnVoteNft :: Value
-    burnVoteNft = Value.singleton voteSymbol voteInfo.voteTokenName (negate one)
-
-    cancelRedeemer :: Redeemer
-    cancelRedeemer = Redeemer $ toData VoteActionRedeemer'Cancel
+    burnVoteNft = Value.singleton voteSymbol voteTokenName (negate one)
 
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
@@ -130,38 +88,19 @@ cancelVote validatorConfig voteInfo = do
     lookups =
       mconcat
         [ Lookups.mintingPolicy appliedVotePolicy
-        , Lookups.unspentOutputs $ Map.singleton voteUtxoTxInput
-            voteUtxoTxOutRefScript
+        , voteInfo.lookups
+        , configInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
-        , Constraints.mustReferenceOutput configUtxoTxInput
-        , Constraints.mustSpendScriptOutput voteUtxoTxInput cancelRedeemer
         , Constraints.mustBeSignedBy voteOwnerKey
+        , configInfo.constraints
+        , voteInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
-  where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
-
-  getVoteUtxo ::
-    VoteInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getVoteUtxo ({ voteSymbol, voteTokenName }) =
-    findUtxoByValue
-      (Value.singleton voteSymbol voteTokenName one)
