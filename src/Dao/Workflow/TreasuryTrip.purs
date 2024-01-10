@@ -27,7 +27,7 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryParams)
+import Dao.Component.Treasury.Params (TreasuryParamsTrip)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import Scripts.ConfigValidator (unappliedConfigValidator)
@@ -36,7 +36,7 @@ import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
 treasuryTrip ::
-  TreasuryParams ->
+  TreasuryParamsTrip ->
   CurrencySymbol ->
   CurrencySymbol ->
   CurrencySymbol ->
