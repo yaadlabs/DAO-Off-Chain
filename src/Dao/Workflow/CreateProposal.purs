@@ -4,7 +4,6 @@ Description: Contract for creating a proposal
 -}
 module Dao.Workflow.CreateProposal (createProposal) where
 
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), fromData, toData, unitRedeemer)
@@ -26,8 +25,6 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -41,10 +38,10 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Query (ConfigInfo, getConfigInfo)
 import Dao.Component.Index.Query (IndexInfo, getIndexInfo)
+import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Utils.Datum
   ( getInlineDatumFromTxOutWithRefScript
   )
-import Dao.Utils.Query (findUtxoByValue)
 import Dao.Utils.Value (mkTokenName)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
@@ -55,10 +52,7 @@ import LambdaBuffers.ApplicationTypes.Arguments
   )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import ScriptArguments.Types
-  ( -- ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-    TallyNftConfig(TallyNftConfig)
-  )
+import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 import Scripts.ConfigValidator
   ( unappliedConfigValidator
   , unappliedConfigValidatorDebug
@@ -67,33 +61,33 @@ import Scripts.IndexValidator (indexValidatorScript, indexValidatorScriptDebug)
 import Scripts.TallyPolicy (unappliedTallyPolicy, unappliedTallyPolicyDebug)
 import Scripts.TallyValidator (unappliedTallyValidator)
 
+-- | Contract for creating a proposal
 createProposal ::
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
-  TokenName ->
+  CreateProposalParams ->
   TallyStateDatum ->
   Contract (TransactionHash /\ CurrencySymbol)
 createProposal
-  configSymbol
-  indexSymbol
-  configTokenName
-  indexTokenName
+  proposalParams
   tallyStateDatum = do
   logInfo' "Entering createProposal transaction"
 
-  let validatorConfig = mkValidatorConfig configSymbol configTokenName
+  let
+    validatorConfig = mkValidatorConfig proposalParams.configSymbol
+      proposalParams.configTokenName
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
 
-  configInfo :: ConfigInfo <- getConfigInfo configSymbol appliedConfigValidator
-  indexInfo :: IndexInfo <- getIndexInfo indexSymbol
+  configInfo :: ConfigInfo <- getConfigInfo proposalParams.configSymbol
+    appliedConfigValidator
+  indexInfo :: IndexInfo <- getIndexInfo proposalParams.indexSymbol
 
   let
-    tallyConfig = mkTallyConfig configSymbol indexSymbol configTokenName
-      indexTokenName
+    tallyConfig = mkTallyConfig proposalParams.configSymbol
+      proposalParams.indexSymbol
+      proposalParams.configTokenName
+      proposalParams.indexTokenName
   appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
