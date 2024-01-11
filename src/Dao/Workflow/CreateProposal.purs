@@ -54,7 +54,7 @@ import Scripts.TallyValidator (unappliedTallyValidator)
 createProposal ::
   CreateProposalParams ->
   TallyStateDatum ->
-  Contract (TransactionHash /\ CurrencySymbol)
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createProposal
   proposalParams
   tallyStateDatum = do
@@ -134,7 +134,7 @@ createProposal
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ tallySymbol)
+  pure (txHash /\ tallySymbol /\ tallyTokenName)
   where
   incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
   incrementIndexDatum (IndexNftDatum { index: oldIndex }) =
