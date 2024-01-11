@@ -35,6 +35,7 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
+import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import JS.BigInt (fromInt)
@@ -49,38 +50,36 @@ import Scripts.IndexValidator (indexValidatorScriptDebug)
 import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
 import Scripts.TallyValidator (unappliedTallyValidator)
 
--- | Contract for creating a new proposal
+-- | Contract for creating a proposal
 createProposal ::
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
-  TokenName ->
+  CreateProposalParams ->
   TallyStateDatum ->
-  Contract (TransactionHash /\ CurrencySymbol)
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createProposal
-  configSymbol
-  indexSymbol
-  configTokenName
-  indexTokenName
+  proposalParams
   tallyStateDatum = do
   logInfo' "Entering createProposal transaction"
 
-  -- Make the scripts
   let
-    validatorConfig = mkValidatorConfig configSymbol configTokenName
-    tallyConfig = mkTallyConfig configSymbol indexSymbol configTokenName
-      indexTokenName
-
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
+    validatorConfig = mkValidatorConfig proposalParams.configSymbol
+      proposalParams.configTokenName
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo proposalParams.configSymbol
     appliedConfigValidator
-  indexInfo :: IndexInfo <- spendIndexUtxo indexSymbol indexValidator
+  indexInfo :: IndexInfo <- spendIndexUtxo proposalParams.indexSymbol
+    indexValidator
+
+  let
+    tallyConfig = mkTallyConfig proposalParams.configSymbol
+      proposalParams.indexSymbol
+      proposalParams.configTokenName
+      proposalParams.indexTokenName
+  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
     -- The index field of the IndexDatum must be incremented
@@ -135,7 +134,7 @@ createProposal
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ tallySymbol)
+  pure (txHash /\ tallySymbol /\ tallyTokenName)
   where
   incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
   incrementIndexDatum (IndexNftDatum { index: oldIndex }) =

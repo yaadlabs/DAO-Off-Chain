@@ -78,14 +78,14 @@ derive instance Eq QueryType
 
 -- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
 findUtxoBySymbol ::
-  forall (dat :: Type).
-  FromData dat =>
-  Proxy dat ->
+  forall (datum' :: Type).
+  FromData datum' =>
+  Proxy datum' ->
   QueryType ->
   Redeemer ->
   CurrencySymbol ->
   Validator ->
-  Contract (UtxoInfo dat)
+  Contract (UtxoInfo datum')
 findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
   logInfo' "Entering findUtxoBySymbol contract"
 
@@ -121,14 +121,14 @@ findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
 
   case txOut.output # unwrap # _.datum of
     OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: dat) -> do
+      Just (datum :: datum') -> do
         pure
           { datum
           , value
           , lookups: lookups'
           , constraints: constraints'
           }
-      Nothing -> throwContractError "Cannot parse config datum"
+      Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
 -- | Find the UTXO in the given 'UtxoMap'
