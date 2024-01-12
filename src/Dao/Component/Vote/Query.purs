@@ -5,14 +5,42 @@ module Dao.Component.Vote.Query
   , spendVoteNftUtxo
   ) where
 
+import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract)
-import Contract.PlutusData (Redeemer(Redeemer), toData, unitRedeemer)
-import Contract.Prelude (discard, ($))
-import Contract.Scripts (Validator)
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
-import Contract.Value (CurrencySymbol)
-import Contract.Value (CurrencySymbol, Value)
+import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData
+  ( Datum(Datum)
+  , OutputDatum(OutputDatum)
+  , Redeemer(Redeemer)
+  , fromData
+  , toData
+  , unitRedeemer
+  )
+import Contract.Prelude
+  ( type (/\)
+  , any
+  , bind
+  , discard
+  , mconcat
+  , negate
+  , one
+  , pure
+  , unwrap
+  , (#)
+  , ($)
+  , (&&)
+  , (/\)
+  , (==)
+  )
+import Contract.ScriptLookups as Lookups
+import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Transaction
+  ( TransactionInput
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  )
+import Contract.TxConstraints as Constraints
+import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
+import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , UtxoInfo
@@ -21,8 +49,103 @@ import Dao.Utils.Query
   )
 import Dao.Utils.Query (findKeyUtxoBySymbol)
 import Data.Map (Map)
-import LambdaBuffers.ApplicationTypes.Vote (VoteActionRedeemer, VoteDatum)
+import Data.Map as Map
+import Data.Maybe (Maybe(Just, Nothing))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteActionRedeemer(VoteActionRedeemer'Count)
+  , VoteDatum
+  , VoteDirection
+  )
 import Type.Proxy (Proxy(Proxy))
+
+type VoteResult =
+  { voteDirection :: VoteDirection
+  , lookups :: Lookups.ScriptLookups
+  , constraints :: Constraints.TxConstraints
+  }
+
+mkVoteUtxoConstraintsAndLookups ::
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
+  TokenName ->
+  MintingPolicy ->
+  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  Contract VoteResult
+mkVoteUtxoConstraintsAndLookups
+  voteNftSymbol
+  voteSymbol
+  voteNftTokenName
+  voteTokenName
+  votePolicyScript
+  (txIn /\ txOut) =
+  do
+    logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
+
+    voteDatum :: VoteDatum <- liftContractM "Failed to extract datum" $
+      extractOutputDatum
+        txOut
+    voteValue :: Value <-
+      liftContractM "Vote value does not contain both vote NFT and vote token" $
+        extractToken voteNftSymbol voteSymbol txOut
+
+    voteOwnerKey :: PaymentPubKeyHash <-
+      liftContractM "Cannot get pkh" $ addressToPaymentPubKeyHash $ voteDatum
+        # unwrap
+        # _.voteOwner
+
+    let
+      voteDirection' :: VoteDirection
+      voteDirection' = voteDatum # unwrap # _.direction
+
+      voteNftToken :: Value
+      voteNftToken = singleton voteNftSymbol voteNftTokenName one
+
+      burnVoteValue :: Value
+      burnVoteValue = singleton voteSymbol voteTokenName (negate one)
+
+      lookups' :: Lookups.ScriptLookups
+      lookups' = mconcat
+        [ Lookups.unspentOutputs $
+            Map.singleton txIn txOut
+        , Lookups.mintingPolicy votePolicyScript
+        ]
+
+      constraints' :: Constraints.TxConstraints
+      constraints' = mconcat
+        [ Constraints.mustSpendScriptOutput txIn
+            (Redeemer $ toData $ VoteActionRedeemer'Count)
+        , Constraints.mustPayToPubKey voteOwnerKey voteNftToken
+        , Constraints.mustMintValue burnVoteValue
+        ]
+
+    pure
+      { voteDirection: voteDirection'
+      , lookups: lookups'
+      , constraints: constraints'
+      }
+  where
+  extractOutputDatum :: TransactionOutputWithRefScript -> Maybe VoteDatum
+  extractOutputDatum (TransactionOutputWithRefScript txOut) =
+    case txOut.output # unwrap # _.datum of
+      OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
+        Just (datum :: VoteDatum) -> Just datum
+        _ -> Nothing
+      _ -> Nothing
+
+  extractToken ::
+    CurrencySymbol ->
+    CurrencySymbol ->
+    TransactionOutputWithRefScript ->
+    Maybe Value
+  extractToken voteSymbol voteNftSymbol txOut =
+    let
+      value = txOut # unwrap # _.output # unwrap # _.amount
+    in
+      if
+        (any (_ == voteSymbol) $ symbols value) &&
+          (any (_ == voteNftSymbol) $ symbols value) then Just value
+      else Nothing
 
 type VoteInfo = UtxoInfo VoteDatum
 

@@ -99,7 +99,8 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
       any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
-  (txIn /\ TransactionOutputWithRefScript txOut) <-
+  (txIn /\ TransactionOutputWithRefScript txOut) ::
+    (TransactionInput /\ TransactionOutputWithRefScript) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter hasNft
