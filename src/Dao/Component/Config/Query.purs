@@ -10,7 +10,11 @@ import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Query (QueryType(Reference, Spend), UtxoInfo, findUtxoBySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
+  )
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import Type.Proxy (Proxy(Proxy))
 
@@ -22,7 +26,7 @@ referenceConfigUtxo ::
   Contract ConfigInfo
 referenceConfigUtxo configSymbol configValidator = do
   logInfo' "Entering referenceConfigUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy DynamicConfigDatum)
     Reference
     unitRedeemer
@@ -35,7 +39,7 @@ spendConfigUtxo ::
   Contract ConfigInfo
 spendConfigUtxo configSymbol configValidator = do
   logInfo' "Entering spendConfigUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy DynamicConfigDatum)
     Spend
     unitRedeemer
