@@ -9,7 +9,11 @@ import Contract.Monad (Contract)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Query (QueryType(Reference, Spend), UtxoInfo, findUtxoBySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
+  )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 
@@ -21,7 +25,9 @@ referenceTallyUtxo ::
   Contract TallyInfo
 referenceTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering referenceTallyUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Reference
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy TallyStateDatum)
+    Reference
     tallySymbol
     tallyValidator
 
@@ -31,6 +37,8 @@ spendTallyUtxo ::
   Contract TallyInfo
 spendTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering spendTallyUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy TallyStateDatum) Spend
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy TallyStateDatum)
+    Spend
     tallySymbol
     tallyValidator

@@ -9,7 +9,11 @@ import Contract.Monad (Contract)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Query (QueryType(Reference, Spend), UtxoInfo, findUtxoBySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
+  )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum)
 import Type.Proxy (Proxy(Proxy))
 
@@ -21,7 +25,9 @@ referenceIndexUtxo ::
   Contract IndexInfo
 referenceIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering referenceIndexUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy IndexNftDatum) Reference
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Reference
     indexSymbol
     indexValidator
 
@@ -31,6 +37,8 @@ spendIndexUtxo ::
   Contract IndexInfo
 spendIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering spendIndexUtxo contract"
-  findUtxoBySymbol (Proxy :: Proxy IndexNftDatum) Spend
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Spend
     indexSymbol
     indexValidator

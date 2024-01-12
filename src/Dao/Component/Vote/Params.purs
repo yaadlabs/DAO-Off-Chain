@@ -13,8 +13,9 @@ type VoteParams =
   { configSymbol :: CurrencySymbol
   , tallySymbol :: CurrencySymbol
   , configTokenName :: TokenName
-  , voteSymbol :: CurrencySymbol
   , voteTokenName :: TokenName
+  -- Vote NFT symbol (vote pass)
+  , voteNftSymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection

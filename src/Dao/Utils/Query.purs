@@ -7,7 +7,8 @@ module Dao.Utils.Query
   , QueryType(..)
   , findUtxoByValue
   , getAllWalletUtxos
-  , findUtxoBySymbol
+  , findScriptUtxoBySymbol
+  , findKeyUtxoBySymbol
   ) where
 
 import Contract.Address (scriptHashAddress)
@@ -76,7 +77,7 @@ data QueryType = Spend | Reference
 derive instance Eq QueryType
 
 -- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
-findUtxoBySymbol ::
+findScriptUtxoBySymbol ::
   forall (datum' :: Type).
   FromData datum' =>
   Proxy datum' ->
@@ -84,8 +85,8 @@ findUtxoBySymbol ::
   CurrencySymbol ->
   Validator ->
   Contract (UtxoInfo datum')
-findUtxoBySymbol _ spendOrReference symbol validatorScript = do
-  logInfo' "Entering findUtxoBySymbol contract"
+findScriptUtxoBySymbol _ spendOrReference symbol validatorScript = do
+  logInfo' "Entering findScriptUtxoBySymbol contract"
 
   let
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
@@ -128,6 +129,26 @@ findUtxoBySymbol _ spendOrReference symbol validatorScript = do
           }
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
+
+findKeyUtxoBySymbol ::
+  CurrencySymbol ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract Value
+findKeyUtxoBySymbol symbol utxos = do
+  logInfo' "Entering findKeyUtxoBySymbol contract"
+
+  let
+    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
+      any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
+
+  (txIn /\ TransactionOutputWithRefScript txOut) <-
+    liftContractM "Cannot find UTxO with NFT"
+      $ head
+      $ filter hasNft
+      $ Map.toUnfoldable
+      $ utxos
+
+  pure $ txOut.output # unwrap # _.amount
 
 -- | Find the UTXO in the given 'UtxoMap'
 -- | that holds the given 'Value'
