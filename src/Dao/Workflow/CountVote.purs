@@ -4,6 +4,7 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
+import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
 import Contract.PlutusData
@@ -11,46 +12,59 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prelude
-  ( bind
+  ( type (/\)
+  , bind
   , discard
+  , foldMap
+  , foldr
   , mconcat
+  , otherwise
   , pure
+  , unwrap
+  , (#)
   , ($)
   , (*)
+  , (+)
+  , (/\)
+  , (==)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
+  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol)
+import Contract.Utxos (utxosAt)
+import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
-import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
+import Dao.Component.Vote.Params (CountVoteParams)
+import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
-import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
-import LambdaBuffers.ApplicationTypes.Vote
-  ( VoteActionRedeemer(VoteActionRedeemer'Count)
-  )
+import Data.Map (Map)
+import Data.Maybe (Maybe(Nothing))
+import JS.BigInt (BigInt, fromInt)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
+import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
--- | Contract for vote count
+-- | Contract for counting the votes
 countVote ::
-  ConfigurationValidatorConfig ->
-  CurrencySymbol ->
-  CurrencySymbol ->
-  CurrencySymbol ->
+  CountVoteParams ->
   Contract TransactionHash
-countVote validatorConfig configSymbol voteSymbol tallySymbol = do
+countVote params = do
   logInfo' "Entering countVote transaction"
 
   -- Make the scripts
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
@@ -58,45 +72,79 @@ countVote validatorConfig configSymbol voteSymbol tallySymbol = do
     validatorConfig
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  tallyInfo :: TallyInfo <- spendTallyUtxo tallySymbol appliedTallyValidator
-  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Count voteSymbol
-    appliedVoteValidator
+  tallyInfo :: TallyInfo <- spendTallyUtxo params.tallySymbol
+    appliedTallyValidator
+
+  let
+    scriptAddr = scriptHashAddress (validatorHash appliedVoteValidator) Nothing
+  voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
+    scriptAddr
+
+  -- Collect the constraints and lookups for each vote UTXO
+  -- And whether the vote was for or against
+  voteDirectionsConstraintsAndLookups ::
+    Array (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints) <-
+    mkAllVoteConstraintsAndLookups
+      params.voteNftSymbol
+      params.voteSymbol
+      params.voteNftTokenName
+      params.voteTokenName
+      params.votePolicy
+      voteUtxos
 
   -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
   let
-    voteValidatorHash :: ValidatorHash
-    voteValidatorHash = validatorHash appliedVoteValidator
+    -- Get the total votes for and against
+    (votesFor /\ votesAgainst) = tallyVotes voteDirectionsConstraintsAndLookups
+
+    -- Update the tally datum with the new vote count
+    tallyDatumWithUpdateVoteCount :: TallyStateDatum
+    tallyDatumWithUpdateVoteCount =
+      let
+        oldDatum = tallyInfo.datum # unwrap
+      in
+        TallyStateDatum
+          { proposal: oldDatum.proposal
+          , proposalEndTime: oldDatum.proposalEndTime
+          , for: oldDatum.for + votesFor
+          , against: oldDatum.against + votesAgainst
+          }
 
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = validatorHash appliedTallyValidator
 
+    -- Collect the vote lookups
+    voteLookups :: Lookups.ScriptLookups
+    voteLookups = foldMap (\(_ /\ lookups' /\ _) -> lookups')
+      voteDirectionsConstraintsAndLookups
+
+    -- Collect the vote constraints
+    voteConstraints :: Constraints.TxConstraints
+    voteConstraints = foldMap (\(_ /\ _ /\ constraints') -> constraints')
+      voteDirectionsConstraintsAndLookups
+
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
-      [ configInfo.lookups
-      , voteInfo.lookups
+      [ voteLookups
       , tallyInfo.lookups
+      , configInfo.lookups
       ]
 
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
         [ Constraints.mustPayToScript
-            voteValidatorHash
-            (Datum $ toData $ voteInfo.datum)
-            Constraints.DatumInline
-            voteInfo.value
-        , Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData $ tallyInfo.datum)
+            (Datum $ toData $ tallyDatumWithUpdateVoteCount)
             Constraints.DatumInline
             tallyInfo.value
+        , voteConstraints
         , configInfo.constraints
-        , voteInfo.constraints
         , tallyInfo.constraints
         , Constraints.mustValidateIn onchainTimeRange
         ]
@@ -104,3 +152,12 @@ countVote validatorConfig configSymbol voteSymbol tallySymbol = do
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
+  where
+  tallyVotes ::
+    Array (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints) ->
+    (BigInt /\ BigInt)
+  tallyVotes = foldr op (fromInt 0 /\ fromInt 0)
+    where
+    op (voteDirection /\ _ /\ _) (for /\ against)
+      | voteDirection == VoteDirection'For = ((for + fromInt 1) /\ against)
+      | otherwise = (for /\ (against + fromInt 1))

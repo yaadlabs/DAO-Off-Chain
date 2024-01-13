@@ -38,7 +38,7 @@ import Contract.Value (singleton) as Value
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Vote.Params (VoteParams)
+import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendVoteNftUtxo)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
@@ -58,7 +58,7 @@ import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for voting on a specific proposal
 voteOnProposal ::
-  VoteParams ->
+  VoteOnProposalParams ->
   Contract (TransactionHash /\ CurrencySymbol)
 voteOnProposal voteParams = do
   logInfo' "Entering voteOnProposal transaction"
@@ -93,6 +93,7 @@ voteOnProposal voteParams = do
 
   -- Check if the user has a 'voteNft' token,
   -- which is required in order to vote on a proposal
+  -- TODO: Spend it properly, now just finding it
   voteNftToken <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash

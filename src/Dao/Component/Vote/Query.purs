@@ -1,5 +1,6 @@
 module Dao.Component.Vote.Query
   ( VoteInfo
+  , mkAllVoteConstraintsAndLookups
   , referenceVoteUtxo
   , spendVoteUtxo
   , spendVoteNftUtxo
@@ -25,6 +26,7 @@ import Contract.Prelude
   , negate
   , one
   , pure
+  , traverse
   , unwrap
   , (#)
   , ($)
@@ -58,11 +60,30 @@ import LambdaBuffers.ApplicationTypes.Vote
   )
 import Type.Proxy (Proxy(Proxy))
 
-type VoteResult =
-  { voteDirection :: VoteDirection
-  , lookups :: Lookups.ScriptLookups
-  , constraints :: Constraints.TxConstraints
-  }
+mkAllVoteConstraintsAndLookups ::
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
+  TokenName ->
+  MintingPolicy ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract
+    ( Array
+        (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints)
+    )
+mkAllVoteConstraintsAndLookups
+  voteNftSymbol
+  voteSymbol
+  voteNftTokenName
+  voteTokenName
+  votePolicyScript
+  utxos =
+  traverse
+    ( mkVoteUtxoConstraintsAndLookups voteNftSymbol voteSymbol voteNftTokenName
+        voteTokenName
+        votePolicyScript
+    )
+    (Map.toUnfoldableUnordered utxos)
 
 mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
@@ -71,7 +92,7 @@ mkVoteUtxoConstraintsAndLookups ::
   TokenName ->
   MintingPolicy ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
-  Contract VoteResult
+  Contract (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints)
 mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
   voteSymbol
@@ -119,11 +140,7 @@ mkVoteUtxoConstraintsAndLookups
         , Constraints.mustMintValue burnVoteValue
         ]
 
-    pure
-      { voteDirection: voteDirection'
-      , lookups: lookups'
-      , constraints: constraints'
-      }
+    pure (voteDirection' /\ lookups' /\ constraints')
   where
   extractOutputDatum :: TransactionOutputWithRefScript -> Maybe VoteDatum
   extractOutputDatum (TransactionOutputWithRefScript txOut) =
