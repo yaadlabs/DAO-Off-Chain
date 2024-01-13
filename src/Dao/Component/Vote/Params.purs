@@ -5,6 +5,7 @@ Description: Helpers for vote on proposal workflow
 module Dao.Component.Vote.Params
   ( VoteOnProposalParams
   , CountVoteParams
+  , CancelVoteParams
   ) where
 
 import Contract.Scripts (MintingPolicy)
@@ -36,4 +37,11 @@ type CountVoteParams =
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
   , votePolicy :: MintingPolicy
+  }
+
+-- | Cancel vote contract paramaters
+type CancelVoteParams =
+  { configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , voteTokenName :: TokenName
   }

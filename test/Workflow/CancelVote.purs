@@ -14,6 +14,7 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -79,5 +80,15 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+
+          let
+            cancelVoteParams =
+              { configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , voteTokenName: adaToken
+              }
+          cancelVoteTxHash <- cancelVote cancelVoteParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
 
           pure unit
