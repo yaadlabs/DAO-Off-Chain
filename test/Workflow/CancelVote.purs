@@ -13,7 +13,7 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken)
+import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -22,6 +22,7 @@ import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
+import Scripts.VoteNft (voteNftPolicy)
 import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
@@ -59,13 +60,14 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
 
+          voteNftPolicy' <- voteNftPolicy
           let
             voteParams =
               { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
-              , voteSymbol: adaSymbol
               , voteTokenName: adaToken
+              , voteNftSymbol: scriptCurrencySymbol voteNftPolicy'
               -- Vote datum fields
               , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For

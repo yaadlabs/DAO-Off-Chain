@@ -18,6 +18,7 @@ import Contract.Prelude
   , ($)
   , (*)
   , (/\)
+  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
@@ -37,8 +38,10 @@ import Contract.Value (singleton) as Value
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Vote.Params (VoteParams)
+import Dao.Component.Vote.Params (VoteOnProposalParams)
+import Dao.Component.Vote.Query (spendVoteNftUtxo)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
+import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
@@ -55,7 +58,7 @@ import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for voting on a specific proposal
 voteOnProposal ::
-  VoteParams ->
+  VoteOnProposalParams ->
   Contract (TransactionHash /\ CurrencySymbol)
 voteOnProposal voteParams = do
   logInfo' "Entering voteOnProposal transaction"
@@ -85,6 +88,14 @@ voteOnProposal voteParams = do
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
+  -- Get the UTXOs at user's address
+  userUtxos <- getAllWalletUtxos
+
+  -- Check if the user has a 'voteNft' token,
+  -- which is required in order to vote on a proposal
+  -- TODO: Spend it properly, now just finding it
+  voteNftToken <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
+
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
     ownerAddress :: Address
@@ -101,8 +112,8 @@ voteOnProposal voteParams = do
     voteSymbol :: CurrencySymbol
     voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
-    voteNft :: Value
-    voteNft = Value.singleton voteParams.voteSymbol voteParams.voteTokenName one
+    voteValue :: Value
+    voteValue = Value.singleton voteSymbol voteParams.voteTokenName one
 
     votePolicyRedeemer :: Redeemer
     votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint
@@ -121,12 +132,12 @@ voteOnProposal voteParams = do
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
-        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer voteNft
+        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer voteValue
         , Constraints.mustPayToScript
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            voteNft
+            (voteValue <> voteNftToken)
         , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints

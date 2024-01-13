@@ -21,8 +21,8 @@ import Effect.Aff
   , launchAff
   )
 import Test.Spec.Runner (defaultConfig)
-import Test.Workflow.VoteOnProposal as VoteOnProposal
 import Test.Workflow.CancelVote as CancelVote
+import Test.Workflow.VoteOnProposal as VoteOnProposal
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do

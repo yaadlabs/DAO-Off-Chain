@@ -10,7 +10,11 @@ import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Query (QueryType(Reference, Spend), UtxoInfo, findUtxoBySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
+  )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum)
 import Type.Proxy (Proxy(Proxy))
 
@@ -22,7 +26,7 @@ referenceIndexUtxo ::
   Contract IndexInfo
 referenceIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering referenceIndexUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy IndexNftDatum)
     Reference
     unitRedeemer
@@ -35,7 +39,7 @@ spendIndexUtxo ::
   Contract IndexInfo
 spendIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering spendIndexUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy IndexNftDatum)
     Spend
     unitRedeemer
