@@ -55,6 +55,7 @@ import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
 -- | Contract for counting the votes
+-- TODO: Include fungible token calculation
 countVote ::
   CountVoteParams ->
   Contract TransactionHash
