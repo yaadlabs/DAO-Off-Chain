@@ -8,16 +8,22 @@ module Dao.Component.Treasury.Params
   ) where
 
 import Contract.Address (Address)
+import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
 
--- | Parameters passed treasury contract
+-- | Parameters for treasury trip contract
 type TreasuryParamsTrip =
   { travelAgentAddress :: Address
   , travellerAddress :: Address
   , totalCost :: BigInt
   }
 
+-- | Parameters for treasury general contract
 type TreasuryParamsGeneral =
   { paymentAddress :: Address
-  , totalCost :: BigInt
+  , generalPaymentAmount :: BigInt
+  , configSymbol :: CurrencySymbol
+  , tallySymbol :: CurrencySymbol
+  , treasurySymbol :: CurrencySymbol
+  , configTokenName :: TokenName
   }
