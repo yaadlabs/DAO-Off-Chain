@@ -4,8 +4,9 @@ Description: Contract for voting on a proposal
 -}
 module Dao.Workflow.VoteOnProposal (voteOnProposal) where
 
+import Contract.Address (Address)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prelude
   ( type (/\)
@@ -17,6 +18,7 @@ import Contract.Prelude
   , ($)
   , (*)
   , (/\)
+  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
@@ -33,63 +35,85 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Component.Vote.Params (VoteOnProposalParams)
+import Dao.Component.Vote.Query (spendVoteNftUtxo)
+import Dao.Utils.Address (paymentPubKeyHashToAddress)
+import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 import LambdaBuffers.ApplicationTypes.Vote
-  ( VoteDatum
+  ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
 import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.VotePolicy (unappliedVotePolicy)
-import Scripts.VoteValidator (unappliedVoteValidator)
-
-type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.VotePolicy (unappliedVotePolicyDebug)
+import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for voting on a specific proposal
 voteOnProposal ::
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
-  VoteInfo ->
-  VoteDatum ->
+  VoteOnProposalParams ->
   Contract (TransactionHash /\ CurrencySymbol)
-voteOnProposal configSymbol tallySymbol configTokenName voteInfo voteDatum = do
+voteOnProposal voteParams = do
   logInfo' "Entering voteOnProposal transaction"
 
   -- Make the scripts
   let
     validatorConfig = ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: configSymbol
-      , cvcConfigNftTokenName: configTokenName
+      { cvcConfigNftCurrencySymbol: voteParams.configSymbol
+      , cvcConfigNftTokenName: voteParams.configTokenName
       }
 
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo voteParams.configSymbol
     appliedConfigValidator
-  tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol appliedTallyValidator
+  tallyInfo :: TallyInfo <- referenceTallyUtxo voteParams.tallySymbol
+    appliedTallyValidator
 
   -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
+  -- Get the UTXOs at user's address
+  userUtxos <- getAllWalletUtxos
+
+  -- Check if the user has a 'voteNft' token,
+  -- which is required in order to vote on a proposal
+  -- TODO: Spend it properly, now just finding it
+  voteNftToken <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
+
+  ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
+    ownerAddress :: Address
+    ownerAddress = paymentPubKeyHashToAddress ownPaymentPkh
+
+    voteDatum :: VoteDatum
+    voteDatum = VoteDatum
+      { proposalTokenName: voteParams.proposalTokenName
+      , direction: voteParams.voteDirection
+      , returnAda: voteParams.returnAda
+      , voteOwner: ownerAddress
+      }
+
     voteSymbol :: CurrencySymbol
     voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
-    voteNft :: Value
-    voteNft = Value.singleton voteInfo.voteSymbol voteInfo.voteTokenName one
+    voteValue :: Value
+    voteValue = Value.singleton voteSymbol voteParams.voteTokenName one
 
     votePolicyRedeemer :: Redeemer
     votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint
@@ -108,12 +132,12 @@ voteOnProposal configSymbol tallySymbol configTokenName voteInfo voteDatum = do
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
-        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer voteNft
+        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer voteValue
         , Constraints.mustPayToScript
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            voteNft
+            (voteValue <> voteNftToken)
         , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
