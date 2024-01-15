@@ -11,7 +11,7 @@ import Contract.Address (Address)
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
 
--- | Parameters passed treasury contract
+-- | Parameters for treasury trip contract
 type TreasuryParamsTrip =
   { travelAgentAddress :: Address
   , travellerAddress :: Address
@@ -22,7 +22,12 @@ type TreasuryParamsTrip =
   , treasurySymbol :: CurrencySymbol
   }
 
+-- | Parameters for treasury general contract
 type TreasuryParamsGeneral =
   { paymentAddress :: Address
-  , totalCost :: BigInt
+  , generalPaymentAmount :: BigInt
+  , configSymbol :: CurrencySymbol
+  , tallySymbol :: CurrencySymbol
+  , treasurySymbol :: CurrencySymbol
+  , configTokenName :: TokenName
   }

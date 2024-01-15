@@ -1,5 +1,6 @@
 module Scripts.VotePolicy
   ( unappliedVotePolicy
+  , unappliedVotePolicyDebug
   ) where
 
 import Contract.Monad (Contract)
@@ -10,3 +11,8 @@ import Scripts.Utils (mkUnappliedPolicy)
 unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy
 unappliedVotePolicy = mkUnappliedPolicy
   "./scripts/Json/Optimised/VotePolicy.json"
+
+unappliedVotePolicyDebug ::
+  ConfigurationValidatorConfig -> Contract MintingPolicy
+unappliedVotePolicyDebug = mkUnappliedPolicy
+  "./scripts/Json/Debug/VotePolicy.json"

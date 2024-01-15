@@ -1,4 +1,7 @@
-module Dao.Utils.Address (addressToPaymentPubKeyHash) where
+module Dao.Utils.Address
+  ( addressToPaymentPubKeyHash
+  , paymentPubKeyHashToAddress
+  ) where
 
 import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
@@ -13,3 +16,10 @@ addressToPaymentPubKeyHash (Address { addressCredential }) =
   case addressCredential of
     PubKeyCredential pubKeyHash -> Just $ PaymentPubKeyHash pubKeyHash
     _ -> Nothing
+
+paymentPubKeyHashToAddress :: PaymentPubKeyHash -> Address
+paymentPubKeyHashToAddress (PaymentPubKeyHash pkh) =
+  Address
+    { addressCredential: PubKeyCredential pkh
+    , addressStakingCredential: Nothing
+    }

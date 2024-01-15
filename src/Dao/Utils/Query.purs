@@ -5,9 +5,9 @@ Description: Query helpers
 module Dao.Utils.Query
   ( UtxoInfo
   , QueryType(..)
-  , findUtxoByValue
   , getAllWalletUtxos
-  , findUtxoBySymbol
+  , findScriptUtxoBySymbol
+  , findKeyUtxoBySymbol
   ) where
 
 import Contract.Address (scriptHashAddress)
@@ -24,7 +24,6 @@ import Contract.PlutusData
   , OutputDatum(OutputDatum)
   , Redeemer
   , fromData
-  , unitRedeemer
   )
 import Contract.Prelude
   ( class Eq
@@ -32,13 +31,11 @@ import Contract.Prelude
   , any
   , bind
   , discard
-  , otherwise
   , pure
   , show
   , (#)
   , ($)
   , (/\)
-  , (<<<)
   , (<>)
   , (==)
   )
@@ -49,7 +46,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
+import Contract.Utxos (utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , Value
@@ -57,13 +54,11 @@ import Contract.Value
   )
 import Contract.Wallet (getWalletUtxos)
 import Data.Array (filter, head)
-import Data.Array as Array
-import Data.Map (Map, mapMaybe, toUnfoldable)
+import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import Type.Proxy (Proxy(Proxy))
+import Type.Proxy (Proxy)
 
 type UtxoInfo (datum' :: Type) =
   { lookups :: Lookups.ScriptLookups
@@ -76,18 +71,18 @@ data QueryType = Spend | Reference
 
 derive instance Eq QueryType
 
--- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
-findUtxoBySymbol ::
-  forall (dat :: Type).
-  FromData dat =>
-  Proxy dat ->
+-- | Reference or spend a UTXO at script marked by an NFT with the given CurrencySymbol
+findScriptUtxoBySymbol ::
+  forall (datum' :: Type).
+  FromData datum' =>
+  Proxy datum' ->
   QueryType ->
   Redeemer ->
   CurrencySymbol ->
   Validator ->
-  Contract (UtxoInfo dat)
-findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
-  logInfo' "Entering findUtxoBySymbol contract"
+  Contract (UtxoInfo datum')
+findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
+  logInfo' "Entering findScriptUtxoBySymbol contract"
 
   let
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
@@ -98,7 +93,8 @@ findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
       any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
-  (txIn /\ TransactionOutputWithRefScript txOut) <-
+  (txIn /\ TransactionOutputWithRefScript txOut) ::
+    (TransactionInput /\ TransactionOutputWithRefScript) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter hasNft
@@ -121,43 +117,37 @@ findUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
 
   case txOut.output # unwrap # _.datum of
     OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: dat) -> do
+      Just (datum :: datum') -> do
         pure
           { datum
           , value
           , lookups: lookups'
           , constraints: constraints'
           }
-      Nothing -> throwContractError "Cannot parse config datum"
+      Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
--- | Find the UTXO in the given 'UtxoMap'
--- | that holds the given 'Value'
-findUtxoByValue ::
-  Value ->
-  UtxoMap ->
-  Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-findUtxoByValue value = pure <<< getFirstTxInputInMap <<< findUtxoByValue' value
+-- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
+-- | Used with 'getAllWalletUtxos' to check UTXOs at key
+findKeyUtxoBySymbol ::
+  CurrencySymbol ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract Value
+findKeyUtxoBySymbol symbol utxos = do
+  logInfo' "Entering findKeyUtxoBySymbol contract"
 
--- | Returns 'UtxoMap' containing only the entry that holds the given 'Value'
--- | and the 'unitDatum'. Will return empty map if the UTXO is not found.
-findUtxoByValue' ::
-  Value ->
-  UtxoMap ->
-  UtxoMap
-findUtxoByValue' value utxoMap =
-  mapMaybe op utxoMap
-  where
-  op ts@(TransactionOutputWithRefScript { output })
-    | (output # unwrap # _.amount) == value = Just ts
-    | otherwise = Nothing
+  let
+    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
+      any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
--- | Return the first UTXO in the given 'UtxoMap'
--- | as (TransactionInput, TransactionOutputWithRefScript) pair
--- | Returns 'Nothing' if the map is empty
-getFirstTxInputInMap ::
-  UtxoMap -> Maybe (TransactionInput /\ TransactionOutputWithRefScript)
-getFirstTxInputInMap = Array.head <<< toUnfoldable
+  (txIn /\ TransactionOutputWithRefScript txOut) <-
+    liftContractM "Cannot find UTxO with NFT"
+      $ head
+      $ filter hasNft
+      $ Map.toUnfoldable
+      $ utxos
+
+  pure $ txOut.output # unwrap # _.amount
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::

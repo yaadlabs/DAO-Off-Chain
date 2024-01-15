@@ -10,7 +10,11 @@ import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Query (QueryType(Reference, Spend), UtxoInfo, findUtxoBySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
+  )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 
@@ -22,7 +26,7 @@ referenceTallyUtxo ::
   Contract TallyInfo
 referenceTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering referenceTallyUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy TallyStateDatum)
     Reference
     unitRedeemer
@@ -35,7 +39,7 @@ spendTallyUtxo ::
   Contract TallyInfo
 spendTallyUtxo tallySymbol tallyValidator = do
   logInfo' "Entering spendTallyUtxo contract"
-  findUtxoBySymbol
+  findScriptUtxoBySymbol
     (Proxy :: Proxy TallyStateDatum)
     Spend
     unitRedeemer
