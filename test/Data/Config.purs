@@ -1,10 +1,10 @@
 module Test.Data.Config (sampleConfigParams) where
 
 import Contract.Value (adaSymbol, adaToken)
-import Dao.Component.Config.Params (ConfigParams)
+import Dao.Component.Config.Params (CreateConfigParams)
 import JS.BigInt as BigInt
 
-sampleConfigParams :: ConfigParams
+sampleConfigParams :: CreateConfigParams
 sampleConfigParams =
   { configTokenName: adaToken
   , upgradeMajorityPercent: BigInt.fromInt 0

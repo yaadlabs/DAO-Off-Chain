@@ -42,8 +42,8 @@ import Contract.Value
   )
 import Contract.Value (singleton) as Value
 import Contract.Wallet (ownPaymentPubKeyHash)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Value (mkTokenName)
-import Scripts.VoteNft (voteNftPolicy)
 
 -- | Contract for creating token corresponding to the 'voteNft' field of the config
 -- | This token acts as a pass for voting on a proposal

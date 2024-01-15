@@ -40,6 +40,10 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendVoteNftUtxo)
+import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
@@ -51,10 +55,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidatorDebug)
-import Scripts.VotePolicy (unappliedVotePolicyDebug)
-import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for voting on a specific proposal
 voteOnProposal ::

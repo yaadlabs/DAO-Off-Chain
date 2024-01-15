@@ -44,15 +44,15 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.VoteValidator (unappliedVoteValidator)
 
 -- | Contract for counting the votes
 -- TODO: Include fungible token calculation

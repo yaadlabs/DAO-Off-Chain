@@ -1,4 +1,4 @@
-module Scripts.Utils
+module Dao.Scripts.Utils
   ( mkUnappliedPolicy
   , mkUnappliedValidator
   , mkScript

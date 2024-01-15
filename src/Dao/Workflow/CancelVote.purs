@@ -39,15 +39,15 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
+import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicy)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
+import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Data.Newtype (unwrap)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.VotePolicy (unappliedVotePolicy)
-import Scripts.VoteValidator (unappliedVoteValidator)
 
 -- | Contract for cancelling a vote
 cancelVote ::

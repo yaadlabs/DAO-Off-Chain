@@ -1,13 +1,13 @@
 -- Just for debugging, will remove later
-module Scripts.AlwaysSucceeds
+module Dao.Scripts.Validator.AlwaysSucceeds
   ( alwaysSucceedsValidatorScript
   ) where
 
 import Contract.Monad (Contract)
 import Contract.Prelude (pure, ($))
 import Contract.Scripts (Validator(Validator))
-import Scripts.Utils (mkScript)
+import Dao.Scripts.Utils (mkScript)
 
 alwaysSucceedsValidatorScript :: Contract Validator
 alwaysSucceedsValidatorScript = pure $ Validator $ mkScript
-  "./scripts/Json/Optimised/AlwaysSucceedsValidator.json"
+  "./src/Dao/Scripts/Json/Optimised/AlwaysSucceedsValidator.json"

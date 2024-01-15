@@ -41,7 +41,18 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Component.Config.Params (ConfigParams)
+import Dao.Component.Config.Params (CreateConfigParams)
+import Dao.Scripts.Policy.ConfigPolicy
+  ( unappliedConfigPolicy
+  , unappliedConfigPolicyDebug
+  )
+import Dao.Scripts.Validator.ConfigValidator
+  ( unappliedConfigValidator
+  , unappliedConfigValidatorDebug
+  )
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Scripts.Validator.TreasuryValidator (unappliedTreasuryValidator)
+import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
@@ -52,19 +63,11 @@ import LambdaBuffers.ApplicationTypes.Arguments
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   )
-import Scripts.ConfigPolicy (unappliedConfigPolicy, unappliedConfigPolicyDebug)
-import Scripts.ConfigValidator
-  ( unappliedConfigValidator
-  , unappliedConfigValidatorDebug
-  )
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.TreasuryValidator (unappliedTreasuryValidator)
-import Scripts.VoteValidator (unappliedVoteValidator)
 
 -- | Contract for creating dynamic config datum and locking
 -- it at UTXO at config validator marked by config NFT
 createConfig ::
-  ConfigParams ->
+  CreateConfigParams ->
   Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createConfig configParams = do
   logInfo' "Entering createConfig transaction"
@@ -98,7 +101,7 @@ type ConfigInfo =
   }
 
 buildDynamicConfig ::
-  ConfigParams ->
+  CreateConfigParams ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   Contract ConfigInfo
 buildDynamicConfig configParams (txInput /\ txInputWithScript) =

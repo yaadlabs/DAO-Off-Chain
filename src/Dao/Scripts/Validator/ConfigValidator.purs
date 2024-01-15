@@ -1,4 +1,4 @@
-module Scripts.ConfigValidator
+module Dao.Scripts.Validator.ConfigValidator
   ( unappliedConfigValidator
   , unappliedConfigValidatorDebug
   ) where
@@ -6,14 +6,14 @@ module Scripts.ConfigValidator
 import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Scripts (Validator)
+import Dao.Scripts.Utils (mkUnappliedValidator)
 import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
-import Scripts.Utils (mkUnappliedValidator)
 
 unappliedConfigValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator
-  "./scripts/Json/Optimised/ConfigValidator.json"
+  "./src/Dao/Scripts/Json/Optimised/ConfigValidator.json"
 
 unappliedConfigValidatorDebug ::
   ConfigurationValidatorConfig -> Contract Validator
 unappliedConfigValidatorDebug = mkUnappliedValidator
-  "./scripts/Json/Debug/ConfigValidator.json"
+  "./src/Dao/Scripts/Json/Debug/ConfigValidator.json"

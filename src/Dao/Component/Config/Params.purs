@@ -3,7 +3,7 @@ Module: Dao.Component.Config.Params
 Description: Config helpers
 -}
 module Dao.Component.Config.Params
-  ( ConfigParams
+  ( CreateConfigParams
   , UpgradeConfigParams
   , mkValidatorConfig
   ) where
@@ -16,7 +16,7 @@ import LambdaBuffers.ApplicationTypes.Arguments
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 
 -- | Parameters passed when initially creating dynamic config
-type ConfigParams =
+type CreateConfigParams =
   { configTokenName :: TokenName
   , upgradeMajorityPercent :: BigInt
   , upgradeRelativeMajorityPercent :: BigInt

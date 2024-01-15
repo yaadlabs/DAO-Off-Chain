@@ -1,20 +1,20 @@
-module Scripts.TallyValidator
+module Dao.Scripts.Validator.TallyValidator
   ( unappliedTallyValidator
   , unappliedTallyValidatorDebug
   ) where
 
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
+import Dao.Scripts.Utils (mkUnappliedValidator)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig
   )
-import Scripts.Utils (mkUnappliedValidator)
 
 unappliedTallyValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedTallyValidator = mkUnappliedValidator
-  "./scripts/Json/Optimised/TallyValidator.json"
+  "./src/Dao/Scripts/Json/Optimised/TallyValidator.json"
 
 unappliedTallyValidatorDebug ::
   ConfigurationValidatorConfig -> Contract Validator
 unappliedTallyValidatorDebug = mkUnappliedValidator
-  "./scripts/Json/Debug/TallyValidator.json"
+  "./src/Dao/Scripts/Json/Debug/TallyValidator.json"

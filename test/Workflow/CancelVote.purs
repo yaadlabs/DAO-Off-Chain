@@ -23,7 +23,7 @@ import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Scripts.VoteNft (voteNftPolicy)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 

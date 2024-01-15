@@ -34,6 +34,14 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Scripts.Policy.IndexPolicy
+  ( unappliedIndexPolicy
+  , unappliedIndexPolicyDebug
+  )
+import Dao.Scripts.Validator.IndexValidator
+  ( indexValidatorScript
+  , indexValidatorScriptDebug
+  )
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
@@ -41,8 +49,6 @@ import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import ScriptArguments.Types (IndexNftConfig(IndexNftConfig))
-import Scripts.IndexPolicy (unappliedIndexPolicy, unappliedIndexPolicyDebug)
-import Scripts.IndexValidator (indexValidatorScript, indexValidatorScriptDebug)
 
 -- | Contract for creating index datum and locking 
 -- it at UTXO at index validator marked by index NFT

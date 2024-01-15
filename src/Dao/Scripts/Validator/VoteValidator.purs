@@ -1,18 +1,18 @@
-module Scripts.VoteValidator
+module Dao.Scripts.Validator.VoteValidator
   ( unappliedVoteValidator
   , unappliedVoteValidatorDebug
   ) where
 
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
+import Dao.Scripts.Utils (mkUnappliedValidator)
 import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
-import Scripts.Utils (mkUnappliedValidator)
 
 unappliedVoteValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedVoteValidator = mkUnappliedValidator
-  "./scripts/Json/Optimised/VoteValidator.json"
+  "./src/Dao/Scripts/Json/Optimised/VoteValidator.json"
 
 unappliedVoteValidatorDebug ::
   ConfigurationValidatorConfig -> Contract Validator
 unappliedVoteValidatorDebug = mkUnappliedValidator
-  "./scripts/Json/Debug/VoteValidator.json"
+  "./src/Dao/Scripts/Json/Debug/VoteValidator.json"

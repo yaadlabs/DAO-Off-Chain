@@ -43,6 +43,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Treasury.Params (TreasuryParamsGeneral)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Scripts.Validator.TreasuryValidator (unappliedTreasuryValidator)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
@@ -52,9 +55,6 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::

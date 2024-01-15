@@ -37,6 +37,10 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
+import Dao.Scripts.Policy.TallyPolicy (unappliedTallyPolicyDebug)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.IndexValidator (indexValidatorScriptDebug)
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import JS.BigInt (fromInt)
@@ -46,10 +50,6 @@ import LambdaBuffers.ApplicationTypes.Arguments
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.IndexValidator (indexValidatorScriptDebug)
-import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
-import Scripts.TallyValidator (unappliedTallyValidator)
 
 -- | Contract for creating a proposal
 createProposal ::

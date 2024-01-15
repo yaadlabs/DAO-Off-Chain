@@ -1,12 +1,12 @@
-module Scripts.VoteNft
+module Dao.Scripts.Policy.VoteNft
   ( voteNftPolicy
   ) where
 
 import Contract.Monad (Contract)
 import Contract.Prelude (pure, ($))
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
-import Scripts.Utils (mkScript)
+import Dao.Scripts.Utils (mkScript)
 
 voteNftPolicy :: Contract MintingPolicy
 voteNftPolicy = pure $ PlutusMintingPolicy $ mkScript
-  "./scripts/Json/Optimised/AlwaysMints.json"
+  "./src/Dao/Scripts/Json/Optimised/AlwaysMints.json"

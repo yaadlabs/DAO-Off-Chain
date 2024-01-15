@@ -37,13 +37,13 @@ import Contract.Value
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Scripts.Policy.UpgradePolicy (upgradePolicy)
+import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
+import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
 import Dao.Utils.Error (guardContract)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.UpgradePolicy (upgradePolicy)
 
 upgradeConfig ::
   UpgradeConfigParams ->
