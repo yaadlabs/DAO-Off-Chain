@@ -32,13 +32,15 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
+  , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
@@ -49,24 +51,29 @@ import Scripts.VoteValidator (unappliedVoteValidator)
 
 -- | Contract for cancelling a vote
 cancelVote ::
-  ConfigurationValidatorConfig ->
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
+  CancelVoteParams ->
   Contract TransactionHash
-cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
+cancelVote params = do
   logInfo' "Entering cancelVote transaction"
 
   -- Make the scripts
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
   appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
 
+  let
+    voteSymbol :: CurrencySymbol
+    voteSymbol = scriptCurrencySymbol appliedVotePolicy
+
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel voteSymbol
+  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel
+    voteSymbol
     appliedVoteValidator
 
   -- Extract the vote owner from the vote datum
@@ -79,7 +86,8 @@ cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
 
   let
     burnVoteNft :: Value
-    burnVoteNft = Value.singleton voteSymbol voteTokenName (negate one)
+    burnVoteNft = Value.singleton voteSymbol params.voteTokenName
+      (negate one)
 
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn

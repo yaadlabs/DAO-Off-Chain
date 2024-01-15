@@ -86,7 +86,6 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
 
   let
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
-
   utxos <- utxosAt scriptAddr
 
   let

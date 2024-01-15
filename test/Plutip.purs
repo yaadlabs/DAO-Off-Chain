@@ -21,6 +21,7 @@ import Effect.Aff
   , launchAff
   )
 import Test.Spec.Runner (defaultConfig)
+import Test.Workflow.CancelVote as CancelVote
 import Test.Workflow.VoteOnProposal as VoteOnProposal
 
 main :: Effect Unit
@@ -30,6 +31,7 @@ main = interruptOnSignal SIGINT =<< launchAff do
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts defaultPlutipConfig do
         VoteOnProposal.suite
+        CancelVote.suite
 
 -- plutipConfig :: PlutipConfig
 -- plutipConfig = defaultConfig { suppressLogs = false }
