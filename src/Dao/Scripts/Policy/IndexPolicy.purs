@@ -14,4 +14,4 @@ unappliedIndexPolicy = mkUnappliedPolicy
 
 unappliedIndexPolicyDebug :: IndexNftConfig -> Contract MintingPolicy
 unappliedIndexPolicyDebug = mkUnappliedPolicy
-  "./scripts/Json/Debug/IndexPolicy.json"
+  "./src/Dao/Scripts/Json/Debug/IndexPolicy.json"

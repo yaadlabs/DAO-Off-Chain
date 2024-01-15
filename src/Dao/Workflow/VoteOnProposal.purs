@@ -15,6 +15,8 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
+  , unwrap
+  , (#)
   , ($)
   , (*)
   , (/\)
@@ -60,14 +62,16 @@ import LambdaBuffers.ApplicationTypes.Vote
 voteOnProposal ::
   VoteOnProposalParams ->
   Contract (TransactionHash /\ CurrencySymbol)
-voteOnProposal voteParams = do
+voteOnProposal params' = do
   logInfo' "Entering voteOnProposal transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let
     validatorConfig = ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: voteParams.configSymbol
-      , cvcConfigNftTokenName: voteParams.configTokenName
+      { cvcConfigNftCurrencySymbol: params.configSymbol
+      , cvcConfigNftTokenName: params.configTokenName
       }
 
   appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
@@ -79,9 +83,9 @@ voteOnProposal voteParams = do
     validatorConfig
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo voteParams.configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  tallyInfo :: TallyInfo <- referenceTallyUtxo voteParams.tallySymbol
+  tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
     appliedTallyValidator
 
   -- Make the on-chain time range
@@ -94,7 +98,7 @@ voteOnProposal voteParams = do
   -- Check if the user has a 'voteNft' token,
   -- which is required in order to vote on a proposal
   -- TODO: Spend it properly, now just finding it
-  voteNftToken <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
+  voteNftToken <- spendVoteNftUtxo params.voteNftSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -103,9 +107,9 @@ voteOnProposal voteParams = do
 
     voteDatum :: VoteDatum
     voteDatum = VoteDatum
-      { proposalTokenName: voteParams.proposalTokenName
-      , direction: voteParams.voteDirection
-      , returnAda: voteParams.returnAda
+      { proposalTokenName: params.proposalTokenName
+      , direction: params.voteDirection
+      , returnAda: params.returnAda
       , voteOwner: ownerAddress
       }
 
@@ -113,7 +117,7 @@ voteOnProposal voteParams = do
     voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
     voteValue :: Value
-    voteValue = Value.singleton voteSymbol voteParams.voteTokenName one
+    voteValue = Value.singleton voteSymbol params.voteTokenName one
 
     votePolicyRedeemer :: Redeemer
     votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint

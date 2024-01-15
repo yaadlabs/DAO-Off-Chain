@@ -59,8 +59,10 @@ import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 countVote ::
   CountVoteParams ->
   Contract TransactionHash
-countVote params = do
+countVote params' = do
   logInfo' "Entering countVote transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

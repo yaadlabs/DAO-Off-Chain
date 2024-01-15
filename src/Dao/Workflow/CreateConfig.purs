@@ -16,6 +16,7 @@ import Contract.Prelude
   , one
   , pure
   , unwrap
+  , (#)
   , ($)
   , (/\)
   )
@@ -69,7 +70,7 @@ import LambdaBuffers.ApplicationTypes.Configuration
 createConfig ::
   CreateConfigParams ->
   Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createConfig configParams = do
+createConfig params = do
   logInfo' "Entering createConfig transaction"
 
   userUtxos <- getAllWalletUtxos
@@ -80,7 +81,7 @@ createConfig configParams = do
 
   dynamicConfigInfo <-
     buildDynamicConfig
-      configParams
+      params
       configSpend
 
   let
@@ -92,7 +93,10 @@ createConfig configParams = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ dynamicConfigInfo.symbol /\ configParams.configTokenName)
+  pure
+    ( txHash /\ dynamicConfigInfo.symbol /\
+        (params # unwrap # _.configTokenName)
+    )
 
 type ConfigInfo =
   { symbol :: CurrencySymbol
@@ -109,9 +113,11 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
     logInfo' "Entering buildDynamicConfig transaction"
 
     let
+      params = configParams # unwrap
+
       configPolicyParams :: NftConfig
       configPolicyParams = NftConfig
-        { ncInitialUtxo: txInput, ncTokenName: configParams.configTokenName }
+        { ncInitialUtxo: txInput, ncTokenName: params.configTokenName }
 
     appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicyDebug
       configPolicyParams
@@ -124,7 +130,7 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
       configValidatorParams =
         ConfigurationValidatorConfig
           { cvcConfigNftCurrencySymbol: configSymbol
-          , cvcConfigNftTokenName: configParams.configTokenName
+          , cvcConfigNftTokenName: params.configTokenName
           }
 
     appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
@@ -160,28 +166,28 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
         , treasuryValidator: treasuryScriptHash
 
         -- Percentages and thresholds
-        , upgradeMajorityPercent: configParams.upgradeMajorityPercent
+        , upgradeMajorityPercent: params.upgradeMajorityPercent
         , upgradeRelativeMajorityPercent:
-            configParams.upgradeRelativeMajorityPercent
-        , generalMajorityPercent: configParams.generalMajorityPercent
+            params.upgradeRelativeMajorityPercent
+        , generalMajorityPercent: params.generalMajorityPercent
         , generalRelativeMajorityPercent:
-            configParams.generalRelativeMajorityPercent
-        , tripMajorityPercent: configParams.tripMajorityPercent
-        , tripRelativeMajorityPercent: configParams.tripRelativeMajorityPercent
-        , totalVotes: configParams.totalVotes
-        , maxGeneralDisbursement: configParams.maxGeneralDisbursement
-        , maxTripDisbursement: configParams.maxTripDisbursement
-        , agentDisbursementPercent: configParams.agentDisbursementPercent
-        , proposalTallyEndOffset: configParams.proposalTallyEndOffset
-        , fungibleVotePercent: configParams.fungibleVotePercent
+            params.generalRelativeMajorityPercent
+        , tripMajorityPercent: params.tripMajorityPercent
+        , tripRelativeMajorityPercent: params.tripRelativeMajorityPercent
+        , totalVotes: params.totalVotes
+        , maxGeneralDisbursement: params.maxGeneralDisbursement
+        , maxTripDisbursement: params.maxTripDisbursement
+        , agentDisbursementPercent: params.agentDisbursementPercent
+        , proposalTallyEndOffset: params.proposalTallyEndOffset
+        , fungibleVotePercent: params.fungibleVotePercent
 
         -- Symbols and token names
-        , tallyNft: configParams.tallyNft
-        , voteCurrencySymbol: configParams.voteCurrencySymbol
-        , voteTokenName: configParams.voteTokenName
-        , voteNft: configParams.voteNft
-        , voteFungibleCurrencySymbol: configParams.voteFungibleCurrencySymbol
-        , voteFungibleTokenName: configParams.voteFungibleTokenName
+        , tallyNft: params.tallyNft
+        , voteCurrencySymbol: params.voteCurrencySymbol
+        , voteTokenName: params.voteTokenName
+        , voteNft: params.voteNft
+        , voteFungibleCurrencySymbol: params.voteFungibleCurrencySymbol
+        , voteFungibleTokenName: params.voteFungibleTokenName
         }
 
     let
@@ -189,7 +195,7 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
       configValidatorHash = validatorHash appliedConfigValidator
 
       nftConfig :: Value
-      nftConfig = Value.singleton configSymbol configParams.configTokenName one
+      nftConfig = Value.singleton configSymbol params.configTokenName one
 
       configDatum :: Datum
       configDatum = Datum $ toData dynamicConfig

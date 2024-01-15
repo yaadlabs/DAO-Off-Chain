@@ -14,6 +14,11 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Dao.Component.Proposal.Params
+  ( CreateProposalParams(CreateProposalParams)
+  )
+import Dao.Component.Vote.Params (VoteOnProposalParams(VoteOnProposalParams))
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -22,7 +27,6 @@ import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
@@ -46,23 +50,26 @@ suite = do
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
-          sampleTallyStateDatum' <- sampleTallyStateDatum
+          tallyStateDatum <- sampleTallyStateDatum
 
           let
-            proposalParams =
-              { configSymbol, indexSymbol, configTokenName, indexTokenName }
+            proposalParams = CreateProposalParams
+              { configSymbol
+              , indexSymbol
+              , configTokenName
+              , indexTokenName
+              , tallyStateDatum
+              }
 
           (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
-            createProposal
-              proposalParams
-              sampleTallyStateDatum'
+            createProposal proposalParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
 
           voteNftPolicy' <- voteNftPolicy
           let
-            voteParams =
+            voteParams = VoteOnProposalParams
               { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName

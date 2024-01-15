@@ -53,8 +53,10 @@ import LambdaBuffers.ApplicationTypes.Vote
 cancelVote ::
   CancelVoteParams ->
   Contract TransactionHash
-cancelVote params = do
+cancelVote params' = do
   logInfo' "Entering cancelVote transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

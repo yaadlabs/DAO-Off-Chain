@@ -48,9 +48,11 @@ import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 upgradeConfig ::
   UpgradeConfigParams ->
   Contract TransactionHash
-upgradeConfig params =
+upgradeConfig params' =
   do
     logInfo' "Entering upgradeConfig transaction"
+
+    let params = params' # unwrap
 
     -- Make the scripts
     let

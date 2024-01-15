@@ -15,6 +15,8 @@ import Contract.Prelude
   , one
   , pure
   , show
+  , unwrap
+  , (#)
   , ($)
   , (+)
   , (/\)
@@ -54,32 +56,31 @@ import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 -- | Contract for creating a proposal
 createProposal ::
   CreateProposalParams ->
-  TallyStateDatum ->
   Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createProposal
-  proposalParams
-  tallyStateDatum = do
+createProposal params' = do
   logInfo' "Entering createProposal transaction"
 
+  let params = params' # unwrap
+
   let
-    validatorConfig = mkValidatorConfig proposalParams.configSymbol
-      proposalParams.configTokenName
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo proposalParams.configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  indexInfo :: IndexInfo <- spendIndexUtxo proposalParams.indexSymbol
+  indexInfo :: IndexInfo <- spendIndexUtxo params.indexSymbol
     indexValidator
 
   let
-    tallyConfig = mkTallyConfig proposalParams.configSymbol
-      proposalParams.indexSymbol
-      proposalParams.configTokenName
-      proposalParams.indexTokenName
+    tallyConfig = mkTallyConfig params.configSymbol
+      params.indexSymbol
+      params.configTokenName
+      params.indexTokenName
   appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
@@ -121,7 +122,7 @@ createProposal
         [ Constraints.mustMintValue tallyNft
         , Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData tallyStateDatum)
+            (Datum $ toData $ params.tallyStateDatum)
             Constraints.DatumInline
             tallyNft
         , Constraints.mustPayToScript

@@ -41,7 +41,7 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryParamsTrip)
+import Dao.Component.Treasury.Params (TreasuryTripParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
 import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
@@ -55,9 +55,11 @@ import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
-treasuryTrip :: TreasuryParamsTrip -> Contract TransactionHash
-treasuryTrip params = do
+treasuryTrip :: TreasuryTripParams -> Contract TransactionHash
+treasuryTrip params' = do
   logInfo' "Entering treasuryTrip transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

@@ -3,16 +3,17 @@ Module: Dao.Component.Treasury.Params
 Description: Treasury helpers
 -}
 module Dao.Component.Treasury.Params
-  ( TreasuryParamsGeneral
-  , TreasuryParamsTrip
+  ( TreasuryGeneralParams(..)
+  , TreasuryTripParams(..)
   ) where
 
 import Contract.Address (Address)
 import Contract.Value (CurrencySymbol, TokenName)
+import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 
 -- | Parameters for treasury trip contract
-type TreasuryParamsTrip =
+newtype TreasuryTripParams = TreasuryTripParams
   { travelAgentAddress :: Address
   , travellerAddress :: Address
   , totalTravelCost :: BigInt
@@ -22,8 +23,10 @@ type TreasuryParamsTrip =
   , treasurySymbol :: CurrencySymbol
   }
 
+derive instance Newtype TreasuryTripParams _
+
 -- | Parameters for treasury general contract
-type TreasuryParamsGeneral =
+newtype TreasuryGeneralParams = TreasuryGeneralParams
   { paymentAddress :: Address
   , generalPaymentAmount :: BigInt
   , configSymbol :: CurrencySymbol
@@ -31,3 +34,5 @@ type TreasuryParamsGeneral =
   , treasurySymbol :: CurrencySymbol
   , configTokenName :: TokenName
   }
+
+derive instance Newtype TreasuryGeneralParams _

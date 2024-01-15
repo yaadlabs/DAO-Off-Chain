@@ -3,18 +3,19 @@ Module: Dao.Component.Vote.Params
 Description: Helpers for vote on proposal workflow
 -}
 module Dao.Component.Vote.Params
-  ( VoteOnProposalParams
-  , CountVoteParams
-  , CancelVoteParams
+  ( VoteOnProposalParams(..)
+  , CountVoteParams(..)
+  , CancelVoteParams(..)
   ) where
 
 import Contract.Scripts (MintingPolicy)
 import Contract.Value (CurrencySymbol, TokenName)
+import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection)
 
 -- | Create proposal contract paramaters
-type VoteOnProposalParams =
+newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: CurrencySymbol
   , tallySymbol :: CurrencySymbol
   , configTokenName :: TokenName
@@ -27,8 +28,10 @@ type VoteOnProposalParams =
   , returnAda :: BigInt
   }
 
+derive instance Newtype VoteOnProposalParams _
+
 -- | Count vote contract paramaters
-type CountVoteParams =
+newtype CountVoteParams = CountVoteParams
   { voteSymbol :: CurrencySymbol
   , voteNftSymbol :: CurrencySymbol
   , voteTokenName :: TokenName
@@ -39,9 +42,13 @@ type CountVoteParams =
   , votePolicy :: MintingPolicy
   }
 
+derive instance Newtype CountVoteParams _
+
 -- | Cancel vote contract paramaters
-type CancelVoteParams =
+newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
   }
+
+derive instance Newtype CancelVoteParams _
