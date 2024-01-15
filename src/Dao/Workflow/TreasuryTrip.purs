@@ -35,23 +35,14 @@ import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
-treasuryTrip ::
-  TreasuryParamsTrip ->
-  CurrencySymbol ->
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
-  Contract TransactionHash
-treasuryTrip
-  treasuryParams
-  configSymbol
-  tallySymbol
-  treasurySymbol
-  configTokenName = do
+treasuryTrip :: TreasuryParamsTrip -> Contract TransactionHash
+treasuryTrip params = do
   logInfo' "Entering treasuryTrip transaction"
 
   -- Make the scripts
-  let validatorConfig = mkValidatorConfig configSymbol configTokenName
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
   appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
@@ -59,17 +50,18 @@ treasuryTrip
     validatorConfig
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol appliedTallyValidator
+  tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
+    appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo
       ( ProposalType'Trip
-          treasuryParams.travelAgentAddress
-          treasuryParams.travellerAddress
-          treasuryParams.totalCost
+          params.travelAgentAddress
+          params.travellerAddress
+          params.totalCost
       )
-      treasurySymbol
+      params.treasurySymbol
       appliedTreasuryValidator
 
   let
