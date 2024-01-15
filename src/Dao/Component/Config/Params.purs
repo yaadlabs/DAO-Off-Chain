@@ -4,6 +4,7 @@ Description: Config helpers
 -}
 module Dao.Component.Config.Params
   ( ConfigParams
+  , UpgradeConfigParams
   , mkValidatorConfig
   ) where
 
@@ -12,6 +13,7 @@ import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 
 -- | Parameters passed when initially creating dynamic config
 type ConfigParams =
@@ -34,6 +36,14 @@ type ConfigParams =
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  }
+
+-- | Parameters passed for the upgrade config proposal contract
+type UpgradeConfigParams =
+  { newDynamicConfigDatum :: DynamicConfigDatum
+  , configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , tallySymbol :: CurrencySymbol
   }
 
 mkValidatorConfig ::

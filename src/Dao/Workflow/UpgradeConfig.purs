@@ -11,8 +11,15 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
+  , one
   , pure
+  , unwrap
+  , (#)
   , ($)
+  , (*)
+  , (+)
+  , (/)
+  , (>=)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
@@ -22,55 +29,105 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value
-  ( CurrencySymbol
-  , TokenName
+  ( Value
+  , adaToken
+  , scriptCurrencySymbol
+  , singleton
   )
-import Dao.Component.Config.Params (mkValidatorConfig)
+import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Utils.Error (guardContract)
+import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
+import Scripts.UpgradePolicy (upgradePolicy)
 
 upgradeConfig ::
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
-  DynamicConfigDatum ->
+  UpgradeConfigParams ->
   Contract TransactionHash
-upgradeConfig configSymbol tallySymbol configTokenName newDynamicConfigDatum =
+upgradeConfig params =
   do
     logInfo' "Entering upgradeConfig transaction"
 
     -- Make the scripts
-    let validatorConfig = mkValidatorConfig configSymbol configTokenName
+    let
+      validatorConfig = mkValidatorConfig params.configSymbol
+        params.configTokenName
     appliedTallyValidator :: Validator <- unappliedTallyValidator
       validatorConfig
     appliedConfigValidator :: Validator <- unappliedConfigValidator
       validatorConfig
 
     -- Query the UTXOs
-    configInfo :: ConfigInfo <- spendConfigUtxo configSymbol
+    configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
-    tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol
+    tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
       appliedTallyValidator
 
     let
       newConfigDatum :: Datum
-      newConfigDatum = Datum $ toData newDynamicConfigDatum
+      newConfigDatum = Datum $ toData params.newDynamicConfigDatum
 
       configValidatorHash :: ValidatorHash
       configValidatorHash = validatorHash appliedConfigValidator
 
-      -- TODO: Need to include an upgrade policy in the lookups
+      oldDynamicConfig :: DynamicConfigDatum
+      oldDynamicConfig = configInfo.datum
+
+      tallyDatum :: TallyStateDatum
+      tallyDatum = tallyInfo.datum
+
+      votesFor :: BigInt
+      votesFor = tallyDatum # unwrap # _.for
+
+      votesAgainst :: BigInt
+      votesAgainst = tallyDatum # unwrap # _.against
+
+      totalVotes :: BigInt
+      totalVotes = votesFor + votesAgainst
+
+      configTotalVotes :: BigInt
+      configTotalVotes = oldDynamicConfig # unwrap # _.totalVotes
+
+      relativeMajority :: BigInt
+      relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
+
+      majorityPercent :: BigInt
+      majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
+
+      configUpgradeRelativeMajorityPercent :: BigInt
+      configUpgradeRelativeMajorityPercent = oldDynamicConfig # unwrap #
+        _.upgradeRelativeMajorityPercent
+
+      configUpgradeMajorityPercent :: BigInt
+      configUpgradeMajorityPercent = oldDynamicConfig # unwrap #
+        _.upgradeMajorityPercent
+
+    -- Check for sufficient votes
+    guardContract "Relative majority is too low" $ relativeMajority >=
+      configUpgradeRelativeMajorityPercent
+    guardContract "Majority percent is too low" $ majorityPercent >=
+      configUpgradeMajorityPercent
+
+    upgradePolicy' <- upgradePolicy
+
+    let
+      -- We use an always succeeds policy as a placeholder for this requirement
+      upgradeToken :: Value
+      upgradeToken = singleton (scriptCurrencySymbol upgradePolicy') adaToken
+        one
+
       lookups :: Lookups.ScriptLookups
       lookups =
         mconcat
           [ configInfo.lookups
           , tallyInfo.lookups
+          , Lookups.mintingPolicy upgradePolicy'
           ]
 
-      -- TODO: Need to include mustMintValue via an upgrade policy here too
       constraints :: Constraints.TxConstraints
       constraints =
         mconcat
@@ -79,6 +136,7 @@ upgradeConfig configSymbol tallySymbol configTokenName newDynamicConfigDatum =
               (Datum $ toData newConfigDatum)
               Constraints.DatumInline
               configInfo.value
+          , Constraints.mustMintValue upgradeToken
           , configInfo.constraints
           , tallyInfo.constraints
           ]
