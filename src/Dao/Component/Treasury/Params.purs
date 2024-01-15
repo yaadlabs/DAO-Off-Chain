@@ -15,7 +15,7 @@ import JS.BigInt (BigInt)
 type TreasuryParamsTrip =
   { travelAgentAddress :: Address
   , travellerAddress :: Address
-  , totalCost :: BigInt
+  , totalTravelCost :: BigInt
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
