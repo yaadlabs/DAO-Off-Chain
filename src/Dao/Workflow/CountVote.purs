@@ -29,7 +29,7 @@ import Contract.Prelude
   , (==)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, ValidatorHash, validatorHash)
+import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
@@ -44,6 +44,7 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
+import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicy)
 import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
 import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
 import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
@@ -68,11 +69,13 @@ countVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
+
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
   appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
   appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -94,7 +97,7 @@ countVote params' = do
       params.voteSymbol
       params.voteNftTokenName
       params.voteTokenName
-      params.votePolicy
+      appliedVotePolicy
       voteUtxos
 
   -- Make on-chain time range
