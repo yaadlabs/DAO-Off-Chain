@@ -5,6 +5,8 @@ import Contract.Prelude
 import Aeson as Aeson
 import JS.BigInt (BigInt)
 
+-- * Non app-specific / CTL types
+
 -- | TokenName represented as a wrapped String
 newtype TokenName = TokenName String
 
@@ -13,7 +15,7 @@ instance Show TokenName where
 
 derive newtype instance Aeson.DecodeAeson TokenName
 
--- | 56-character long hex string
+-- | 56-character hex string
 -- | Used to represent a 'CurrencySymbol'
 newtype Hash28 = Hash28 String
 
@@ -24,8 +26,22 @@ instance Show Hash28 where
 
 derive newtype instance Aeson.DecodeAeson Hash28
 
+-- | 64-character hex string
+-- | Used to represent a TransactionHash
+newtype Hash32 = Hash32 String
+
+derive instance Newtype Hash32 _
+
+instance Show Hash32 where
+  show (Hash32 h) = h
+
+derive newtype instance Aeson.DecodeAeson Hash32
+
 -- | ScriptHash represented as a wrapped String
 newtype ScriptHash = ScriptHash String
+
+-- | TransactionHash represented as a 64-character String
+type TransactionHash = Hash32
 
 -- | POSIXTime represented as a wrapped BigInt
 newtype POSIXTime = POSIXTime BigInt
@@ -35,6 +51,8 @@ newtype Address = Address String
 
 instance Show Address where
   show (Address a) = a
+
+-- * Contract parameters
 
 -- | Parameters passed when initially creating dynamic config
 newtype CreateConfigParams = CreateConfigParams
@@ -67,31 +85,6 @@ newtype UpgradeConfigParams = UpgradeConfigParams
   , tallySymbol :: Hash28
   }
 
-newtype DynamicConfigDatum = DynamicConfigDatum
-  { tallyValidator :: ScriptHash
-  , treasuryValidator :: ScriptHash
-  , configurationValidator :: ScriptHash
-  , voteValidator :: ScriptHash
-  , upgradeMajorityPercent :: BigInt
-  , upgradeRelativeMajorityPercent :: BigInt
-  , generalMajorityPercent :: BigInt
-  , generalRelativeMajorityPercent :: BigInt
-  , tripMajorityPercent :: BigInt
-  , tripRelativeMajorityPercent :: BigInt
-  , totalVotes :: BigInt
-  , maxGeneralDisbursement :: BigInt
-  , maxTripDisbursement :: BigInt
-  , agentDisbursementPercent :: BigInt
-  , proposalTallyEndOffset :: BigInt
-  , tallyNft :: Hash28
-  , voteCurrencySymbol :: Hash28
-  , voteTokenName :: TokenName
-  , voteNft :: Hash28
-  , voteFungibleCurrencySymbol :: Hash28
-  , voteFungibleTokenName :: TokenName
-  , fungibleVotePercent :: BigInt
-  }
-
 -- | Create proposal contract paramaters
 newtype CreateProposalParams = CreateProposalParams
   { configSymbol :: Hash28
@@ -100,18 +93,6 @@ newtype CreateProposalParams = CreateProposalParams
   , indexTokenName :: TokenName
   , tallyStateDatum :: TallyStateDatum
   }
-
-newtype TallyStateDatum = TallyStateDatum
-  { proposal :: ProposalType
-  , proposalEndTime :: POSIXTime
-  , for :: BigInt
-  , against :: BigInt
-  }
-
-data ProposalType
-  = ProposalType'Upgrade Hash28
-  | ProposalType'General Address BigInt
-  | ProposalType'Trip Address Address BigInt
 
 -- | Parameters for treasury trip contract
 newtype TreasuryTripParams = TreasuryTripParams
@@ -148,8 +129,6 @@ newtype VoteOnProposalParams = VoteOnProposalParams
   , returnAda :: BigInt
   }
 
-data VoteDirection = VoteDirection'For | VoteDirection'Against
-
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
   { voteSymbol :: Hash28
@@ -167,3 +146,49 @@ newtype CancelVoteParams = CancelVoteParams
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
   }
+
+-- * Datums
+
+-- | The app's config datum
+newtype DynamicConfigDatum = DynamicConfigDatum
+  { tallyValidator :: ScriptHash
+  , treasuryValidator :: ScriptHash
+  , configurationValidator :: ScriptHash
+  , voteValidator :: ScriptHash
+  , upgradeMajorityPercent :: BigInt
+  , upgradeRelativeMajorityPercent :: BigInt
+  , generalMajorityPercent :: BigInt
+  , generalRelativeMajorityPercent :: BigInt
+  , tripMajorityPercent :: BigInt
+  , tripRelativeMajorityPercent :: BigInt
+  , totalVotes :: BigInt
+  , maxGeneralDisbursement :: BigInt
+  , maxTripDisbursement :: BigInt
+  , agentDisbursementPercent :: BigInt
+  , proposalTallyEndOffset :: BigInt
+  , tallyNft :: Hash28
+  , voteCurrencySymbol :: Hash28
+  , voteTokenName :: TokenName
+  , voteNft :: Hash28
+  , voteFungibleCurrencySymbol :: Hash28
+  , voteFungibleTokenName :: TokenName
+  , fungibleVotePercent :: BigInt
+  }
+
+-- | Proposal datum
+newtype TallyStateDatum = TallyStateDatum
+  { proposal :: ProposalType
+  , proposalEndTime :: POSIXTime
+  , for :: BigInt
+  , against :: BigInt
+  }
+
+-- | Index datum
+newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
+
+data VoteDirection = VoteDirection'For | VoteDirection'Against
+
+data ProposalType
+  = ProposalType'Upgrade Hash28
+  | ProposalType'General Address BigInt
+  | ProposalType'Trip Address Address BigInt
