@@ -1,0 +1,352 @@
+{-|
+Module: Dao.Web.Conversion
+Description: For conversions between JavaScript and PureScript
+-}
+module Dao.Web.Conversion where
+
+import Contract.Prelude
+
+import Contract.Config
+  ( NetworkId
+  ) as Ctl
+import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
+import Contract.Prim.ByteArray (rawBytesToHex)
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  , getCurrencySymbol
+  , getTokenName
+  , mkCurrencySymbol
+  , mkTokenName
+  ) as Ctl
+import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
+import Ctl.Internal.Serialization.Hash (ScriptHash) as Ctl
+import Ctl.Internal.Serialization.Hash
+  ( scriptHashToBytes
+  )
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , UpgradeConfigParams(UpgradeConfigParams)
+  ) as DaoApi
+import Dao.Component.Proposal.Params
+  ( CreateProposalParams(CreateProposalParams)
+  ) as DaoApi
+import Dao.Web.Types as WebApi
+import Data.Either (Either(Left))
+import LambdaBuffers.ApplicationTypes.Configuration
+  ( DynamicConfigDatum(DynamicConfigDatum)
+  ) as DaoApi
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum)) as DaoApi
+
+type Conversion a = ReaderT Ctl.NetworkId (Either String) a
+
+class ConvertPsToJs js ps | js -> ps where
+  convertPsToJs :: ps -> Conversion js
+
+class (ConvertPsToJs js ps) <= ConvertJsToPs js ps | js -> ps where
+  convertJsToPs :: js -> Conversion ps
+
+runConvertJsToPs ::
+  forall js ps.
+  ConvertJsToPs js ps =>
+  js ->
+  Ctl.NetworkId ->
+  Either String ps
+runConvertJsToPs js = runReaderT $ convertJsToPs js
+
+runConvertPsToJs ::
+  forall js ps.
+  ConvertPsToJs js ps =>
+  ps ->
+  Ctl.NetworkId ->
+  Either String js
+runConvertPsToJs ps = runReaderT $ convertPsToJs ps
+
+note :: forall a. String -> Maybe a -> Conversion a
+note _ (Just a) = pure a
+note msg Nothing = lift $ Left msg
+
+instance ConvertPsToJs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
+  convertPsToJs (DaoApi.DynamicConfigDatum params) = do
+
+    tallyValidator' <- convertPsToJs params.tallyValidator
+    treasuryValidator' <- convertPsToJs params.treasuryValidator
+    configValidator' <- convertPsToJs params.configurationValidator
+    voteValidator' <- convertPsToJs params.voteValidator
+    tallyNft' <- convertPsToJs params.tallyNft
+    voteCurrencySymbol' <- convertPsToJs params.voteCurrencySymbol
+    voteTokenName' <- convertPsToJs params.voteTokenName
+    voteNft' <- convertPsToJs params.voteNft
+    voteFungibleCurrencySymbol' <- convertPsToJs
+      params.voteFungibleCurrencySymbol
+    voteFungibleTokenName' <- convertPsToJs params.voteFungibleTokenName
+
+    pure $ WebApi.DynamicConfigDatum
+      { tallyValidator: tallyValidator'
+      , treasuryValidator: treasuryValidator'
+      , configurationValidator: configValidator'
+      , voteValidator: voteValidator'
+      , upgradeMajorityPercent: params.upgradeMajorityPercent
+      , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
+      , generalMajorityPercent: params.generalMajorityPercent
+      , generalRelativeMajorityPercent: params.generalRelativeMajorityPercent
+      , tripMajorityPercent: params.tripMajorityPercent
+      , tripRelativeMajorityPercent: params.tripRelativeMajorityPercent
+      , totalVotes: params.totalVotes
+      , maxGeneralDisbursement: params.maxGeneralDisbursement
+      , maxTripDisbursement: params.maxTripDisbursement
+      , agentDisbursementPercent: params.agentDisbursementPercent
+      , proposalTallyEndOffset: params.proposalTallyEndOffset
+      , tallyNft: tallyNft'
+      , voteCurrencySymbol: voteCurrencySymbol'
+      , voteTokenName: voteTokenName'
+      , voteNft: voteNft'
+      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
+      , voteFungibleTokenName: voteFungibleTokenName'
+      , fungibleVotePercent: params.fungibleVotePercent
+      }
+
+instance ConvertJsToPs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
+  convertJsToPs (WebApi.DynamicConfigDatum params) = do
+
+    tallyValidator' <- convertPsToJs params.tallyValidator
+    treasuryValidator' <- convertPsToJs params.treasuryValidator
+    configValidator' <- convertPsToJs params.configurationValidator
+    voteValidator' <- convertPsToJs params.voteValidator
+    tallyNft' <- convertPsToJs params.tallyNft
+    voteCurrencySymbol' <- convertPsToJs params.voteCurrencySymbol
+    voteTokenName' <- convertPsToJs params.voteTokenName
+    voteNft' <- convertPsToJs params.voteNft
+    voteFungibleCurrencySymbol' <- convertPsToJs
+      params.voteFungibleCurrencySymbol
+    voteFungibleTokenName' <- convertPsToJs params.voteFungibleTokenName
+
+    pure $ DaoApi.DynamicConfigDatum
+      { tallyValidator: tallyValidator'
+      , treasuryValidator: treasuryValidator'
+      , configurationValidator: configValidator'
+      , voteValidator: voteValidator'
+      , upgradeMajorityPercent: params.upgradeMajorityPercent
+      , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
+      , generalMajorityPercent: params.generalMajorityPercent
+      , generalRelativeMajorityPercent: params.generalRelativeMajorityPercent
+      , tripMajorityPercent: params.tripMajorityPercent
+      , tripRelativeMajorityPercent: params.tripRelativeMajorityPercent
+      , totalVotes: params.totalVotes
+      , maxGeneralDisbursement: params.maxGeneralDisbursement
+      , maxTripDisbursement: params.maxTripDisbursement
+      , agentDisbursementPercent: params.agentDisbursementPercent
+      , proposalTallyEndOffset: params.proposalTallyEndOffset
+      , tallyNft: tallyNft'
+      , voteCurrencySymbol: voteCurrencySymbol'
+      , voteTokenName: voteTokenName'
+      , voteNft: voteNft'
+      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
+      , voteFungibleTokenName: voteFungibleTokenName'
+      , fungibleVotePercent: params.fungibleVotePercent
+      }
+
+-- * UpgradeConfigParams
+
+instance ConvertPsToJs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams where
+  convertPsToJs (DaoApi.UpgradeConfigParams params) = do
+
+    newDynamicConfigDatum' <- convertPsToJs params.newDynamicConfigDatum
+    configSymbol' <- convertPsToJs params.configSymbol
+    configTokenName' <- convertPsToJs params.configTokenName
+    tallySymbol' <- convertPsToJs params.tallySymbol
+
+    pure $ WebApi.UpgradeConfigParams
+      { newDynamicConfigDatum: newDynamicConfigDatum'
+      , configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , tallySymbol: tallySymbol'
+      }
+
+instance ConvertJsToPs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams where
+  convertJsToPs (WebApi.UpgradeConfigParams params) = do
+
+    newDynamicConfigDatum' <- convertJsToPs params.newDynamicConfigDatum
+    configSymbol' <- convertJsToPs params.configSymbol
+    configTokenName' <- convertJsToPs params.configTokenName
+    tallySymbol' <- convertJsToPs params.tallySymbol
+
+    pure $ DaoApi.UpgradeConfigParams
+      { newDynamicConfigDatum: newDynamicConfigDatum'
+      , configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , tallySymbol: tallySymbol'
+      }
+
+-- * CreateConfigParams
+
+instance
+  ConvertPsToJs WebApi.CreateConfigParams DaoApi.CreateConfigParams where
+  convertPsToJs (DaoApi.CreateConfigParams params) = do
+
+    configTokenName' <- convertPsToJs params.configTokenName
+    tallyNft' <- convertPsToJs params.tallyNft
+    voteCurrencySymbol' <- convertPsToJs params.voteCurrencySymbol
+    voteTokenName' <- convertPsToJs params.voteTokenName
+    voteNft' <- convertPsToJs params.voteNft
+    voteFungibleCurrencySymbol' <- convertPsToJs
+      params.voteFungibleCurrencySymbol
+    voteFungibleTokenName' <- convertPsToJs params.voteFungibleTokenName
+
+    pure $ WebApi.CreateConfigParams
+      { configTokenName: configTokenName'
+      , upgradeMajorityPercent: params.upgradeMajorityPercent
+      , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
+      , generalMajorityPercent: params.generalMajorityPercent
+      , generalRelativeMajorityPercent: params.generalRelativeMajorityPercent
+      , tripMajorityPercent: params.tripMajorityPercent
+      , tripRelativeMajorityPercent: params.tripRelativeMajorityPercent
+      , totalVotes: params.totalVotes
+      , maxGeneralDisbursement: params.maxGeneralDisbursement
+      , maxTripDisbursement: params.maxTripDisbursement
+      , agentDisbursementPercent: params.agentDisbursementPercent
+      , proposalTallyEndOffset: params.proposalTallyEndOffset
+      , tallyNft: tallyNft'
+      , voteCurrencySymbol: voteCurrencySymbol'
+      , voteTokenName: voteTokenName'
+      , voteNft: voteNft'
+      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
+      , voteFungibleTokenName: voteFungibleTokenName'
+      , fungibleVotePercent: params.fungibleVotePercent
+      }
+
+instance
+  ConvertJsToPs WebApi.CreateConfigParams DaoApi.CreateConfigParams where
+  convertJsToPs (WebApi.CreateConfigParams params) = do
+
+    configTokenName' <- convertJsToPs params.configTokenName
+    tallyNft' <- convertJsToPs params.tallyNft
+    voteCurrencySymbol' <- convertJsToPs params.voteCurrencySymbol
+    voteTokenName' <- convertJsToPs params.voteTokenName
+    voteNft' <- convertJsToPs params.voteNft
+    voteFungibleCurrencySymbol' <- convertJsToPs
+      params.voteFungibleCurrencySymbol
+    voteFungibleTokenName' <- convertJsToPs params.voteFungibleTokenName
+
+    pure $ DaoApi.CreateConfigParams
+      { configTokenName: configTokenName'
+      , upgradeMajorityPercent: params.upgradeMajorityPercent
+      , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
+      , generalMajorityPercent: params.generalMajorityPercent
+      , generalRelativeMajorityPercent: params.generalRelativeMajorityPercent
+      , tripMajorityPercent: params.tripMajorityPercent
+      , tripRelativeMajorityPercent: params.tripRelativeMajorityPercent
+      , totalVotes: params.totalVotes
+      , maxGeneralDisbursement: params.maxGeneralDisbursement
+      , maxTripDisbursement: params.maxTripDisbursement
+      , agentDisbursementPercent: params.agentDisbursementPercent
+      , proposalTallyEndOffset: params.proposalTallyEndOffset
+      , tallyNft: tallyNft'
+      , voteCurrencySymbol: voteCurrencySymbol'
+      , voteTokenName: voteTokenName'
+      , voteNft: voteNft'
+      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
+      , voteFungibleTokenName: voteFungibleTokenName'
+      , fungibleVotePercent: params.fungibleVotePercent
+      }
+
+-- * CreateProposalParams
+
+instance ConvertPsToJs WebApi.CreateProposalParams DaoApi.CreateProposalParams where
+  convertPsToJs (DaoApi.CreateProposalParams params) = do
+
+    configSymbol' <- convertPsToJs params.configSymbol
+    configTokenName' <- convertPsToJs params.configTokenName
+    indexSymbol' <- convertPsToJs params.indexSymbol
+    indexTokenName' <- convertPsToJs params.indexTokenName
+    tallyStateDatum' <- convertPsToJs params.tallyStateDatum
+
+    pure $ WebApi.CreateProposalParams
+      { configSymbol: configSymbol'
+      , indexSymbol: indexSymbol'
+      , configTokenName: configTokenName'
+      , indexTokenName: indexTokenName'
+      , tallyStateDatum: tallyStateDatum'
+      }
+
+instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams where
+  convertPsToJs (WebApi.CreateProposalParams params) = do
+
+    configSymbol' <- convertJsToPs params.configSymbol
+    configTokenName' <- convertJsToPs params.configTokenName
+    indexSymbol' <- convertJsToPs params.indexSymbol
+    indexTokenName' <- convertJsToPs params.indexTokenName
+    tallyStateDatum' <- convertJsToPs params.tallyStateDatum
+
+    pure $ DaoApi.CreateProposalParams
+      { configSymbol: configSymbol'
+      , indexSymbol: indexSymbol'
+      , configTokenName: configTokenName'
+      , indexTokenName: indexTokenName'
+      , tallyStateDatum: tallyStateDatum'
+      }
+
+-- * TallyStateDatum
+
+instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
+  convertPsToJs (DaoApi.TallyStateDatum params) = do
+
+    proposal' <- convertPsToJs params.proposal
+    proposalEndTime' <- convertPsToJs params.proposalEndTime
+    for' <- convertPsToJs params.for
+    against' <- convertPsToJs params.against
+
+    pure $ WebApi.TallyStateDatum
+      { proposal: proposal'
+      , proposalEndTime: proposalEndTime'
+      , for: for'
+      , against: against'
+      }
+
+instance ConvertJsToPs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
+  convertJsToPs (WebApi.TallyStateDatum params) = do
+
+    proposal' <- convertJsToPs params.proposal
+    proposalEndTime' <- convertJsToPs params.proposalEndTime
+    for' <- convertJsToPs params.for
+    against' <- convertJsToPs params.against
+
+    pure $ DaoApi.TallyStateDatum
+      { proposal: proposal'
+      , proposalEndTime: proposalEndTime'
+      , for: for'
+      , against: against'
+      }
+
+-- * TokenName
+
+instance ConvertPsToJs WebApi.TokenName Ctl.TokenName where
+  convertPsToJs = pure <<< WebApi.TokenName <<< Ctl.byteArrayToHex <<<
+    Ctl.getTokenName
+
+instance ConvertJsToPs WebApi.TokenName Ctl.TokenName where
+  convertJsToPs (WebApi.TokenName tn) = do
+    note ("Invalid token name: " <> show tn)
+      $ Ctl.hexToByteArray tn
+      >>= Ctl.mkTokenName
+
+-- * CurrencySymbol
+
+instance ConvertPsToJs WebApi.Hash28 Ctl.CurrencySymbol where
+  convertPsToJs = pure <<< WebApi.Hash28 <<< Ctl.byteArrayToHex <<<
+    Ctl.getCurrencySymbol
+
+instance ConvertJsToPs WebApi.Hash28 Ctl.CurrencySymbol where
+  convertJsToPs (WebApi.Hash28 hash28) =
+    note ("Invalid currency symbol: " <> show hash28)
+      $ Ctl.hexToByteArray hash28
+      >>= Ctl.mkCurrencySymbol
+
+-- * ScriptHash
+
+instance ConvertPsToJs WebApi.ScriptHash Ctl.ScriptHash where
+  convertPsToJs = pure <<< WebApi.ScriptHash <<< rawBytesToHex <<<
+    scriptHashToBytes
+
+-- instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
+--   convertJsToPs (WebApi.Hash28 hash28) = undefined
