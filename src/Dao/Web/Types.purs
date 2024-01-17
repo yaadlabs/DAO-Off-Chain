@@ -3,6 +3,7 @@ module Dao.Web.Types where
 import Contract.Prelude
 
 import Aeson as Aeson
+import Contract.Time (POSIXTime)
 import JS.BigInt (BigInt)
 
 -- * Non app-specific / CTL types
@@ -42,9 +43,6 @@ newtype ScriptHash = ScriptHash String
 
 -- | TransactionHash represented as a 64-character String
 type TransactionHash = Hash32
-
--- | POSIXTime represented as a wrapped BigInt
-newtype POSIXTime = POSIXTime BigInt
 
 -- | Address represented as a wrapped String
 newtype Address = Address String

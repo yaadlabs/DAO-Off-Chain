@@ -6,6 +6,13 @@ module Dao.Web.Conversion where
 
 import Contract.Prelude
 
+import Contract.Address
+  ( Address
+  , AddressWithNetworkTag(AddressWithNetworkTag)
+  , PubKeyHash
+  , addressWithNetworkTagFromBech32
+  , addressWithNetworkTagToBech32
+  ) as Ctl
 import Contract.Config
   ( NetworkId
   ) as Ctl
@@ -22,7 +29,8 @@ import Contract.Value
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
 import Ctl.Internal.Serialization.Hash (ScriptHash) as Ctl
 import Ctl.Internal.Serialization.Hash
-  ( scriptHashToBytes
+  ( scriptHashFromBytes
+  , scriptHashToBytes
   )
 import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
@@ -35,6 +43,9 @@ import Dao.Web.Types as WebApi
 import Data.Either (Either(Left))
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
+  ) as DaoApi
+import LambdaBuffers.ApplicationTypes.Proposal
+  ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
   ) as DaoApi
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum)) as DaoApi
 
@@ -109,17 +120,17 @@ instance ConvertPsToJs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
 instance ConvertJsToPs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
   convertJsToPs (WebApi.DynamicConfigDatum params) = do
 
-    tallyValidator' <- convertPsToJs params.tallyValidator
-    treasuryValidator' <- convertPsToJs params.treasuryValidator
-    configValidator' <- convertPsToJs params.configurationValidator
-    voteValidator' <- convertPsToJs params.voteValidator
-    tallyNft' <- convertPsToJs params.tallyNft
-    voteCurrencySymbol' <- convertPsToJs params.voteCurrencySymbol
-    voteTokenName' <- convertPsToJs params.voteTokenName
-    voteNft' <- convertPsToJs params.voteNft
-    voteFungibleCurrencySymbol' <- convertPsToJs
+    tallyValidator' <- convertJsToPs params.tallyValidator
+    treasuryValidator' <- convertJsToPs params.treasuryValidator
+    configValidator' <- convertJsToPs params.configurationValidator
+    voteValidator' <- convertJsToPs params.voteValidator
+    tallyNft' <- convertJsToPs params.tallyNft
+    voteCurrencySymbol' <- convertJsToPs params.voteCurrencySymbol
+    voteTokenName' <- convertJsToPs params.voteTokenName
+    voteNft' <- convertJsToPs params.voteNft
+    voteFungibleCurrencySymbol' <- convertJsToPs
       params.voteFungibleCurrencySymbol
-    voteFungibleTokenName' <- convertPsToJs params.voteFungibleTokenName
+    voteFungibleTokenName' <- convertJsToPs params.voteFungibleTokenName
 
     pure $ DaoApi.DynamicConfigDatum
       { tallyValidator: tallyValidator'
@@ -270,7 +281,7 @@ instance ConvertPsToJs WebApi.CreateProposalParams DaoApi.CreateProposalParams w
       }
 
 instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams where
-  convertPsToJs (WebApi.CreateProposalParams params) = do
+  convertJsToPs (WebApi.CreateProposalParams params) = do
 
     configSymbol' <- convertJsToPs params.configSymbol
     configTokenName' <- convertJsToPs params.configTokenName
@@ -292,31 +303,71 @@ instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
   convertPsToJs (DaoApi.TallyStateDatum params) = do
 
     proposal' <- convertPsToJs params.proposal
-    proposalEndTime' <- convertPsToJs params.proposalEndTime
-    for' <- convertPsToJs params.for
-    against' <- convertPsToJs params.against
 
     pure $ WebApi.TallyStateDatum
       { proposal: proposal'
-      , proposalEndTime: proposalEndTime'
-      , for: for'
-      , against: against'
+      , proposalEndTime: params.proposalEndTime
+      , for: params.for
+      , against: params.against
       }
 
 instance ConvertJsToPs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
   convertJsToPs (WebApi.TallyStateDatum params) = do
 
     proposal' <- convertJsToPs params.proposal
-    proposalEndTime' <- convertJsToPs params.proposalEndTime
-    for' <- convertJsToPs params.for
-    against' <- convertJsToPs params.against
 
     pure $ DaoApi.TallyStateDatum
       { proposal: proposal'
-      , proposalEndTime: proposalEndTime'
-      , for: for'
-      , against: against'
+      , proposalEndTime: params.proposalEndTime
+      , for: params.for
+      , against: params.against
       }
+
+-- * ProposalType
+
+instance ConvertPsToJs WebApi.ProposalType DaoApi.ProposalType where
+  convertPsToJs (DaoApi.ProposalType'Upgrade symbol) = do
+    hash28 <- convertPsToJs symbol
+    pure $ WebApi.ProposalType'Upgrade hash28
+  convertPsToJs (DaoApi.ProposalType'General paymentAddress amount) = do
+    paymentAddress' <- convertPsToJs paymentAddress
+    pure $ WebApi.ProposalType'General paymentAddress' amount
+  convertPsToJs
+    (DaoApi.ProposalType'Trip travelAgentAddress travellerAddress amount) = do
+    travelAgentAddress' <- convertPsToJs travelAgentAddress
+    travellerAddress' <- convertPsToJs travellerAddress
+    pure $ WebApi.ProposalType'Trip travelAgentAddress' travellerAddress' amount
+
+instance ConvertJsToPs WebApi.ProposalType DaoApi.ProposalType where
+  convertJsToPs (WebApi.ProposalType'Upgrade hash28) = do
+    symbol <- convertJsToPs hash28
+    pure $ DaoApi.ProposalType'Upgrade symbol
+  convertJsToPs (WebApi.ProposalType'General paymentAddress amount) = do
+    paymentAddress' <- convertJsToPs paymentAddress
+    pure $ DaoApi.ProposalType'General paymentAddress' amount
+  convertJsToPs
+    (WebApi.ProposalType'Trip travelAgentAddress travellerAddress amount) = do
+    travelAgentAddress' <- convertJsToPs travelAgentAddress
+    travellerAddress' <- convertJsToPs travellerAddress
+    pure $ DaoApi.ProposalType'Trip travelAgentAddress' travellerAddress' amount
+
+-- * Address
+
+instance ConvertPsToJs WebApi.Address Ctl.Address where
+  convertPsToJs address = do
+    networkId <- ask
+    pure $ WebApi.Address $ Ctl.addressWithNetworkTagToBech32 $
+      Ctl.AddressWithNetworkTag
+        { address: address
+        , networkId
+        }
+
+instance ConvertJsToPs WebApi.Address Ctl.Address where
+  convertJsToPs (WebApi.Address addr) = do
+    Ctl.AddressWithNetworkTag { address } <-
+      note ("Invalid address: " <> show addr) $
+        Ctl.addressWithNetworkTagFromBech32 addr
+    pure address
 
 -- * TokenName
 
@@ -348,5 +399,8 @@ instance ConvertPsToJs WebApi.ScriptHash Ctl.ScriptHash where
   convertPsToJs = pure <<< WebApi.ScriptHash <<< rawBytesToHex <<<
     scriptHashToBytes
 
--- instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
---   convertJsToPs (WebApi.Hash28 hash28) = undefined
+instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
+  convertJsToPs (WebApi.ScriptHash scriptHash) =
+    note ("Invalid ScriptHash: " <> show scriptHash)
+      $ Ctl.hexToByteArray scriptHash
+      >>= scriptHashFromBytes
