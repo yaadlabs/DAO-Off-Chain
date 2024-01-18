@@ -42,6 +42,7 @@ import Dao.Scripts.Validator.IndexValidator
   ( indexValidatorScript
   , indexValidatorScriptDebug
   )
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
@@ -53,8 +54,8 @@ import ScriptArguments.Types (IndexNftConfig(IndexNftConfig))
 -- | Contract for creating index datum and locking 
 -- it at UTXO at index validator marked by index NFT
 createIndex ::
-  TokenName -> Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createIndex indexTokenName = do
+  TokenName -> Contract ContractResult
+createIndex tokenName = do
   logInfo' "Entering createIndex transaction"
 
   userUtxos <- getAllWalletUtxos
@@ -63,7 +64,7 @@ createIndex indexTokenName = do
     $ head
     $ Map.toUnfoldable userUtxos
 
-  indexInfo <- buildIndex configSpend indexTokenName
+  indexInfo <- buildIndex configSpend tokenName
 
   let
     lookups :: Lookups.ScriptLookups
@@ -72,9 +73,12 @@ createIndex indexTokenName = do
     constraints :: Constraints.TxConstraints
     constraints = indexInfo.constraints
 
+    symbol :: CurrencySymbol
+    symbol = indexInfo.symbol
+
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ indexInfo.symbol /\ indexTokenName)
+  pure $ ContractResult { txHash, symbol, tokenName }
 
 type IndexInfo =
   { symbol :: CurrencySymbol

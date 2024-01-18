@@ -2,7 +2,10 @@
 Module: Dao.Workflow.VoteOnProposal
 Description: Contract for voting on a proposal
 -}
-module Dao.Workflow.VoteOnProposal (voteOnProposal) where
+module Dao.Workflow.VoteOnProposal
+  ( VoteOnProposalResult(..)
+  , voteOnProposal
+  ) where
 
 import Contract.Address (Address)
 import Contract.Log (logInfo')
@@ -58,10 +61,15 @@ import LambdaBuffers.ApplicationTypes.Vote
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
 
+newtype VoteOnProposalResult = VoteOnProposalResult
+  { txHash :: TransactionHash
+  , voteSymbol :: CurrencySymbol
+  }
+
 -- | Contract for voting on a specific proposal
 voteOnProposal ::
   VoteOnProposalParams ->
-  Contract (TransactionHash /\ CurrencySymbol)
+  Contract VoteOnProposalResult
 voteOnProposal params' = do
   logInfo' "Entering voteOnProposal transaction"
 
@@ -149,4 +157,4 @@ voteOnProposal params' = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ voteSymbol)
+  pure $ VoteOnProposalResult { txHash, voteSymbol }

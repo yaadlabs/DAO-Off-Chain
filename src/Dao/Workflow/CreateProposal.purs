@@ -43,6 +43,7 @@ import Dao.Scripts.Policy.TallyPolicy (unappliedTallyPolicyDebug)
 import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.IndexValidator (indexValidatorScriptDebug)
 import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import JS.BigInt (fromInt)
@@ -56,7 +57,7 @@ import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 -- | Contract for creating a proposal
 createProposal ::
   CreateProposalParams ->
-  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
+  Contract ContractResult
 createProposal params' = do
   logInfo' "Entering createProposal transaction"
 
@@ -136,7 +137,8 @@ createProposal params' = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ tallySymbol /\ tallyTokenName)
+  pure $ ContractResult
+    { txHash, symbol: tallySymbol, tokenName: tallyTokenName }
   where
   incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
   incrementIndexDatum (IndexNftDatum { index: oldIndex }) =

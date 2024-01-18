@@ -18,6 +18,7 @@ import Contract.Config
   ) as Ctl
 import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
 import Contract.Prim.ByteArray (rawBytesToHex)
+import Contract.Transaction (TransactionHash(TransactionHash)) as Ctl
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -39,7 +40,18 @@ import Dao.Component.Config.Params
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   ) as DaoApi
+import Dao.Component.Treasury.Params
+  ( TreasuryGeneralParams(TreasuryGeneralParams)
+  , TreasuryTripParams(TreasuryTripParams)
+  ) as DaoApi
+import Dao.Component.Vote.Params
+  ( CancelVoteParams(CancelVoteParams)
+  , CountVoteParams(CountVoteParams)
+  , VoteOnProposalParams(VoteOnProposalParams)
+  ) as DaoApi
+import Dao.Utils.Contract (ContractResult(ContractResult)) as DaoApi
 import Dao.Web.Types as WebApi
+import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult)) as DaoApi
 import Data.Either (Either(Left))
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
@@ -48,6 +60,9 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
   ) as DaoApi
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum)) as DaoApi
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteDirection(VoteDirection'For, VoteDirection'Against)
+  ) as DaoApi
 
 type Conversion a = ReaderT Ctl.NetworkId (Either String) a
 
@@ -76,6 +91,8 @@ runConvertPsToJs ps = runReaderT $ convertPsToJs ps
 note :: forall a. String -> Maybe a -> Conversion a
 note _ (Just a) = pure a
 note msg Nothing = lift $ Left msg
+
+-- * DynamicConfigDatum
 
 instance ConvertPsToJs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
   convertPsToJs (DaoApi.DynamicConfigDatum params) = do
@@ -157,6 +174,54 @@ instance ConvertJsToPs WebApi.DynamicConfigDatum DaoApi.DynamicConfigDatum where
       , fungibleVotePercent: params.fungibleVotePercent
       }
 
+-- * ContractResult
+
+instance ConvertPsToJs WebApi.ContractResult DaoApi.ContractResult where
+  convertPsToJs (DaoApi.ContractResult params) = do
+    txHash <- convertPsToJs params.txHash
+    symbol <- convertPsToJs params.symbol
+    tokenName <- convertPsToJs params.tokenName
+
+    pure $ WebApi.ContractResult
+      { txHash
+      , symbol
+      , tokenName
+      }
+
+instance ConvertJsToPs WebApi.ContractResult DaoApi.ContractResult where
+  convertJsToPs (WebApi.ContractResult params) = do
+    txHash <- convertJsToPs params.txHash
+    symbol <- convertJsToPs params.symbol
+    tokenName <- convertJsToPs params.tokenName
+
+    pure $ DaoApi.ContractResult
+      { txHash
+      , symbol
+      , tokenName
+      }
+
+-- * VoteOnProposalResult
+
+instance ConvertPsToJs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult where
+  convertPsToJs (DaoApi.VoteOnProposalResult params) = do
+    txHash <- convertPsToJs params.txHash
+    voteSymbol <- convertPsToJs params.voteSymbol
+
+    pure $ WebApi.VoteOnProposalResult
+      { txHash
+      , voteSymbol
+      }
+
+instance ConvertJsToPs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult where
+  convertJsToPs (WebApi.VoteOnProposalResult params) = do
+    txHash <- convertJsToPs params.txHash
+    voteSymbol <- convertJsToPs params.voteSymbol
+
+    pure $ DaoApi.VoteOnProposalResult
+      { txHash
+      , voteSymbol
+      }
+
 -- * UpgradeConfigParams
 
 instance ConvertPsToJs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams where
@@ -187,6 +252,86 @@ instance ConvertJsToPs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams whe
       , configSymbol: configSymbol'
       , configTokenName: configTokenName'
       , tallySymbol: tallySymbol'
+      }
+
+-- * TreasuryGeneralParams
+
+instance ConvertPsToJs WebApi.TreasuryGeneralParams DaoApi.TreasuryGeneralParams where
+  convertPsToJs (DaoApi.TreasuryGeneralParams params) = do
+
+    paymentAddress <- convertPsToJs params.paymentAddress
+    configSymbol <- convertPsToJs params.configSymbol
+    tallySymbol <- convertPsToJs params.tallySymbol
+    treasurySymbol <- convertPsToJs params.treasurySymbol
+    configTokenName <- convertPsToJs params.configTokenName
+
+    pure $ WebApi.TreasuryGeneralParams
+      { paymentAddress
+      , generalPaymentAmount: params.generalPaymentAmount
+      , configSymbol
+      , tallySymbol
+      , treasurySymbol
+      , configTokenName
+      }
+
+instance ConvertJsToPs WebApi.TreasuryGeneralParams DaoApi.TreasuryGeneralParams where
+  convertJsToPs (WebApi.TreasuryGeneralParams params) = do
+
+    paymentAddress <- convertJsToPs params.paymentAddress
+    configSymbol <- convertJsToPs params.configSymbol
+    tallySymbol <- convertJsToPs params.tallySymbol
+    treasurySymbol <- convertJsToPs params.treasurySymbol
+    configTokenName <- convertJsToPs params.configTokenName
+
+    pure $ DaoApi.TreasuryGeneralParams
+      { paymentAddress
+      , generalPaymentAmount: params.generalPaymentAmount
+      , configSymbol
+      , tallySymbol
+      , treasurySymbol
+      , configTokenName
+      }
+
+-- * TreasuryTripParams
+
+instance ConvertPsToJs WebApi.TreasuryTripParams DaoApi.TreasuryTripParams where
+  convertPsToJs (DaoApi.TreasuryTripParams params) = do
+
+    travelAgentAddress <- convertPsToJs params.travelAgentAddress
+    travellerAddress <- convertPsToJs params.travellerAddress
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    tallySymbol <- convertPsToJs params.tallySymbol
+    treasurySymbol <- convertPsToJs params.treasurySymbol
+
+    pure $ WebApi.TreasuryTripParams
+      { travelAgentAddress
+      , travellerAddress
+      , totalTravelCost: params.totalTravelCost
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , treasurySymbol
+      }
+
+instance ConvertJsToPs WebApi.TreasuryTripParams DaoApi.TreasuryTripParams where
+  convertJsToPs (WebApi.TreasuryTripParams params) = do
+
+    travelAgentAddress <- convertJsToPs params.travelAgentAddress
+    travellerAddress <- convertJsToPs params.travellerAddress
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    tallySymbol <- convertJsToPs params.tallySymbol
+    treasurySymbol <- convertJsToPs params.treasurySymbol
+
+    pure $ DaoApi.TreasuryTripParams
+      { travelAgentAddress
+      , travellerAddress
+      , totalTravelCost: params.totalTravelCost
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , treasurySymbol
       }
 
 -- * CreateConfigParams
@@ -297,6 +442,134 @@ instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams w
       , tallyStateDatum: tallyStateDatum'
       }
 
+-- * CountVoteParams
+
+instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
+  convertPsToJs (DaoApi.CountVoteParams params) = do
+
+    voteSymbol' <- convertPsToJs params.voteSymbol
+    voteNftSymbol' <- convertPsToJs params.voteNftSymbol
+    voteTokenName' <- convertPsToJs params.voteTokenName
+    voteNftTokenName' <- convertPsToJs params.voteNftTokenName
+    configSymbol' <- convertPsToJs params.configSymbol
+    configTokenName' <- convertPsToJs params.configTokenName
+    tallySymbol' <- convertPsToJs params.tallySymbol
+
+    pure $ WebApi.CountVoteParams
+      { voteSymbol: voteSymbol'
+      , voteNftSymbol: voteNftSymbol'
+      , voteTokenName: voteTokenName'
+      , voteNftTokenName: voteNftTokenName'
+      , configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , tallySymbol: tallySymbol'
+      }
+
+instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
+  convertJsToPs (WebApi.CountVoteParams params) = do
+
+    voteSymbol' <- convertJsToPs params.voteSymbol
+    voteNftSymbol' <- convertJsToPs params.voteNftSymbol
+    voteTokenName' <- convertJsToPs params.voteTokenName
+    voteNftTokenName' <- convertJsToPs params.voteNftTokenName
+    configSymbol' <- convertJsToPs params.configSymbol
+    configTokenName' <- convertJsToPs params.configTokenName
+    tallySymbol' <- convertJsToPs params.tallySymbol
+
+    pure $ DaoApi.CountVoteParams
+      { voteSymbol: voteSymbol'
+      , voteNftSymbol: voteNftSymbol'
+      , voteTokenName: voteTokenName'
+      , voteNftTokenName: voteNftTokenName'
+      , configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , tallySymbol: tallySymbol'
+      }
+
+-- * CancelVoteParams
+
+instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
+  convertPsToJs (DaoApi.CancelVoteParams params) = do
+
+    configSymbol' <- convertPsToJs params.configSymbol
+    configTokenName' <- convertPsToJs params.configTokenName
+    voteTokenName' <- convertPsToJs params.voteTokenName
+
+    pure $ WebApi.CancelVoteParams
+      { configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , voteTokenName: voteTokenName'
+      }
+
+instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
+  convertJsToPs (WebApi.CancelVoteParams params) = do
+
+    configSymbol' <- convertJsToPs params.configSymbol
+    configTokenName' <- convertJsToPs params.configTokenName
+    voteTokenName' <- convertJsToPs params.voteTokenName
+
+    pure $ DaoApi.CancelVoteParams
+      { configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      , voteTokenName: voteTokenName'
+      }
+
+-- * VoteOnProposalParams
+
+instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams where
+  convertPsToJs (DaoApi.VoteOnProposalParams params) = do
+
+    configSymbol <- convertPsToJs params.configSymbol
+    tallySymbol <- convertPsToJs params.tallySymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    voteTokenName <- convertPsToJs params.voteTokenName
+    voteNftSymbol <- convertPsToJs params.voteNftSymbol
+    proposalTokenName <- convertPsToJs params.proposalTokenName
+    voteDirection <- convertPsToJs params.voteDirection
+
+    pure $ WebApi.VoteOnProposalParams
+      { configSymbol
+      , tallySymbol
+      , configTokenName
+      , voteTokenName
+      , voteNftSymbol
+      , proposalTokenName
+      , voteDirection
+      , returnAda: params.returnAda
+      }
+
+instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams where
+  convertJsToPs (WebApi.VoteOnProposalParams params) = do
+
+    configSymbol <- convertJsToPs params.configSymbol
+    tallySymbol <- convertJsToPs params.tallySymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    voteTokenName <- convertJsToPs params.voteTokenName
+    voteNftSymbol <- convertJsToPs params.voteNftSymbol
+    proposalTokenName <- convertJsToPs params.proposalTokenName
+    voteDirection <- convertJsToPs params.voteDirection
+
+    pure $ DaoApi.VoteOnProposalParams
+      { configSymbol
+      , tallySymbol
+      , configTokenName
+      , voteTokenName
+      , voteNftSymbol
+      , proposalTokenName
+      , voteDirection
+      , returnAda: params.returnAda
+      }
+
+-- * VoteDirection
+
+instance ConvertPsToJs WebApi.VoteDirection DaoApi.VoteDirection where
+  convertPsToJs DaoApi.VoteDirection'For = pure WebApi.VoteDirection'For
+  convertPsToJs DaoApi.VoteDirection'Against = pure WebApi.VoteDirection'Against
+
+instance ConvertJsToPs WebApi.VoteDirection DaoApi.VoteDirection where
+  convertJsToPs WebApi.VoteDirection'For = pure DaoApi.VoteDirection'For
+  convertJsToPs WebApi.VoteDirection'Against = pure DaoApi.VoteDirection'Against
+
 -- * TallyStateDatum
 
 instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
@@ -404,3 +677,15 @@ instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
     note ("Invalid ScriptHash: " <> show scriptHash)
       $ Ctl.hexToByteArray scriptHash
       >>= scriptHashFromBytes
+
+-- * TransactionHash
+
+instance ConvertPsToJs WebApi.Hash32 Ctl.TransactionHash where
+  convertPsToJs (Ctl.TransactionHash bytes) =
+    pure $ WebApi.Hash32 $ Ctl.byteArrayToHex bytes
+
+instance ConvertJsToPs WebApi.Hash32 Ctl.TransactionHash where
+  convertJsToPs (WebApi.Hash32 hash32) = do
+    bytes <- note ("Invalid txHash: " <> show hash32) $ Ctl.hexToByteArray
+      hash32
+    pure $ Ctl.TransactionHash bytes

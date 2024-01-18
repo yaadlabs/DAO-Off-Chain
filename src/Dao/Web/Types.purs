@@ -145,6 +145,21 @@ newtype CancelVoteParams = CancelVoteParams
   , voteTokenName :: TokenName
   }
 
+-- * Contract Results
+
+-- | ContractResult
+newtype ContractResult = ContractResult
+  { txHash :: TransactionHash
+  , symbol :: Hash28
+  , tokenName :: TokenName
+  }
+
+-- | VoteOnProposalResult
+newtype VoteOnProposalResult = VoteOnProposalResult
+  { txHash :: TransactionHash
+  , voteSymbol :: Hash28
+  }
+
 -- * Datums
 
 -- | The app's config datum

@@ -19,10 +19,14 @@ import Dao.Component.Proposal.Params
   )
 import Dao.Component.Vote.Params (VoteOnProposalParams(VoteOnProposalParams))
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
-import Dao.Workflow.VoteOnProposal (voteOnProposal)
+import Dao.Workflow.VoteOnProposal
+  ( VoteOnProposalResult(VoteOnProposalResult)
+  , voteOnProposal
+  )
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
@@ -42,13 +46,21 @@ suite = do
           ]
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
-          (createConfigTxHash /\ configSymbol /\ configTokenName) <-
+          ContractResult
+            { txHash: configTxHash
+            , symbol: configSymbol
+            , tokenName: configTokenName
+            } <-
             createConfig sampleConfigParams
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) configTxHash
 
-          (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
+          ContractResult
+            { txHash: indexTxHash
+            , symbol: indexSymbol
+            , tokenName: indexTokenName
+            } <-
             createIndex adaToken
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) indexTxHash
 
           tallyStateDatum <- sampleTallyStateDatum
 
@@ -61,7 +73,11 @@ suite = do
               , tallyStateDatum
               }
 
-          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
+          ContractResult
+            { txHash: createProposalTxHash
+            , symbol: proposalSymbol
+            , tokenName: proposalTokenName
+            } <-
             createProposal proposalParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
@@ -82,8 +98,9 @@ suite = do
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-            voteParams
+          VoteOnProposalResult { txHash: voteOnProposalTxHash, voteSymbol } <-
+            voteOnProposal
+              voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash

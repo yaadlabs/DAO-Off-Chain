@@ -6,6 +6,7 @@ You can edit this file as you like.
 , dependencies =
   [ "aeson"
   , "aff"
+  , "aff-promise"
   , "arraybuffer"
   , "arraybuffer-types"
   , "arrays"

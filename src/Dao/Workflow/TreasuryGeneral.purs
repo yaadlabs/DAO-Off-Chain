@@ -2,7 +2,7 @@
 Module: Dao.Workflow.TreasuryGeneral
 Description: Contract for disbursing treasury funds based on a general proposal
 -}
-module Dao.Workflow.TreasuryGeneral where
+module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')

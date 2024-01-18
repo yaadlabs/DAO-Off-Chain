@@ -43,11 +43,12 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 
 -- | Contract for creating token corresponding to the 'voteNft' field of the config
 -- | This token acts as a pass for voting on a proposal
-createVotePass :: Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
+createVotePass :: Contract ContractResult
 createVotePass = do
   logInfo' "Entering createVotePass transaction"
 
@@ -73,4 +74,5 @@ createVotePass = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ voteNftSymbol /\ voteNftTokenName)
+  pure $ ContractResult
+    { txHash, symbol: voteNftSymbol, tokenName: voteNftTokenName }
