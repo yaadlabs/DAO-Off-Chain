@@ -677,18 +677,6 @@ let
         installPhase = "ln -s $src $out";
       };
 
-    "lambda-buffers" = pkgs.stdenv.mkDerivation {
-        name = "lambda-buffers";
-        version = "617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a";
-        src = pkgs.fetchgit {
-          url = "https://github.com/mlabs-haskell/lambda-buffers";
-          rev = "617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a";
-          sha256 = "1cbyn3scp1rp8psm6h93nr75zczk9ggvv0960mq11y2l7app8skf";
-        };
-        phases = "installPhase";
-        installPhase = "ln -s $src $out";
-      };
-
     "lattice" = pkgs.stdenv.mkDerivation {
         name = "lattice";
         version = "v0.3.0";

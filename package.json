@@ -3,25 +3,20 @@
   "name": "triphut-dao-offchain",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "start-blockfrost-runtime": "nix run -L .#ctl-dao-blockfrost-runtime",
-    "test": "spago run --main Test.Plutip",
-    "blockfrost-test": "source ./test/blockfrost.env && spago run --main Dao.Test.Blockfrost",
-    "blockfrost-local-test": "source ./test/blockfrost-local.env && spago run --main Dao.Test.Blockfrost",
-    "e2e-serve": "make e2e-serve",
-    "start-runtime": "nix run -L .#dao-offchain-runtime",
-    "e2e-test": "source ./test/e2e.env && spago test --main Dao.Test.E2E -a 'e2e-test run'",
-    "e2e-test-debug": "source ./test/e2e.env && spago test --main Dao.Test.E2E -a 'e2e-test run --no-headless'",
-    "e2e-browser": "source ./test/e2e.env && spago run --main Dao.Test.E2E -a 'e2e-test browser'",
-    "e2e-pack-settings": "source ./test/e2e.env && spago run --main Dao.Test.E2E -a 'e2e-test pack'",
-    "e2e-unpack-settings": "source ./test/e2e.env && spago run --main Dao.Test.E2E -a 'e2e-test unpack'",
-    "dev": "make run-dev",
-    "build": "make run-build"
+      "test": "spago run --main Test.Plutip",
+      "dev": "make run-dev",
+      "build": "make run-build",
+      "start-runtime": "nix run -L .#dao-offchain-runtime"
   },
+  "files": [
+    "dist",
+    "library.js"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -44,6 +39,8 @@
     "reconnecting-websocket": "4.4.0",
     "uniqid": "5.4.0",
     "utf-8-validate": "^5.0.10",
+    "terser-loader": "^2.0.3",
+    "terser-webpack-plugin": "^5.3.6",
     "ws": "8.4.0",
     "xhr2": "0.2.1"
   },
@@ -52,6 +49,7 @@
     "esbuild": "0.18.11",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "esbuild-plugin-wasm": "^1.1.0",
+    "ts-loader": "^9.3.1",
     "node-polyfill-webpack-plugin": "2.0.1",
     "webpack": "5.88.1",
     "webpack-cli": "5.1.4",

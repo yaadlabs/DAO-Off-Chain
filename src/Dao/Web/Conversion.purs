@@ -563,12 +563,12 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
 -- * VoteDirection
 
 instance ConvertPsToJs WebApi.VoteDirection DaoApi.VoteDirection where
-  convertPsToJs DaoApi.VoteDirection'For = pure WebApi.VoteDirection'For
-  convertPsToJs DaoApi.VoteDirection'Against = pure WebApi.VoteDirection'Against
+  convertPsToJs DaoApi.VoteDirection'For = pure WebApi.For
+  convertPsToJs DaoApi.VoteDirection'Against = pure WebApi.Against
 
 instance ConvertJsToPs WebApi.VoteDirection DaoApi.VoteDirection where
-  convertJsToPs WebApi.VoteDirection'For = pure DaoApi.VoteDirection'For
-  convertJsToPs WebApi.VoteDirection'Against = pure DaoApi.VoteDirection'Against
+  convertJsToPs WebApi.For = pure DaoApi.VoteDirection'For
+  convertJsToPs WebApi.Against = pure DaoApi.VoteDirection'Against
 
 -- * TallyStateDatum
 
@@ -601,25 +601,25 @@ instance ConvertJsToPs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
 instance ConvertPsToJs WebApi.ProposalType DaoApi.ProposalType where
   convertPsToJs (DaoApi.ProposalType'Upgrade symbol) = do
     hash28 <- convertPsToJs symbol
-    pure $ WebApi.ProposalType'Upgrade hash28
+    pure $ WebApi.Upgrade hash28
   convertPsToJs (DaoApi.ProposalType'General paymentAddress amount) = do
     paymentAddress' <- convertPsToJs paymentAddress
-    pure $ WebApi.ProposalType'General paymentAddress' amount
+    pure $ WebApi.General paymentAddress' amount
   convertPsToJs
     (DaoApi.ProposalType'Trip travelAgentAddress travellerAddress amount) = do
     travelAgentAddress' <- convertPsToJs travelAgentAddress
     travellerAddress' <- convertPsToJs travellerAddress
-    pure $ WebApi.ProposalType'Trip travelAgentAddress' travellerAddress' amount
+    pure $ WebApi.Trip travelAgentAddress' travellerAddress' amount
 
 instance ConvertJsToPs WebApi.ProposalType DaoApi.ProposalType where
-  convertJsToPs (WebApi.ProposalType'Upgrade hash28) = do
+  convertJsToPs (WebApi.Upgrade hash28) = do
     symbol <- convertJsToPs hash28
     pure $ DaoApi.ProposalType'Upgrade symbol
-  convertJsToPs (WebApi.ProposalType'General paymentAddress amount) = do
+  convertJsToPs (WebApi.General paymentAddress amount) = do
     paymentAddress' <- convertJsToPs paymentAddress
     pure $ DaoApi.ProposalType'General paymentAddress' amount
   convertJsToPs
-    (WebApi.ProposalType'Trip travelAgentAddress travellerAddress amount) = do
+    (WebApi.Trip travelAgentAddress travellerAddress amount) = do
     travelAgentAddress' <- convertJsToPs travelAgentAddress
     travellerAddress' <- convertJsToPs travellerAddress
     pure $ DaoApi.ProposalType'Trip travelAgentAddress' travellerAddress' amount

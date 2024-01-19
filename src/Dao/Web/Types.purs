@@ -199,9 +199,9 @@ newtype TallyStateDatum = TallyStateDatum
 -- | Index datum
 newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
 
-data VoteDirection = VoteDirection'For | VoteDirection'Against
+data VoteDirection = For | Against
 
 data ProposalType
-  = ProposalType'Upgrade Hash28
-  | ProposalType'General Address BigInt
-  | ProposalType'Trip Address Address BigInt
+  = Upgrade Hash28
+  | General Address BigInt
+  | Trip Address Address BigInt

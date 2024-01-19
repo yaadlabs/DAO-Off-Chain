@@ -9,12 +9,17 @@ js-sources := $(shell fd --no-ignore-parent -ejs -ecjs)
 
 ### Bundler setup
 
-# The main Purescript module
-ps-entrypoint := Dao.Test.E2E.Serve
 # The entry point function in the main PureScript module
 ps-entrypoint-function := main
 # Whether to bundle for the browser
 browser-runtime := 1 # Use "1" for true and "" for false
+
+# Bundler for the library
+
+# The main Purescript module
+ps-entrypoint := Dao.Web.Api
+# Bundle command
+ps-bundle = spago bundle-module -m ${ps-entrypoint} --to library.js
 
 preview-node-ipc = $(shell docker volume inspect store_node-preview-ipc | jq -r '.[0].Mountpoint')
 preprod-node-ipc = $(shell docker volume inspect store_node-preprod-ipc | jq -r '.[0].Mountpoint')
@@ -58,7 +63,7 @@ webpack-serve: spago-build create-bundle-entrypoint create-html-entrypoint
 		-o dist/ --env entry=./dist/entrypoint.js
 
 run-build:
-	@${ps-bundle} && BROWSER_RUNTIME=1 webpack --mode=production
+	@${ps-bundle} && BROWSER_RUNTIME=1 webpack -c webpack.config.lib.cjs --mode=production
 
 check-format:
 	@purs-tidy check ${ps-sources}

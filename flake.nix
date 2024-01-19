@@ -94,6 +94,14 @@
             main = "Dao.Main";
           };
 
+          dao-offchain-bundle-web = {
+            mainModule = "Dao.Web.Api";
+            entrypointJs = "index.ts";
+            webpackConfig = "webpack.config.lib.cjs";
+            bundledModuleName = "library.js";
+            enableCheck = true;
+          };
+
           dao-runtime = pkgs.buildCtlRuntime runtimeConfig;
         });
 
