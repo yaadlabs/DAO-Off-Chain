@@ -45,10 +45,11 @@ suite = do
 
           sampleTallyStateDatum' <- sampleTallyStateDatum
 
-          let proposalParams = { configSymbol, indexSymbol, configTokenName, indexTokenName }
+          let
+            proposalParams =
+              { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
-          -- pure unit
           void $
             createProposal
-              proposalParams 
+              proposalParams
               sampleTallyStateDatum'
