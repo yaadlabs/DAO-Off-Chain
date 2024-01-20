@@ -15,5 +15,5 @@ import Contract.Value
 import Data.Maybe (Maybe)
 
 mkTokenName :: String -> Maybe Value.TokenName
-mkTokenName = (Value.mkTokenName <=< byteArrayFromAscii)
+mkTokenName = Value.mkTokenName <=< byteArrayFromAscii
 
