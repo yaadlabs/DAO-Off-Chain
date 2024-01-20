@@ -7,6 +7,7 @@ import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
 import Ctl.Internal.FromData as Ctl.Internal.FromData
 import Ctl.Internal.ToData as Ctl.Internal.ToData
+import Ctl.Internal.Types.BigNum as BigNum
 import Ctl.Internal.Types.PlutusData as Ctl.Internal.Types.PlutusData
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
@@ -14,7 +15,6 @@ import Data.Newtype as Data.Newtype
 import Data.Show as Data.Show
 import Data.Show.Generic as Data.Show.Generic
 import LambdaBuffers.Runtime.Plutus as LambdaBuffers.Runtime.Plutus
-import Ctl.Internal.Types.BigNum as BigNum
 import Prelude as Prelude
 
 newtype ConfigurationValidatorConfig = ConfigurationValidatorConfig
