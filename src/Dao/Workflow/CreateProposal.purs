@@ -5,8 +5,8 @@ Description: Contract for creating a proposal
 module Dao.Workflow.CreateProposal (createProposal) where
 
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.PlutusData (Datum(Datum), fromData, toData, unitRedeemer)
+import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
   ( type (/\)
   , bind
@@ -19,7 +19,6 @@ import Contract.Prelude
   , ($)
   , (+)
   , (/\)
-  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
@@ -28,7 +27,6 @@ import Contract.Transaction
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -39,12 +37,8 @@ import Contract.Value (singleton) as Value
 import Dao.Component.Config.Query (ConfigInfo, getConfigInfo)
 import Dao.Component.Index.Query (IndexInfo, getIndexInfo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
-import Dao.Utils.Datum
-  ( getInlineDatumFromTxOutWithRefScript
-  )
 import Dao.Utils.Value (mkTokenName)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
+import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments

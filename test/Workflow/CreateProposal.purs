@@ -4,7 +4,7 @@ Description: Test the create proposal workflow
 -}
 module Test.Workflow.CreateProposal (suite) where
 
-import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
+import Contract.Prelude (Unit, bind, discard, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
