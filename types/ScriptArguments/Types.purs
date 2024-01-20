@@ -128,22 +128,22 @@ derive newtype instance Eq IndexNftConfig
 derive newtype instance Show IndexNftConfig
 
 newtype TallyNftConfig = TallyNftConfig
-  { tncConfigNftCurrencySymbol :: CurrencySymbol
-  , tncConfigNftTokenName :: TokenName
-  , tncIndexNftPolicyId :: CurrencySymbol
+  { tncIndexNftPolicyId :: CurrencySymbol
   , tncIndexNftTokenName :: TokenName
+  , tncConfigNftCurrencySymbol :: CurrencySymbol
+  , tncConfigNftTokenName :: TokenName
   }
 
 instance
   HasPlutusSchema TallyNftConfig
     ( "TallyNftConfig"
         :=
-          ( "tncConfigNftCurrencySymbol" := I CurrencySymbol
-              :+ "tncConfigNftTokenName"
-              := I TokenName
-              :+ "tncIndexNftPolicyId"
-              := I CurrencySymbol
+          ( "tncIndexNftPolicyId" := I CurrencySymbol
               :+ "tncIndexNftTokenName"
+              := I TokenName
+              :+ "tncConfigNftCurrencySymbol"
+              := I CurrencySymbol
+              :+ "tncConfigNftTokenName"
               := I TokenName
               :+ PNil
           )

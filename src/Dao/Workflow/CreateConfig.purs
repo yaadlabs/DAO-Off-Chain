@@ -57,7 +57,7 @@ import Scripts.ConfigValidator
   ( unappliedConfigValidator
   , unappliedConfigValidatorDebug
   )
-import Scripts.TallyValidator (unappliedTallyValidator)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
@@ -130,7 +130,7 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
     -- Make the scripts for the dynamic config datum
     appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
       configValidatorParams
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
       configValidatorParams
     appliedVoteValidator :: Validator <- unappliedVoteValidator
       configValidatorParams

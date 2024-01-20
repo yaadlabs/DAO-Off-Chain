@@ -15,6 +15,7 @@ import Contract.Prelude
   , one
   , pure
   , show
+  , (#)
   , ($)
   , (+)
   , (/\)
@@ -38,6 +39,7 @@ import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
+import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
@@ -48,7 +50,7 @@ import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
 import Scripts.IndexValidator (indexValidatorScriptDebug)
 import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
-import Scripts.TallyValidator (unappliedTallyValidator)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 
 -- | Contract for creating a proposal
 createProposal ::
@@ -63,7 +65,8 @@ createProposal
   let
     validatorConfig = mkValidatorConfig proposalParams.configSymbol
       proposalParams.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
@@ -90,7 +93,7 @@ createProposal
   -- The tally token name corresponds to the index field of the index datum
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
-      mkTallyTokenName updatedIndexDatum
+      mkTallyTokenName indexInfo.datum
 
   let
     tallySymbol :: CurrencySymbol
@@ -141,7 +144,8 @@ createProposal
     IndexNftDatum { index: oldIndex + (fromInt 1) }
 
   mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
-  mkTallyTokenName (IndexNftDatum index) = mkTokenName $ show index
+  mkTallyTokenName indexDatum =
+    mkTokenName $ show $ indexDatum # unwrap # _.index
 
   mkValidatorConfig ::
     CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
@@ -153,10 +157,10 @@ createProposal
 
   mkTallyConfig ::
     CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
-  mkTallyConfig configSymbol' indexSymbol' configTokenName' indexTokenName' =
+  mkTallyConfig configSymbol indexSymbol configTokenName indexTokenName =
     TallyNftConfig
-      { tncConfigNftCurrencySymbol: configSymbol'
-      , tncConfigNftTokenName: configTokenName'
-      , tncIndexNftPolicyId: indexSymbol'
-      , tncIndexNftTokenName: indexTokenName'
+      { tncIndexNftPolicyId: indexSymbol
+      , tncConfigNftTokenName: configTokenName
+      , tncConfigNftCurrencySymbol: configSymbol
+      , tncIndexNftTokenName: indexTokenName
       }

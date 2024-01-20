@@ -30,6 +30,3 @@ main = interruptOnSignal SIGINT =<< launchAff do
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts defaultPlutipConfig do
         VoteOnProposal.suite
-
--- plutipConfig :: PlutipConfig
--- plutipConfig = defaultConfig { suppressLogs = false }

@@ -1,10 +1,10 @@
 {-|
-Module: Test.Workflow.VoteOnProposal
-Description: Test the vote on proposal workflow
+Module: Test.Workflow.CreateProposal
+Description: Test the create proposal workflow
 -}
-module Test.Workflow.VoteOnProposal (suite) where
+module Test.Workflow.CreateProposal (suite) where
 
-import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
+import Contract.Prelude (Unit, bind, discard, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
@@ -13,16 +13,13 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Value (adaToken)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
-import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
-import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Scripts.VoteNft (voteNftPolicy)
 import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
@@ -52,33 +49,7 @@ suite = do
             proposalParams =
               { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
-          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
+          void $
             createProposal
               proposalParams
               sampleTallyStateDatum'
-
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            createProposalTxHash
-
-          -- voteNftPolicy' <- voteNftPolicy
-          -- let
-          --   voteParams =
-          --     { configSymbol: configSymbol
-          --     , tallySymbol: proposalSymbol
-          --     , configTokenName: configTokenName
-          --     , voteTokenName: adaToken
-          --     -- Vote NFT (voting pass) symbol
-          --     , voteNftSymbol: scriptCurrencySymbol voteNftPolicy'
-          --     -- Vote datum fields
-          --     , proposalTokenName: proposalTokenName
-          --     , voteDirection: VoteDirection'For
-          --     , returnAda: (BigInt.fromInt 0)
-          --     }
-
-          -- (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-          --   voteParams
-
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   voteOnProposalTxHash
-
-          pure unit
