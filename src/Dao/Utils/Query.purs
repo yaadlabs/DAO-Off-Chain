@@ -5,6 +5,7 @@ Description: Query helpers
 module Dao.Utils.Query
   ( UtxoInfo
   , QueryType(..)
+  , SpendPubKeyResult
   , findUtxoByValue
   , getAllWalletUtxos
   , findScriptUtxoBySymbol
@@ -32,6 +33,7 @@ import Contract.Prelude
   , any
   , bind
   , discard
+  , mconcat
   , otherwise
   , pure
   , show
@@ -130,10 +132,16 @@ findScriptUtxoBySymbol _ spendOrReference symbol validatorScript = do
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
+type SpendPubKeyResult =
+  { lookups :: Lookups.ScriptLookups
+  , constraints :: Constraints.TxConstraints
+  , value :: Value
+  }
+
 findKeyUtxoBySymbol ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
-  Contract Value
+  Contract SpendPubKeyResult
 findKeyUtxoBySymbol symbol utxos = do
   logInfo' "Entering findKeyUtxoBySymbol contract"
 
@@ -148,7 +156,17 @@ findKeyUtxoBySymbol symbol utxos = do
       $ Map.toUnfoldable
       $ utxos
 
-  pure $ txOut.output # unwrap # _.amount
+  let
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat [ Lookups.unspentOutputs utxos ] -- TODO: Make this more precise
+
+    constraints :: Constraints.TxConstraints
+    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  pure { lookups, constraints, value }
 
 -- | Find the UTXO in the given 'UtxoMap'
 -- | that holds the given 'Value'

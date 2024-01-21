@@ -16,7 +16,7 @@ sampleTallyStateDatum = do
   pure $
     TallyStateDatum
       { proposal: ProposalType'General dummyAddress' (BigInt.fromInt 10)
-      , proposalEndTime: POSIXTime $ BigInt.fromInt 0
+      , proposalEndTime: POSIXTime $ BigInt.fromInt 1705886649
       , for: BigInt.fromInt 0
       , against: BigInt.fromInt 0
       }

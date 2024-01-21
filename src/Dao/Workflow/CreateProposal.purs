@@ -37,15 +37,19 @@ import Contract.Value (singleton) as Value
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
+import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
+-- import LambdaBuffers.ApplicationTypes.Arguments
+--   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+--   )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
 import Scripts.IndexValidator (indexValidatorScriptDebug)
@@ -153,14 +157,4 @@ createProposal
     ConfigurationValidatorConfig
       { cvcConfigNftCurrencySymbol: symbol
       , cvcConfigNftTokenName: tokenName
-      }
-
-  mkTallyConfig ::
-    CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
-  mkTallyConfig configSymbol indexSymbol configTokenName indexTokenName =
-    TallyNftConfig
-      { tncIndexNftPolicyId: indexSymbol
-      , tncConfigNftTokenName: configTokenName
-      , tncConfigNftCurrencySymbol: configSymbol
-      , tncIndexNftTokenName: indexTokenName
       }

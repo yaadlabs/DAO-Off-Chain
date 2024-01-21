@@ -69,7 +69,10 @@ createVotePass = do
     lookups = mconcat [ Lookups.mintingPolicy voteNftPolicy' ]
 
     constraints :: Constraints.TxConstraints
-    constraints = mconcat [ Constraints.mustPayToPubKey userPkh voteNftValue ]
+    constraints = mconcat
+      [ Constraints.mustMintValue voteNftValue
+      , Constraints.mustPayToPubKey userPkh voteNftValue
+      ]
 
   txHash <- submitTxFromConstraints lookups constraints
 

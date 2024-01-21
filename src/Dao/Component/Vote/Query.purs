@@ -7,13 +7,13 @@ import Contract.Scripts (Validator)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (CurrencySymbol)
 import Contract.Value (Value)
-import Dao.Utils.Query (findKeyUtxoBySymbol)
+import Dao.Utils.Query (SpendPubKeyResult, findKeyUtxoBySymbol)
 import Data.Map (Map)
 
 spendVoteNftUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
-  Contract Value
+  Contract SpendPubKeyResult
 spendVoteNftUtxo voteNftSymbol utxoMap = do
   logInfo' "Entering spendVoteNftUtxo contract"
   findKeyUtxoBySymbol voteNftSymbol utxoMap

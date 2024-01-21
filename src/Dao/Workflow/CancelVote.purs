@@ -51,13 +51,16 @@ import Dao.Utils.Query (findUtxoByValue)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
 import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
+  )
+-- import LambdaBuffers.ApplicationTypes.Arguments
+--   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+--   )
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.VotePolicy (unappliedVotePolicy)
