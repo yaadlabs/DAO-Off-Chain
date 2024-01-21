@@ -116,8 +116,11 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
         Reference -> Constraints.mustReferenceOutput txIn
 
     lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $
-      Map.singleton txIn (TransactionOutputWithRefScript txOut)
+    lookups' = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn
+          (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
+      ]
 
     value :: Value
     value = txOut.output # unwrap # _.amount

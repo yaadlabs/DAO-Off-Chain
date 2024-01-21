@@ -30,7 +30,6 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
   , Value
   , scriptCurrencySymbol
   )
@@ -45,12 +44,9 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.VotePolicy (unappliedVotePolicy)
-import Scripts.VoteValidator (unappliedVoteValidator)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.VotePolicy (unappliedVotePolicyDebug)
+import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for cancelling a vote
 cancelVote ::
@@ -63,9 +59,10 @@ cancelVote params = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   let

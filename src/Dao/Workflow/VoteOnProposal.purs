@@ -73,8 +73,6 @@ voteOnProposal voteParams = do
       , cvcConfigNftTokenName: voteParams.configTokenName
       }
 
-  logInfo' $ "validatorConfig: " <> show validatorConfig
-
   appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
@@ -96,8 +94,8 @@ voteOnProposal voteParams = do
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
-  -- Look for the'voteNft' UTXO,
-  -- get the constraints and lookups to spend it if found
+  -- Look for the 'voteNft' UTXO,
+  -- get the constraints and lookups to spend this UTXO if found
   voteNftInfo <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash

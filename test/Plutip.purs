@@ -8,8 +8,7 @@ import Contract.Prelude
 
 import Contract.Test.Mote (interpretWithConfig)
 import Contract.Test.Plutip
-  ( PlutipConfig
-  , defaultPlutipConfig
+  ( defaultPlutipConfig
   , testPlutipContracts
   )
 import Contract.Test.Utils (exitCode, interruptOnSignal)
@@ -31,4 +30,4 @@ main = interruptOnSignal SIGINT =<< launchAff do
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts defaultPlutipConfig do
         VoteOnProposal.suite
-        -- CancelVote.suite
+        CancelVote.suite

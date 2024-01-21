@@ -25,9 +25,7 @@ type ConfigParams =
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: CurrencySymbol
-  , voteCurrencySymbol :: CurrencySymbol
   , voteTokenName :: TokenName
-  , voteNft :: CurrencySymbol
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
