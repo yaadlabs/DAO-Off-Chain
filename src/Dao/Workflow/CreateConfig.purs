@@ -46,21 +46,17 @@ import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( -- ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-    NftConfig(NftConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   )
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  , NftConfig(NftConfig)
+  , TallyNftConfig
   )
-import ScriptArguments.Types (TallyNftConfig)
-import Scripts.ConfigPolicy (unappliedConfigPolicy, unappliedConfigPolicyDebug)
+import Scripts.ConfigPolicy (unappliedConfigPolicyDebug)
 import Scripts.ConfigValidator
-  ( unappliedConfigValidator
-  , unappliedConfigValidatorDebug
+  ( unappliedConfigValidatorDebug
   )
 import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
 import Scripts.TallyValidator (unappliedTallyValidatorDebug)

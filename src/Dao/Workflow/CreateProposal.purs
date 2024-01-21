@@ -42,9 +42,6 @@ import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
--- import LambdaBuffers.ApplicationTypes.Arguments
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import ScriptArguments.Types

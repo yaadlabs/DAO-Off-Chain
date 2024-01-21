@@ -56,9 +56,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   , VoteDatum
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
--- import LambdaBuffers.ApplicationTypes.Arguments
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )

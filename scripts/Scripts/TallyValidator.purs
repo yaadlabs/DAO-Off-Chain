@@ -6,9 +6,6 @@ module Scripts.TallyValidator
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import ScriptArguments.Types (ConfigurationValidatorConfig(ConfigurationValidatorConfig))
--- import LambdaBuffers.ApplicationTypes.Arguments
---   ( ConfigurationValidatorConfig
---   )
 import Scripts.Utils (mkUnappliedValidator)
 
 unappliedTallyValidator :: ConfigurationValidatorConfig -> Contract Validator

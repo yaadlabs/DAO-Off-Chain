@@ -16,6 +16,8 @@ import Contract.Prelude
   , one
   , pure
   , show
+  , unwrap
+  , (#)
   , ($)
   , (*)
   , (/\)
@@ -49,9 +51,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
--- import LambdaBuffers.ApplicationTypes.Arguments
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
@@ -144,7 +143,7 @@ voteOnProposal voteParams = do
             (Datum $ toData voteDatum)
             Constraints.DatumInline
             (voteValue <> voteNftInfo.value)
-        , Constraints.mustValidateIn onchainTimeRange
+        -- , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints

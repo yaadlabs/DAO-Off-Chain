@@ -37,16 +37,10 @@ import Contract.Value (singleton) as Value
 import Dao.Utils.Query (findUtxoByValue)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
--- import LambdaBuffers.ApplicationTypes.Arguments
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 

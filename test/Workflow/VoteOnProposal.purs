@@ -4,7 +4,9 @@ Description: Test the vote on proposal workflow
 -}
 module Test.Workflow.VoteOnProposal (suite) where
 
-import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
+import Contract.Chain (waitNSlots)
+import Contract.Numeric.Natural as Natural
+import Contract.Prelude (Unit, bind, discard, pure, show, unit, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
@@ -14,11 +16,12 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
-import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Dao.Workflow.CreateVotePass (createVotePass)
+import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
@@ -26,7 +29,6 @@ import Mote (group, test)
 import Scripts.VoteNft (voteNftPolicy)
 import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
-import Dao.Component.Config.Params (ConfigParams)
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
@@ -41,7 +43,8 @@ suite = do
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
 
-          (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <- createVotePass
+          (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
+            createVotePass
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
