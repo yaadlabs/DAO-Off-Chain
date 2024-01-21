@@ -89,6 +89,10 @@ cancelVote params = do
     burnVoteNft = Value.singleton voteSymbol params.voteTokenName
       (negate one)
 
+    voteNftPass :: Value
+    voteNftPass = Value.singleton params.voteNftSymbol params.voteNftTokenName
+      one
+
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
@@ -105,6 +109,8 @@ cancelVote params = do
       mconcat
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
+        , Constraints.mustPayToPubKey voteOwnerKey voteNftPass
+        -- ^ Pay the vote 'pass' back to the owner
         , configInfo.constraints
         , voteInfo.constraints
         ]

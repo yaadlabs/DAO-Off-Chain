@@ -116,6 +116,8 @@ suite = do
               { configSymbol: configSymbol
               , configTokenName: configTokenName
               , voteTokenName: adaToken
+              , voteNftSymbol: votePassSymbol
+              , voteNftTokenName: votePassTokenName
               }
           cancelVoteTxHash <- cancelVote cancelVoteParams
 

@@ -44,4 +44,6 @@ type CancelVoteParams =
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
+  , voteNftSymbol :: CurrencySymbol
+  , voteNftTokenName :: TokenName
   }
