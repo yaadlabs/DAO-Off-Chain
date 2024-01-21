@@ -5,7 +5,7 @@ module Scripts.ConfigPolicy
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import LambdaBuffers.ApplicationTypes.Arguments (NftConfig)
+import ScriptArguments.Types (NftConfig)
 import Scripts.Utils (mkUnappliedPolicy)
 
 unappliedConfigPolicy :: NftConfig -> Contract MintingPolicy

@@ -49,7 +49,7 @@ import Dao.Utils.Query
   , findKeyUtxoBySymbol
   , findScriptUtxoBySymbol
   )
-import Dao.Utils.Query (findKeyUtxoBySymbol)
+import Dao.Utils.Query (SpendPubKeyResult, findKeyUtxoBySymbol)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -196,7 +196,7 @@ spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
 spendVoteNftUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
-  Contract Value
+  Contract SpendPubKeyResult
 spendVoteNftUtxo voteNftSymbol utxoMap = do
   logInfo' "Entering spendVoteNftUtxo contract"
   findKeyUtxoBySymbol voteNftSymbol utxoMap

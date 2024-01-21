@@ -25,4 +25,6 @@ sampleConfigParams =
   , voteFungibleCurrencySymbol: adaSymbol
   , voteFungibleTokenName: adaToken
   , fungibleVotePercent: BigInt.fromInt 0
+  , indexSymbol: adaSymbol
+  , indexTokenName: adaToken
   }

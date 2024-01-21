@@ -5,7 +5,8 @@ module Scripts.TreasuryValidator
 
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig(ConfigurationValidatorConfig))
+-- import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
 import Scripts.Utils (mkUnappliedValidator)
 
 unappliedTreasuryValidator :: ConfigurationValidatorConfig -> Contract Validator

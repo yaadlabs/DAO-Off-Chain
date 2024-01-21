@@ -1,6 +1,6 @@
 module LambdaBuffers.ApplicationTypes.Proposal (ProposalType(..)) where
 
-import Ctl.Internal.Cardano.Types.Value (CurrencySymbol)
+import Contract.Value (CurrencySymbol)
 import Ctl.Internal.FromData as Ctl.Internal.FromData
 import Ctl.Internal.Plutus.Types.Address (Address)
 import Ctl.Internal.ToData as Ctl.Internal.ToData

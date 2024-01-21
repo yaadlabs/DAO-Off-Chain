@@ -45,6 +45,9 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.VotePolicy (unappliedVotePolicy)
 import Scripts.VoteValidator (unappliedVoteValidator)

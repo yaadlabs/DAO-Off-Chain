@@ -15,6 +15,9 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
+  , show
+  , unwrap
+  , (#)
   , ($)
   , (*)
   , (/\)
@@ -44,12 +47,12 @@ import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
+  )
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
 import Scripts.TallyValidator (unappliedTallyValidatorDebug)
@@ -69,6 +72,8 @@ voteOnProposal voteParams = do
       { cvcConfigNftCurrencySymbol: voteParams.configSymbol
       , cvcConfigNftTokenName: voteParams.configTokenName
       }
+
+  logInfo' $ "validatorConfig: " <> show validatorConfig
 
   appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
@@ -91,10 +96,9 @@ voteOnProposal voteParams = do
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
-  -- Check if the user has a 'voteNft' token,
-  -- which is required in order to vote on a proposal
-  -- TODO: Spend it properly, now just finding it
-  voteNftToken <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
+  -- Look for the'voteNft' UTXO,
+  -- get the constraints and lookups to spend it if found
+  voteNftInfo <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -127,6 +131,7 @@ voteOnProposal voteParams = do
         [ Lookups.mintingPolicy appliedVotePolicy
         , configInfo.lookups
         , tallyInfo.lookups
+        , voteNftInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -137,10 +142,11 @@ voteOnProposal voteParams = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftToken)
-        , Constraints.mustValidateIn onchainTimeRange
+            (voteValue <> voteNftInfo.value)
+        -- , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
+        , voteNftInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints

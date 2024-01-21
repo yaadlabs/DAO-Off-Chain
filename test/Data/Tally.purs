@@ -3,6 +3,7 @@ module Test.Data.Tally (sampleTallyStateDatum) where
 import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, ($))
 import Contract.Time (POSIXTime(POSIXTime))
+import Dao.Utils.Time (mkPosixTime)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
@@ -16,7 +17,10 @@ sampleTallyStateDatum = do
   pure $
     TallyStateDatum
       { proposal: ProposalType'General dummyAddress' (BigInt.fromInt 10)
-      , proposalEndTime: POSIXTime $ BigInt.fromInt 0
+      , proposalEndTime: proposalEndTimeWayInFuture
       , for: BigInt.fromInt 0
       , against: BigInt.fromInt 0
       }
+
+proposalEndTimeWayInFuture :: POSIXTime
+proposalEndTimeWayInFuture = mkPosixTime "1795941991500"

@@ -6,7 +6,7 @@ module Dao.Component.Config.Params (ConfigParams, mkValidatorConfig) where
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
-import LambdaBuffers.ApplicationTypes.Arguments
+import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 
@@ -31,6 +31,9 @@ type ConfigParams =
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  -- Index needed for making tallyNft
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
   }
 
 mkValidatorConfig ::
