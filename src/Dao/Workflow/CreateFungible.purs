@@ -6,32 +6,22 @@ module Dao.Workflow.CreateFungible (createFungible) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.PlutusData (Datum(Datum), toData)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
   ( type (/\)
   , bind
   , discard
   , mconcat
   , pure
-  , unwrap
   , ($)
   , (/\)
   , (<)
   , (>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , ValidatorHash
-  , validatorHash
-  )
+import Contract.Scripts (MintingPolicy)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -59,7 +49,7 @@ createFungible userPkh tokenAmount = do
   -- Script sets these arbitrary bounds on number of tokens allowed
   guardContract "Token amount must be greater than 0"
     (tokenAmount > (fromInt 0))
-  guardContract "Token amount must be less than 50"
+  guardContract "Token amount must be less than 500"
     (tokenAmount < (fromInt 500))
 
   appliedFungiblePolicy :: MintingPolicy <- unappliedFungiblePolicyDebug

@@ -5,10 +5,8 @@ Description: Test the vote on proposal workflow
 module Test.Workflow.VoteOnProposal (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Chain (waitNSlots)
 import Contract.Monad (liftedM)
-import Contract.Numeric.Natural as Natural
-import Contract.Prelude (Unit, bind, discard, pure, show, unit, void, ($), (/\))
+import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
@@ -17,7 +15,7 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Value (adaSymbol, adaToken)
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -30,8 +28,6 @@ import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Scripts.VoteNft (voteNftPolicy)
-import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit

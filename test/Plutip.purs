@@ -9,7 +9,6 @@ import Contract.Prelude
 import Contract.Test.Mote (interpretWithConfig)
 import Contract.Test.Plutip
   ( PlutipConfig
-  , defaultPlutipConfig
   , testPlutipContracts
   )
 import Contract.Test.Utils (exitCode, interruptOnSignal)

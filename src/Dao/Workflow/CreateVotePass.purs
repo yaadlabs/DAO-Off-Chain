@@ -6,8 +6,7 @@ module Dao.Workflow.CreateVotePass (createVotePass) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.PlutusData (Datum(Datum), toData)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
   ( type (/\)
   , bind
@@ -15,22 +14,12 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
-  , unwrap
   , ($)
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , ValidatorHash
-  , validatorHash
-  )
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints

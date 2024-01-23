@@ -5,10 +5,8 @@ Description: Test the count vote workflow
 module Test.Workflow.CountVote (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
-import Contract.Numeric.Natural as Natural
 import Contract.Prelude
   ( Unit
   , bind
@@ -30,9 +28,8 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
-import Contract.Wallet (getWalletCollateral)
-import Contract.Wallet (ownPaymentPubKeyHash)
+import Contract.Value (adaSymbol, adaToken)
+import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -45,8 +42,6 @@ import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Scripts.VoteNft (voteNftPolicy)
-import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit
