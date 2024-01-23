@@ -59,7 +59,6 @@ import Scripts.VotePolicy (unappliedVotePolicyDebug)
 import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for counting the votes
--- TODO: Include fungible token calculation
 countVote ::
   CountVoteParams ->
   Contract TransactionHash
@@ -104,6 +103,7 @@ countVote params = do
       params.fungibleSymbol
       params.voteNftTokenName
       params.voteTokenName
+      params.fungibleTokenName
       params.fungiblePercent
       appliedVotePolicy
       voteUtxos

@@ -38,6 +38,7 @@ type CountVoteParams =
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
   , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
   , fungiblePercent :: BigInt
   }
 
@@ -48,4 +49,6 @@ type CancelVoteParams =
   , voteTokenName :: TokenName
   , voteNftSymbol :: CurrencySymbol
   , voteNftTokenName :: TokenName
+  , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
   }

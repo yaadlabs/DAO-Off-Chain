@@ -125,6 +125,8 @@ suite = do
               , voteTokenName: adaToken
               , voteNftSymbol: votePassSymbol
               , voteNftTokenName: votePassTokenName
+              , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
               }
           cancelVoteTxHash <- cancelVote cancelVoteParams
 

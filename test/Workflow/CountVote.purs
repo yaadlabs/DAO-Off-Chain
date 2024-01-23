@@ -146,6 +146,7 @@ suite = do
               , configTokenName: configTokenName
               , tallySymbol: proposalSymbol
               , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
               , fungiblePercent: BigInt.fromInt 10
               }
 

@@ -36,6 +36,7 @@ import Contract.Prelude
   , (+)
   , (/)
   , (/\)
+  , (<>)
   , (==)
   )
 import Contract.ScriptLookups as Lookups
@@ -73,6 +74,7 @@ mkAllVoteConstraintsAndLookups ::
   CurrencySymbol ->
   TokenName ->
   TokenName ->
+  TokenName ->
   BigInt ->
   MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
@@ -88,6 +90,7 @@ mkAllVoteConstraintsAndLookups
   fungibleSymbol
   voteNftTokenName
   voteTokenName
+  fungibleTokenName
   fungiblePercent
   votePolicyScript
   utxos =
@@ -98,6 +101,7 @@ mkAllVoteConstraintsAndLookups
         fungibleSymbol
         voteNftTokenName
         voteTokenName
+        fungibleTokenName
         fungiblePercent
         votePolicyScript
     )
@@ -107,6 +111,7 @@ mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
   CurrencySymbol ->
+  TokenName ->
   TokenName ->
   TokenName ->
   BigInt ->
@@ -122,6 +127,7 @@ mkVoteUtxoConstraintsAndLookups
   fungibleSymbol
   voteNftTokenName
   voteTokenName
+  fungibleTokenName
   fungiblePercent
   votePolicyScript
   (txIn /\ txOut) =
@@ -156,6 +162,9 @@ mkVoteUtxoConstraintsAndLookups
       voteNftToken :: Value
       voteNftToken = singleton voteNftSymbol voteNftTokenName one
 
+      fungibleToken :: Value
+      fungibleToken = singleton fungibleSymbol fungibleTokenName fungibleAmount
+
       burnVoteValue :: Value
       burnVoteValue = singleton voteSymbol voteTokenName (negate one)
 
@@ -173,7 +182,9 @@ mkVoteUtxoConstraintsAndLookups
       constraints' = mconcat
         [ Constraints.mustSpendScriptOutput txIn
             (Redeemer $ toData $ VoteActionRedeemer'Count)
-        , Constraints.mustPayToPubKey voteOwnerKey voteNftToken
+        , Constraints.mustPayToPubKey voteOwnerKey
+            (voteNftToken <> fungibleToken)
+        -- ^ Return the 'voteNft', and 'fungibleToken(s)' if any
         , Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteValue
         ]
 

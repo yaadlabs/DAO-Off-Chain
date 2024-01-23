@@ -15,11 +15,16 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
+  , mempty
   , negate
   , one
+  , otherwise
   , pure
+  , zero
   , (#)
   , ($)
+  , (<>)
+  , (==)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator)
@@ -39,7 +44,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Value (countOfTokenInValue)
 import Data.Newtype (unwrap)
+import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
@@ -96,6 +103,16 @@ cancelVote params = do
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
+    fungibleAmount :: BigInt
+    fungibleAmount = countOfTokenInValue params.fungibleSymbol voteInfo.value
+
+    fungibleToken :: Value
+    fungibleToken
+      | fungibleAmount == zero = mempty
+      | otherwise = Value.singleton params.fungibleSymbol
+          params.fungibleTokenName
+          fungibleAmount
+
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
@@ -109,8 +126,9 @@ cancelVote params = do
       mconcat
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
-        , Constraints.mustPayToPubKey voteOwnerKey voteNftPass
-        -- ^ Pay the vote 'pass' back to the owner
+        , Constraints.mustPayToPubKey voteOwnerKey
+            (voteNftPass <> fungibleToken)
+        -- ^ Pay the vote 'pass' back to the owner, and the fungibleTokens if any
         , configInfo.constraints
         , voteInfo.constraints
         ]
