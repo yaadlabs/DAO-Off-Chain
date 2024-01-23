@@ -5,8 +5,9 @@ module Scripts.VotePolicy
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import ScriptArguments.Types (ConfigurationValidatorConfig(ConfigurationValidatorConfig))
--- import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import Scripts.Utils (mkUnappliedPolicy)
 
 unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy

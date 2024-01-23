@@ -1,13 +1,12 @@
-module Scripts.FungiblePolicy 
+module Scripts.FungiblePolicy
   ( unappliedFungiblePolicy
   , unappliedFungiblePolicyDebug
-  )
-  where
+  ) where
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import Scripts.Utils (mkUnappliedPolicy)
 import JS.BigInt (BigInt)
+import Scripts.Utils (mkUnappliedPolicy)
 
 unappliedFungiblePolicy :: BigInt -> Contract MintingPolicy
 unappliedFungiblePolicy = mkUnappliedPolicy
