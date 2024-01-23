@@ -4,6 +4,7 @@ module Dao.Component.Vote.Query
   , referenceVoteUtxo
   , spendVoteUtxo
   , spendVoteNftUtxo
+  , spendFungibleUtxo
   ) where
 
 import Contract.Address (PaymentPubKeyHash)
@@ -31,6 +32,9 @@ import Contract.Prelude
   , (#)
   , ($)
   , (&&)
+  , (*)
+  , (+)
+  , (/)
   , (/\)
   , (==)
   )
@@ -50,37 +54,51 @@ import Dao.Utils.Query
   , findScriptUtxoBySymbol
   )
 import Dao.Utils.Query (SpendPubKeyResult, findKeyUtxoBySymbol)
+import Dao.Utils.Value (countOfTokenInValue)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
+import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Count)
   , VoteDatum
   , VoteDirection
+  , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
 import Type.Proxy (Proxy(Proxy))
 
 mkAllVoteConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
+  CurrencySymbol ->
   TokenName ->
   TokenName ->
+  BigInt ->
   MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract
     ( Array
-        (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints)
+        ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+            Constraints.TxConstraints
+        )
     )
 mkAllVoteConstraintsAndLookups
   voteNftSymbol
   voteSymbol
+  fungibleSymbol
   voteNftTokenName
   voteTokenName
+  fungiblePercent
   votePolicyScript
   utxos =
   traverse
-    ( mkVoteUtxoConstraintsAndLookups voteNftSymbol voteSymbol voteNftTokenName
+    ( mkVoteUtxoConstraintsAndLookups
+        voteNftSymbol
+        voteSymbol
+        fungibleSymbol
+        voteNftTokenName
         voteTokenName
+        fungiblePercent
         votePolicyScript
     )
     (Map.toUnfoldableUnordered utxos)
@@ -88,16 +106,23 @@ mkAllVoteConstraintsAndLookups
 mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
+  CurrencySymbol ->
   TokenName ->
   TokenName ->
+  BigInt ->
   MintingPolicy ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
-  Contract (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints)
+  Contract
+    ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+        Constraints.TxConstraints
+    )
 mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
   voteSymbol
+  fungibleSymbol
   voteNftTokenName
   voteTokenName
+  fungiblePercent
   votePolicyScript
   (txIn /\ txOut) =
   do
@@ -116,14 +141,26 @@ mkVoteUtxoConstraintsAndLookups
         # _.voteOwner
 
     let
+      -- If the user holds fungible tokens we need to add the calculated weight
+      -- of these tokens to the vote amount
+      fungibleAmount = countOfToken fungibleSymbol txOut
+      fungibleVoteWeight = (fungibleAmount * fungiblePercent) / (fromInt 1000)
+
+    let
       voteDirection' :: VoteDirection
       voteDirection' = voteDatum # unwrap # _.direction
+
+      voteAmount :: BigInt
+      voteAmount = (fromInt 1) + fungibleVoteWeight
 
       voteNftToken :: Value
       voteNftToken = singleton voteNftSymbol voteNftTokenName one
 
       burnVoteValue :: Value
       burnVoteValue = singleton voteSymbol voteTokenName (negate one)
+
+      burnVoteRedeemer :: Redeemer
+      burnVoteRedeemer = Redeemer $ toData $ VoteMinterActionRedeemer'Burn
 
       lookups' :: Lookups.ScriptLookups
       lookups' = mconcat
@@ -137,11 +174,16 @@ mkVoteUtxoConstraintsAndLookups
         [ Constraints.mustSpendScriptOutput txIn
             (Redeemer $ toData $ VoteActionRedeemer'Count)
         , Constraints.mustPayToPubKey voteOwnerKey voteNftToken
-        , Constraints.mustMintValue burnVoteValue
+        , Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteValue
         ]
 
-    pure (voteDirection' /\ lookups' /\ constraints')
+    pure ((voteDirection' /\ voteAmount) /\ lookups' /\ constraints')
   where
+  countOfToken :: CurrencySymbol -> TransactionOutputWithRefScript -> BigInt
+  countOfToken symbol txOut = countOfTokenInValue symbol value
+    where
+    value = txOut # unwrap # _.output # unwrap # _.amount
+
   extractOutputDatum :: TransactionOutputWithRefScript -> Maybe VoteDatum
   extractOutputDatum (TransactionOutputWithRefScript txOut) =
     case txOut.output # unwrap # _.datum of
@@ -200,3 +242,11 @@ spendVoteNftUtxo ::
 spendVoteNftUtxo voteNftSymbol utxoMap = do
   logInfo' "Entering spendVoteNftUtxo contract"
   findKeyUtxoBySymbol voteNftSymbol utxoMap
+
+spendFungibleUtxo ::
+  CurrencySymbol ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract SpendPubKeyResult
+spendFungibleUtxo symbol utxoMap = do
+  logInfo' "Entering spendFungibleUtxo contract"
+  findKeyUtxoBySymbol symbol utxoMap

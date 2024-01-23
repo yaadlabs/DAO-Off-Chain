@@ -21,6 +21,8 @@ type VoteOnProposalParams =
   , voteTokenName :: TokenName
   -- Vote NFT symbol (vote pass)
   , voteNftSymbol :: CurrencySymbol
+  -- Fungible token symbol (vote multiplier token)
+  , fungibleSymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -29,14 +31,14 @@ type VoteOnProposalParams =
 
 -- | Count vote contract paramaters
 type CountVoteParams =
-  { voteSymbol :: CurrencySymbol
-  , voteNftSymbol :: CurrencySymbol
+  { voteNftSymbol :: CurrencySymbol
   , voteTokenName :: TokenName
   , voteNftTokenName :: TokenName
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
-  , votePolicy :: MintingPolicy
+  , fungibleSymbol :: CurrencySymbol
+  , fungiblePercent :: BigInt
   }
 
 -- | Cancel vote contract paramaters

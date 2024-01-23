@@ -42,7 +42,7 @@ import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
-import Dao.Component.Vote.Query (spendVoteNftUtxo)
+import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
@@ -98,6 +98,10 @@ voteOnProposal voteParams = do
   -- get the constraints and lookups to spend this UTXO if found
   voteNftInfo <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
 
+  -- Look for the 'voteFungibleCurrencySymbol' UTXO,
+  -- get the constraints and lookups to spend this UTXO if found
+  fungibleInfo <- spendFungibleUtxo voteParams.fungibleSymbol userUtxos
+
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
     ownerAddress :: Address
@@ -130,6 +134,7 @@ voteOnProposal voteParams = do
         , configInfo.lookups
         , tallyInfo.lookups
         , voteNftInfo.lookups
+        , fungibleInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -140,11 +145,12 @@ voteOnProposal voteParams = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftInfo.value)
+            (voteValue <> voteNftInfo.value <> fungibleInfo.value)
         -- , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints
+        , fungibleInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints

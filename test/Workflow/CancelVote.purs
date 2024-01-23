@@ -17,6 +17,7 @@ import Contract.Value (adaSymbol, adaToken)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CreateConfig (createConfig)
+import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateVotePass (createVotePass)
@@ -34,7 +35,7 @@ suite = do
       let
         distribution :: InitialUTxOs
         distribution =
-          [ BigInt.fromInt 5_000_000
+          [ BigInt.fromInt 2_000_000_000
           , BigInt.fromInt 2_000_000_000
           ]
       withWallets distribution \wallet -> do
@@ -43,6 +44,10 @@ suite = do
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
             createVotePass
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+
+          (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
+            createFungible (BigInt.fromInt 2)
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
@@ -99,6 +104,8 @@ suite = do
               -- Vote NFT (voting pass) symbol and token name
               , voteNftSymbol: votePassSymbol
               , voteTokenName: adaToken -- votePassTokenName
+              -- Fungible
+              , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
               , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For
