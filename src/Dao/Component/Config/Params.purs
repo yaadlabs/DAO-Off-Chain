@@ -9,7 +9,7 @@ module Dao.Component.Config.Params
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
-import LambdaBuffers.ApplicationTypes.Arguments
+import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
 
@@ -28,12 +28,13 @@ type ConfigParams =
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: CurrencySymbol
-  , voteCurrencySymbol :: CurrencySymbol
   , voteTokenName :: TokenName
-  , voteNft :: CurrencySymbol
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  -- Index needed for making tallyNft
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
   }
 
 mkValidatorConfig ::
