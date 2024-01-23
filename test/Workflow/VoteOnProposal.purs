@@ -4,7 +4,9 @@ Description: Test the vote on proposal workflow
 -}
 module Test.Workflow.VoteOnProposal (suite) where
 
+import Contract.Address (PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
+import Contract.Monad (liftedM)
 import Contract.Numeric.Natural as Natural
 import Contract.Prelude (Unit, bind, discard, pure, show, unit, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
@@ -16,6 +18,7 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
@@ -44,12 +47,16 @@ suite = do
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
 
+          userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
+            ownPaymentPubKeyHash
+
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
-            createVotePass
+            createVotePass userPkh
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible (BigInt.fromInt 2)
+            createFungible userPkh (BigInt.fromInt 2)
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-

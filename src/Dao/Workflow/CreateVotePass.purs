@@ -41,20 +41,19 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Utils.Value (mkTokenName)
 import Scripts.VoteNft (voteNftPolicy)
 
 -- | Contract for creating token corresponding to the 'voteNft' field of the config
 -- | This token acts as a pass for voting on a proposal
-createVotePass :: Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createVotePass = do
+createVotePass ::
+  PaymentPubKeyHash ->
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
+createVotePass userPkh = do
   logInfo' "Entering createVotePass transaction"
 
   voteNftPolicy' <- voteNftPolicy
 
-  userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
-    ownPaymentPubKeyHash
   voteNftTokenName :: TokenName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName "vote_pass"
 

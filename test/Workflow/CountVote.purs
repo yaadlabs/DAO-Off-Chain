@@ -4,8 +4,10 @@ Description: Test the count vote workflow
 -}
 module Test.Workflow.CountVote (suite) where
 
+import Contract.Address (PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
+import Contract.Monad (liftedM)
 import Contract.Numeric.Natural as Natural
 import Contract.Prelude
   ( Unit
@@ -30,6 +32,7 @@ import Contract.Test.Plutip
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
 import Contract.Wallet (getWalletCollateral)
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -59,12 +62,15 @@ suite = do
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
 
+          userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
+            ownPaymentPubKeyHash
+
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
-            createVotePass
+            createVotePass userPkh
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible (BigInt.fromInt 400)
+            createFungible userPkh (BigInt.fromInt 400)
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-

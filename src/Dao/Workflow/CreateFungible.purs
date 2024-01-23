@@ -42,7 +42,6 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)
 import JS.BigInt (BigInt, fromInt)
@@ -51,8 +50,10 @@ import Scripts.FungiblePolicy (unappliedFungiblePolicyDebug)
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
 createFungible ::
-  BigInt -> Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createFungible tokenAmount = do
+  PaymentPubKeyHash ->
+  BigInt ->
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
+createFungible userPkh tokenAmount = do
   logInfo' "Entering createVotePass transaction"
 
   -- Script sets these arbitrary bounds on number of tokens allowed
@@ -64,8 +65,6 @@ createFungible tokenAmount = do
   appliedFungiblePolicy :: MintingPolicy <- unappliedFungiblePolicyDebug
     tokenAmount
 
-  userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
-    ownPaymentPubKeyHash
   fungibleTokenName :: TokenName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
       "vote_fungible"
