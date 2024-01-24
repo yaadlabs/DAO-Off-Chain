@@ -38,7 +38,7 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryGeneralParams)
+import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
@@ -56,7 +56,7 @@ import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
-  TreasuryGeneralParams ->
+  TreasuryParams ->
   Contract TransactionHash
 treasuryGeneral params = do
   logInfo' "Entering treasuryGeneral transaction"

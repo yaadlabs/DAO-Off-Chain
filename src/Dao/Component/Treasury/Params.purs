@@ -3,32 +3,19 @@ Module: Dao.Component.Treasury.Params
 Description: Treasury helpers
 -}
 module Dao.Component.Treasury.Params
-  ( TreasuryGeneralParams
-  , TreasuryTripParams
+  ( TreasuryParams
   , TreasuryFundParams
   ) where
 
-import Contract.Address (Address)
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
 
--- | Parameters for treasury trip contract
-type TreasuryTripParams =
-  { travelAgentAddress :: Address
-  , travellerAddress :: Address
-  , totalTravelCost :: BigInt
-  , configSymbol :: CurrencySymbol
-  , configTokenName :: TokenName
-  , tallySymbol :: CurrencySymbol
-  , treasurySymbol :: CurrencySymbol
-  }
-
--- | Parameters for treasury general contract
-type TreasuryGeneralParams =
+-- | Parameters for treasury general or trip contracts
+type TreasuryParams =
   { configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
   , treasurySymbol :: CurrencySymbol
-  , configTokenName :: TokenName
   }
 
 -- | Parameters for treasury fund contract
