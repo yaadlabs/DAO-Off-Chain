@@ -5,6 +5,7 @@ Description: Query helpers
 module Dao.Utils.Query
   ( UtxoInfo
   , QueryType(..)
+  , SpendPubKeyResult
   , getAllWalletUtxos
   , findScriptUtxoBySymbol
   , findKeyUtxoBySymbol
@@ -31,6 +32,7 @@ import Contract.Prelude
   , any
   , bind
   , discard
+  , mconcat
   , pure
   , show
   , (#)
@@ -86,7 +88,6 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
 
   let
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
-
   utxos <- utxosAt scriptAddr
 
   let
@@ -109,8 +110,11 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
         Reference -> Constraints.mustReferenceOutput txIn
 
     lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $
-      Map.singleton txIn (TransactionOutputWithRefScript txOut)
+    lookups' = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn
+          (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
+      ]
 
     value :: Value
     value = txOut.output # unwrap # _.amount
@@ -127,12 +131,18 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
--- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
--- | Used with 'getAllWalletUtxos' to check UTXOs at key
+-- | Result type for 'findKeyUtxoBySymbol' function
+type SpendPubKeyResult =
+  { lookups :: Lookups.ScriptLookups
+  , constraints :: Constraints.TxConstraints
+  , value :: Value
+  }
+
+-- | Spend UTXO marked by an NFT with the given CurrencySymbol
 findKeyUtxoBySymbol ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
-  Contract Value
+  Contract SpendPubKeyResult
 findKeyUtxoBySymbol symbol utxos = do
   logInfo' "Entering findKeyUtxoBySymbol contract"
 
@@ -147,7 +157,17 @@ findKeyUtxoBySymbol symbol utxos = do
       $ Map.toUnfoldable
       $ utxos
 
-  pure $ txOut.output # unwrap # _.amount
+  let
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat [ Lookups.unspentOutputs utxos ] -- TODO: Make this more precise
+
+    constraints :: Constraints.TxConstraints
+    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  pure { lookups, constraints, value }
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::

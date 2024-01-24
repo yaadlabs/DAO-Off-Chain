@@ -15,11 +15,16 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
+  , mempty
   , negate
   , one
+  , otherwise
   , pure
+  , zero
   , (#)
   , ($)
+  , (<>)
+  , (==)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator)
@@ -30,43 +35,52 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
   , Value
+  , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Value (countOfTokenInValue)
 import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.VotePolicy (unappliedVotePolicy)
-import Scripts.VoteValidator (unappliedVoteValidator)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.VotePolicy (unappliedVotePolicyDebug)
+import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for cancelling a vote
 cancelVote ::
-  ConfigurationValidatorConfig ->
-  CurrencySymbol ->
-  CurrencySymbol ->
-  TokenName ->
+  CancelVoteParams ->
   Contract TransactionHash
-cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
+cancelVote params = do
   logInfo' "Entering cancelVote transaction"
 
   -- Make the scripts
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
+  let
+    voteSymbol :: CurrencySymbol
+    voteSymbol = scriptCurrencySymbol appliedVotePolicy
+
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel voteSymbol
+  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel
+    voteSymbol
     appliedVoteValidator
 
   -- Extract the vote owner from the vote datum
@@ -79,10 +93,25 @@ cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
 
   let
     burnVoteNft :: Value
-    burnVoteNft = Value.singleton voteSymbol voteTokenName (negate one)
+    burnVoteNft = Value.singleton voteSymbol params.voteTokenName
+      (negate one)
+
+    voteNftPass :: Value
+    voteNftPass = Value.singleton params.voteNftSymbol params.voteNftTokenName
+      one
 
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
+
+    fungibleAmount :: BigInt
+    fungibleAmount = countOfTokenInValue params.fungibleSymbol voteInfo.value
+
+    fungibleToken :: Value
+    fungibleToken
+      | fungibleAmount == zero = mempty
+      | otherwise = Value.singleton params.fungibleSymbol
+          params.fungibleTokenName
+          fungibleAmount
 
     lookups :: Lookups.ScriptLookups
     lookups =
@@ -97,6 +126,9 @@ cancelVote validatorConfig configSymbol voteSymbol voteTokenName = do
       mconcat
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
+        , Constraints.mustPayToPubKey voteOwnerKey
+            (voteNftPass <> fungibleToken)
+        -- ^ Pay the vote 'pass' back to the owner, and the fungibleTokens if any
         , configInfo.constraints
         , voteInfo.constraints
         ]

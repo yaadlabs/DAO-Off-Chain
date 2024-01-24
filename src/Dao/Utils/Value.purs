@@ -7,28 +7,35 @@ module Dao.Utils.Value
   , valueSubtraction
   , normaliseValue
   , allPositive
+  , countOfTokenInValue
   ) where
 
+import Contract.AssocMap as AssocMap
 import Contract.Prelude
   ( class Foldable
   , type (/\)
   , all
   , foldMap
   , sub
+  , sum
+  , zero
   , zero
   , ($)
   , (/=)
   , (/\)
+  , (<$>)
   , (<<<)
+  , (<=<)
   , (<=<)
   , (>=)
   )
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
   , flattenValue
+  , getValue
   , getValue
   , singleton
   , unionWith
@@ -37,7 +44,7 @@ import Contract.Value
   ( mkTokenName
   ) as Value
 import Data.Array (filter) as Array
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, fromMaybe)
 import JS.BigInt (BigInt)
 
 mkTokenName :: String -> Maybe TokenName
@@ -61,3 +68,11 @@ unflattenValue ::
   Value
 unflattenValue = foldMap $
   \(symbol /\ tokenName /\ amount) -> singleton symbol tokenName amount
+
+countOfTokenInValue :: CurrencySymbol -> Value -> BigInt
+countOfTokenInValue symbol value =
+  let
+    maybeTotal = sum <$> AssocMap.elems <$> AssocMap.lookup symbol
+      (getValue value)
+  in
+    fromMaybe zero maybeTotal

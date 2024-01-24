@@ -2,9 +2,9 @@
 Module: Dao.Workflow.TreasuryGeneral
 Description: Contract for disbursing treasury funds based on a general proposal
 -}
-module Dao.Workflow.TreasuryGeneral where
+module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
-import Contract.Address (PaymentPubKeyHash)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -15,7 +15,6 @@ import Contract.Prelude
   , min
   , pure
   , unwrap
-  , void
   , (#)
   , ($)
   , (*)
@@ -31,9 +30,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
+  ( Value
   , adaSymbol
   , adaToken
   , singleton
@@ -41,24 +38,25 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryParamsGeneral)
+import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
+import Data.Maybe (Maybe(Nothing, Just))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.TreasuryValidator (unappliedTreasuryValidator)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
-  TreasuryParamsGeneral ->
+  TreasuryParams ->
   Contract TransactionHash
 treasuryGeneral params = do
   logInfo' "Entering treasuryGeneral transaction"
@@ -67,10 +65,11 @@ treasuryGeneral params = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs
@@ -80,10 +79,6 @@ treasuryGeneral params = do
     appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo
-      ( ProposalType'General
-          params.paymentAddress
-          params.generalPaymentAmount
-      )
       params.treasurySymbol
       appliedTreasuryValidator
 
@@ -94,6 +89,16 @@ treasuryGeneral params = do
     tallyDatum :: TallyStateDatum
     tallyDatum = tallyInfo.datum
 
+  -- Get the treasury payment info from the 'TallyStateDatum'
+  paymentAddress :: Address <- liftContractM "Not a general proposal" $
+    getPaymentAddress tallyDatum
+  paymentAmount :: BigInt <- liftContractM "Not a general proposal" $
+    getPaymentAmount tallyDatum
+  paymentKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key" $
+      addressToPaymentPubKeyHash paymentAddress
+
+  let
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
 
@@ -125,8 +130,7 @@ treasuryGeneral params = do
       _.maxGeneralDisbursement
 
     disbursementAmount :: BigInt
-    disbursementAmount = min configMaxGeneralDisbursement
-      params.generalPaymentAmount
+    disbursementAmount = min configMaxGeneralDisbursement paymentAmount
 
     treasuryInputAmount :: Value
     treasuryInputAmount = treasuryInfo.value
@@ -148,10 +152,6 @@ treasuryGeneral params = do
     configGeneralRelativeMajorityPercent
   guardContract "Majority percent is too low" $ majorityPercent >=
     configGeneralMajorityPercent
-
-  paymentKey :: PaymentPubKeyHash <-
-    liftContractM "Could not convert address to key" $
-      addressToPaymentPubKeyHash params.paymentAddress
 
   let
     treasuryValidatorHash :: ValidatorHash
@@ -182,3 +182,21 @@ treasuryGeneral params = do
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
+  where
+  getPaymentAddress :: TallyStateDatum -> Maybe Address
+  getPaymentAddress tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'General address _) -> Just address
+        _ -> Nothing
+
+  getPaymentAmount :: TallyStateDatum -> Maybe BigInt
+  getPaymentAmount tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'General _ amount) -> Just amount
+        _ -> Nothing
