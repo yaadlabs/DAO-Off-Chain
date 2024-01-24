@@ -5,6 +5,7 @@ Description: Helpers for vote on proposal workflow
 module Dao.Component.Vote.Params
   ( VoteOnProposalParams
   , CountVoteParams
+  , CancelVoteParams
   ) where
 
 import Contract.Scripts (MintingPolicy)
@@ -20,6 +21,8 @@ type VoteOnProposalParams =
   , voteTokenName :: TokenName
   -- Vote NFT symbol (vote pass)
   , voteNftSymbol :: CurrencySymbol
+  -- Fungible token symbol (vote multiplier token)
+  , fungibleSymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -28,12 +31,24 @@ type VoteOnProposalParams =
 
 -- | Count vote contract paramaters
 type CountVoteParams =
-  { voteSymbol :: CurrencySymbol
-  , voteNftSymbol :: CurrencySymbol
+  { voteNftSymbol :: CurrencySymbol
   , voteTokenName :: TokenName
   , voteNftTokenName :: TokenName
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
-  , votePolicy :: MintingPolicy
+  , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
+  , fungiblePercent :: BigInt
+  }
+
+-- | Cancel vote contract paramaters
+type CancelVoteParams =
+  { configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , voteTokenName :: TokenName
+  , voteNftSymbol :: CurrencySymbol
+  , voteNftTokenName :: TokenName
+  , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
   }

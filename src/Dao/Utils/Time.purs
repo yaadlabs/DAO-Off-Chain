@@ -8,6 +8,7 @@ module Dao.Utils.Time
   , mkValidityRange
   , mkTimeRangeWithinSummary
   , oneMinute
+  , mkPosixTime
   ) where
 
 import Contract.Prelude
@@ -30,6 +31,7 @@ import Ctl.Internal.Types.Interval
   ( Interval(FiniteInterval)
   )
 import JS.BigInt as BigInt
+import Partial.Unsafe (unsafePartial)
 
 -- | Make validity range from current time for specified period of time
 mkValidityRange :: POSIXTime -> Contract POSIXTimeRange
@@ -124,3 +126,6 @@ mkOnchainTimeRange'' pTime = do
 
 oneMinute :: Int
 oneMinute = 1000 * 60
+
+mkPosixTime :: String -> POSIXTime
+mkPosixTime = wrap <<< unsafePartial fromJust <<< BigInt.fromString

@@ -41,7 +41,7 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryParamsTrip)
+import Dao.Component.Treasury.Params (TreasuryTripParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
@@ -55,7 +55,7 @@ import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
-treasuryTrip :: TreasuryParamsTrip -> Contract TransactionHash
+treasuryTrip :: TreasuryTripParams -> Contract TransactionHash
 treasuryTrip params = do
   logInfo' "Entering treasuryTrip transaction"
 
@@ -76,11 +76,6 @@ treasuryTrip params = do
     appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo
-      ( ProposalType'Trip
-          params.travelAgentAddress
-          params.travellerAddress
-          params.totalTravelCost
-      )
       params.treasurySymbol
       appliedTreasuryValidator
 
