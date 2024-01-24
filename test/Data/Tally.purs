@@ -1,4 +1,4 @@
-module Test.Data.Tally (sampleTallyStateDatum) where
+module Test.Data.Tally (sampleGeneralProposalTallyStateDatum) where
 
 import Contract.Address (Address)
 import Contract.Monad (Contract)
@@ -11,8 +11,8 @@ import LambdaBuffers.ApplicationTypes.Proposal
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 
-sampleTallyStateDatum :: Address -> TallyStateDatum
-sampleTallyStateDatum paymentAddress =
+sampleGeneralProposalTallyStateDatum :: Address -> TallyStateDatum
+sampleGeneralProposalTallyStateDatum paymentAddress =
   TallyStateDatum
     { proposal: ProposalType'General paymentAddress (BigInt.fromInt 1_000_000)
     , proposalEndTime: proposalEndTimeWayInFuture

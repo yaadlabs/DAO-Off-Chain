@@ -43,7 +43,7 @@ import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Test.Data.Tally (sampleTallyStateDatum)
+import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
@@ -106,7 +106,8 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
           let
-            sampleTallyStateDatum' = sampleTallyStateDatum walletTwoAddress
+            sampleTallyStateDatum' = sampleGeneralProposalTallyStateDatum
+              walletTwoAddress
 
             proposalParams =
               { configSymbol, indexSymbol, configTokenName, indexTokenName }
