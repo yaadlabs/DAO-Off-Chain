@@ -2,7 +2,7 @@
 Module: Dao.Workflow.TreasuryGeneral
 Description: Contract for disbursing treasury funds based on a general proposal
 -}
-module Dao.Workflow.TreasuryGeneral where
+module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
@@ -14,6 +14,7 @@ import Contract.Prelude
   , mconcat
   , min
   , pure
+  , show
   , unwrap
   , void
   , (#)
@@ -21,6 +22,7 @@ import Contract.Prelude
   , (*)
   , (+)
   , (/)
+  , (<>)
   , (>=)
   )
 import Contract.ScriptLookups as Lookups
@@ -36,12 +38,14 @@ import Contract.Value
   , Value
   , adaSymbol
   , adaToken
+  , geq
+  , leq
   , singleton
   )
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryParamsGeneral)
+import Dao.Component.Treasury.Params (TreasuryGeneralParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
@@ -52,13 +56,13 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.TreasuryValidator (unappliedTreasuryValidator)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
-  TreasuryParamsGeneral ->
+  TreasuryGeneralParams ->
   Contract TransactionHash
 treasuryGeneral params = do
   logInfo' "Entering treasuryGeneral transaction"
@@ -67,10 +71,11 @@ treasuryGeneral params = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs
