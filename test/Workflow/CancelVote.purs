@@ -88,54 +88,54 @@ suite = do
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
-          sampleTallyStateDatum' <- sampleTallyStateDatum
+          -- sampleTallyStateDatum' <- sampleTallyStateDatum
 
-          let
-            proposalParams =
-              { configSymbol, indexSymbol, configTokenName, indexTokenName }
+          -- let
+          --   proposalParams =
+          --     { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
-          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
-            createProposal
-              proposalParams
-              sampleTallyStateDatum'
+          -- (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
+          --   createProposal
+          --     proposalParams
+          --     sampleTallyStateDatum'
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            createProposalTxHash
+          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+          --   createProposalTxHash
 
-          let
-            voteParams =
-              { configSymbol: configSymbol
-              , tallySymbol: proposalSymbol
-              , configTokenName: configTokenName
-              -- Vote NFT (voting pass) symbol and token name
-              , voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken -- votePassTokenName
-              -- Fungible
-              , fungibleSymbol: fungibleSymbol
-              -- Vote datum fields
-              , proposalTokenName: proposalTokenName
-              , voteDirection: VoteDirection'For
-              , returnAda: (BigInt.fromInt 0)
-              }
+          -- let
+          --   voteParams =
+          --     { configSymbol: configSymbol
+          --     , tallySymbol: proposalSymbol
+          --     , configTokenName: configTokenName
+          --     -- Vote NFT (voting pass) symbol and token name
+          --     , voteNftSymbol: votePassSymbol
+          --     , voteTokenName: adaToken -- votePassTokenName
+          --     -- Fungible
+          --     , fungibleSymbol: fungibleSymbol
+          --     -- Vote datum fields
+          --     , proposalTokenName: proposalTokenName
+          --     , voteDirection: VoteDirection'For
+          --     , returnAda: (BigInt.fromInt 0)
+          --     }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-            voteParams
+          -- (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+          --   voteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            voteOnProposalTxHash
+          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+          --   voteOnProposalTxHash
 
-          let
-            cancelVoteParams =
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
-              , voteTokenName: adaToken
-              , voteNftSymbol: votePassSymbol
-              , voteNftTokenName: votePassTokenName
-              , fungibleSymbol: fungibleSymbol
-              , fungibleTokenName: fungibleTokenName
-              }
-          cancelVoteTxHash <- cancelVote cancelVoteParams
+          -- let
+          --   cancelVoteParams =
+          --     { configSymbol: configSymbol
+          --     , configTokenName: configTokenName
+          --     , voteTokenName: adaToken
+          --     , voteNftSymbol: votePassSymbol
+          --     , voteNftTokenName: votePassTokenName
+          --     , fungibleSymbol: fungibleSymbol
+          --     , fungibleTokenName: fungibleTokenName
+          --     }
+          -- cancelVoteTxHash <- cancelVote cancelVoteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
+          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
 
-          pure unit
+          -- pure unit

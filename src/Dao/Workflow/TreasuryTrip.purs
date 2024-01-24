@@ -29,7 +29,6 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Treasury.Params (TreasuryTripParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
-import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
@@ -67,11 +66,6 @@ treasuryTrip
   tallyInfo :: TallyInfo <- referenceTallyUtxo tallySymbol appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo
-      ( ProposalType'Trip
-          treasuryParams.travelAgentAddress
-          treasuryParams.travellerAddress
-          treasuryParams.totalCost
-      )
       treasurySymbol
       appliedTreasuryValidator
 

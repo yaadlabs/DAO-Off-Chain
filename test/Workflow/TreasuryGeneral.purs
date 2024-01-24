@@ -8,7 +8,8 @@ import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
 import Contract.Prelude
-  ( Unit
+  ( type (/\)
+  , Unit
   , bind
   , discard
   , pure
@@ -29,7 +30,7 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash, getWalletAddress)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -42,6 +43,7 @@ import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (fromInt) as BigInt
+import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
 import Test.Data.Address (dummyAddress)
@@ -52,13 +54,20 @@ suite = do
   group "DAO tests" do
     test "Treasury general test" do
       let
-        distribution :: InitialUTxOs
+        distribution :: (Array BigInt /\ Array BigInt)
         distribution =
           [ BigInt.fromInt 2_000_000_000
           , BigInt.fromInt 500_000_000
-          ]
-      withWallets distribution \wallet -> do
-        withKeyWallet wallet do
+          ] /\ [ BigInt.fromInt 2_000_000_000 ]
+      withWallets distribution \(walletOne /\ walletTwo) -> do
+        walletTwoAddress <- withKeyWallet walletTwo do
+           liftedM "Could not get wallet address" getWalletAddress
+
+        withKeyWallet walletOne do
+
+          walletAddress <- getWalletAddress
+          logInfo' $ "w1 walletAddresses: " <> show walletAddress
+          logInfo' $ "w2 walletAddresses: " <> show walletTwoAddress
 
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
@@ -86,7 +95,7 @@ suite = do
               , tripMajorityPercent: BigInt.fromInt 0
               , tripRelativeMajorityPercent: BigInt.fromInt 0
               , totalVotes: BigInt.fromInt 1
-              , maxGeneralDisbursement: BigInt.fromInt 2_000_000
+              , maxGeneralDisbursement: BigInt.fromInt 200_000_000
               , maxTripDisbursement: BigInt.fromInt 0
               , agentDisbursementPercent: BigInt.fromInt 0
               , proposalTallyEndOffset: BigInt.fromInt 0
@@ -115,9 +124,9 @@ suite = do
           (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
             treasuryFundParams
 
-          sampleTallyStateDatum' <- sampleTallyStateDatum
+          let 
+            sampleTallyStateDatum' = sampleTallyStateDatum walletTwoAddress
 
-          let
             proposalParams =
               { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
@@ -148,8 +157,7 @@ suite = do
           (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            voteOnProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) voteOnProposalTxHash
 
           let
             countVoteParams =
@@ -169,13 +177,9 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             countVoteTxHash
 
-          paymentAddress' <- dummyAddress
-
           let
             treasuryGeneralParams =
-              { paymentAddress: paymentAddress'
-              , generalPaymentAmount: BigInt.fromInt 1_000_000
-              , configSymbol: configSymbol
+              { configSymbol: configSymbol
               , configTokenName: configTokenName
               , tallySymbol: proposalSymbol
               , treasurySymbol: treasuryFundSymbol
@@ -185,4 +189,4 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
 
-          pure unit
+          -- pure unit

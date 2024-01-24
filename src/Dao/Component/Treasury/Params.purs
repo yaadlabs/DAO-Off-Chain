@@ -21,9 +21,7 @@ type TreasuryTripParams =
 
 -- | Parameters for treasury general contract
 type TreasuryGeneralParams =
-  { paymentAddress :: Address
-  , generalPaymentAmount :: BigInt
-  , configSymbol :: CurrencySymbol
+  { configSymbol :: CurrencySymbol
   , tallySymbol :: CurrencySymbol
   , treasurySymbol :: CurrencySymbol
   , configTokenName :: TokenName

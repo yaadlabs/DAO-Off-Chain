@@ -34,15 +34,14 @@ referenceTreasuryUtxo treasurySymbol treasuryValidator = do
     treasuryValidator
 
 spendTreasuryUtxo ::
-  ProposalType ->
   CurrencySymbol ->
   Validator ->
   Contract TreasuryInfo
-spendTreasuryUtxo proposalTypeRedeemer treasurySymbol treasuryValidator = do
+spendTreasuryUtxo treasurySymbol treasuryValidator = do
   logInfo' "Entering spendTreasuryUtxo contract"
   findScriptUtxoBySymbol
     (Proxy :: Proxy Datum)
     Spend
-    (Redeemer $ toData $ proposalTypeRedeemer)
+    unitRedeemer
     treasurySymbol
     treasuryValidator

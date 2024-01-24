@@ -9,18 +9,16 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
-import Test.Data.Address (dummyAddress)
+import Contract.Address (Address)
 
-sampleTallyStateDatum :: Contract TallyStateDatum
-sampleTallyStateDatum = do
-  dummyAddress' <- dummyAddress
-  pure $
-    TallyStateDatum
-      { proposal: ProposalType'General dummyAddress' (BigInt.fromInt 10)
-      , proposalEndTime: proposalEndTimeWayInFuture
-      , for: BigInt.fromInt 0
-      , against: BigInt.fromInt 0
-      }
+sampleTallyStateDatum :: Address -> TallyStateDatum
+sampleTallyStateDatum paymentAddress =
+  TallyStateDatum
+    { proposal: ProposalType'General paymentAddress (BigInt.fromInt 1_000_000)
+    , proposalEndTime: proposalEndTimeWayInFuture
+    , for: BigInt.fromInt 0
+    , against: BigInt.fromInt 0
+    }
 
 proposalEndTimeWayInFuture :: POSIXTime
 proposalEndTimeWayInFuture = mkPosixTime "1795941991500"
