@@ -6,7 +6,16 @@ module Test.Workflow.CancelVote (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Monad (liftedM)
-import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
+import Contract.Prelude
+  ( type (/\)
+  , Unit
+  , bind
+  , discard
+  , pure
+  , void
+  , ($)
+  , (/\)
+  )
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
@@ -16,7 +25,7 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -26,6 +35,7 @@ import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
+import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
@@ -36,14 +46,16 @@ suite = do
   group "DAO tests" do
     test "Cancel vote on proposal test" do
       let
-        distribution :: InitialUTxOs
+        distribution :: (Array BigInt /\ Array BigInt)
         distribution =
           [ BigInt.fromInt 2_000_000_000
-          , BigInt.fromInt 2_000_000_000
-          ]
-      withWallets distribution \wallet -> do
-        withKeyWallet wallet do
+          , BigInt.fromInt 500_000_000
+          ] /\ [ BigInt.fromInt 2_000_000_000 ]
+      withWallets distribution \(walletOne /\ walletTwo) -> do
+        walletTwoAddress <- withKeyWallet walletTwo do
+          liftedM "Could not get wallet address" getWalletAddress
 
+        withKeyWallet walletOne do
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
 
@@ -88,54 +100,52 @@ suite = do
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
-          -- sampleTallyStateDatum' <- sampleTallyStateDatum
+          let sampleTallyStateDatum' = sampleTallyStateDatum walletTwoAddress
 
-          -- let
-          --   proposalParams =
-          --     { configSymbol, indexSymbol, configTokenName, indexTokenName }
+          let
+            proposalParams =
+              { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
-          -- (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
-          --   createProposal
-          --     proposalParams
-          --     sampleTallyStateDatum'
+          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
+            createProposal
+              proposalParams
+              sampleTallyStateDatum'
 
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   createProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            createProposalTxHash
 
-          -- let
-          --   voteParams =
-          --     { configSymbol: configSymbol
-          --     , tallySymbol: proposalSymbol
-          --     , configTokenName: configTokenName
-          --     -- Vote NFT (voting pass) symbol and token name
-          --     , voteNftSymbol: votePassSymbol
-          --     , voteTokenName: adaToken -- votePassTokenName
-          --     -- Fungible
-          --     , fungibleSymbol: fungibleSymbol
-          --     -- Vote datum fields
-          --     , proposalTokenName: proposalTokenName
-          --     , voteDirection: VoteDirection'For
-          --     , returnAda: (BigInt.fromInt 0)
-          --     }
+          let
+            voteParams =
+              { configSymbol: configSymbol
+              , tallySymbol: proposalSymbol
+              , configTokenName: configTokenName
+              -- Vote NFT (voting pass) symbol and token name
+              , voteNftSymbol: votePassSymbol
+              , voteTokenName: adaToken -- votePassTokenName
+              -- Fungible
+              , fungibleSymbol: fungibleSymbol
+              -- Vote datum fields
+              , proposalTokenName: proposalTokenName
+              , voteDirection: VoteDirection'For
+              , returnAda: (BigInt.fromInt 0)
+              }
 
-          -- (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-          --   voteParams
+          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+            voteParams
 
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   voteOnProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            voteOnProposalTxHash
 
-          -- let
-          --   cancelVoteParams =
-          --     { configSymbol: configSymbol
-          --     , configTokenName: configTokenName
-          --     , voteTokenName: adaToken
-          --     , voteNftSymbol: votePassSymbol
-          --     , voteNftTokenName: votePassTokenName
-          --     , fungibleSymbol: fungibleSymbol
-          --     , fungibleTokenName: fungibleTokenName
-          --     }
-          -- cancelVoteTxHash <- cancelVote cancelVoteParams
+          let
+            cancelVoteParams =
+              { configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , voteTokenName: adaToken
+              , voteNftSymbol: votePassSymbol
+              , voteNftTokenName: votePassTokenName
+              , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
+              }
+          cancelVoteTxHash <- cancelVote cancelVoteParams
 
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
-
-          -- pure unit
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash

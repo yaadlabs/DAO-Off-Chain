@@ -8,13 +8,13 @@ import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
 import Contract.Prelude
-  ( Unit
+  ( type (/\)
+  , Unit
   , bind
   , discard
   , pure
   , show
   , show
-  , unit
   , void
   , ($)
   , (/\)
@@ -29,7 +29,7 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -39,6 +39,7 @@ import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
+import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
@@ -49,14 +50,16 @@ suite = do
   group "DAO tests" do
     test "Count votes on proposal test" do
       let
-        distribution :: InitialUTxOs
+        distribution :: (Array BigInt /\ Array BigInt)
         distribution =
           [ BigInt.fromInt 2_000_000_000
           , BigInt.fromInt 500_000_000
-          ]
-      withWallets distribution \wallet -> do
-        withKeyWallet wallet do
+          ] /\ [ BigInt.fromInt 2_000_000_000 ]
+      withWallets distribution \(walletOne /\ walletTwo) -> do
+        walletTwoAddress <- withKeyWallet walletTwo do
+          liftedM "Could not get wallet address" getWalletAddress
 
+        withKeyWallet walletOne do
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
 
@@ -102,61 +105,56 @@ suite = do
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
-          -- sampleTallyStateDatum' <- sampleTallyStateDatum
+          let
+            sampleTallyStateDatum' = sampleTallyStateDatum walletTwoAddress
 
-          -- let
-          --   proposalParams =
-          --     { configSymbol, indexSymbol, configTokenName, indexTokenName }
+            proposalParams =
+              { configSymbol, indexSymbol, configTokenName, indexTokenName }
 
-          -- (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
-          --   createProposal
-          --     proposalParams
-          --     sampleTallyStateDatum'
+          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
+            createProposal
+              proposalParams
+              sampleTallyStateDatum'
 
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   createProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            createProposalTxHash
 
-          -- let
-          --   voteParams =
-          --     { configSymbol: configSymbol
-          --     , tallySymbol: proposalSymbol
-          --     , configTokenName: configTokenName
-          --     -- Vote NFT (voting pass) symbol and token name
-          --     , voteNftSymbol: votePassSymbol
-          --     , voteTokenName: adaToken -- votePassTokenName
-          --     -- Fungible
-          --     , fungibleSymbol: fungibleSymbol
-          --     -- Vote datum fields
-          --     , proposalTokenName: proposalTokenName
-          --     , voteDirection: VoteDirection'For
-          --     , returnAda: (BigInt.fromInt 0)
-          --     }
+          let
+            voteParams =
+              { configSymbol: configSymbol
+              , tallySymbol: proposalSymbol
+              , configTokenName: configTokenName
+              -- Vote NFT (voting pass) symbol and token name
+              , voteNftSymbol: votePassSymbol
+              , voteTokenName: adaToken -- votePassTokenName
+              -- Fungible
+              , fungibleSymbol: fungibleSymbol
+              -- Vote datum fields
+              , proposalTokenName: proposalTokenName
+              , voteDirection: VoteDirection'For
+              , returnAda: (BigInt.fromInt 0)
+              }
 
-          -- (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-          --   voteParams
+          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+            voteParams
 
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   voteOnProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            voteOnProposalTxHash
 
-          -- let
-          --   countVoteParams =
-          --     { voteNftSymbol: votePassSymbol
-          --     , voteTokenName: adaToken
-          --     , voteNftTokenName: votePassTokenName
-          --     , configSymbol: configSymbol
-          --     , configTokenName: configTokenName
-          --     , tallySymbol: proposalSymbol
-          --     , fungibleSymbol: fungibleSymbol
-          --     , fungibleTokenName: fungibleTokenName
-          --     , fungiblePercent: BigInt.fromInt 10
-          --     }
+          let
+            countVoteParams =
+              { voteNftSymbol: votePassSymbol
+              , voteTokenName: adaToken
+              , voteNftTokenName: votePassTokenName
+              , configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , tallySymbol: proposalSymbol
+              , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
+              , fungiblePercent: BigInt.fromInt 10
+              }
 
-          -- collateral <- getWalletCollateral
-          -- logInfo' $ "collateral: " <> show collateral
+          countVoteTxHash <- countVote countVoteParams
 
-          -- countVoteTxHash <- countVote countVoteParams
-
-          -- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-          --   countVoteTxHash
-
-          -- pure unit
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            countVoteTxHash

@@ -1,5 +1,6 @@
 module Test.Data.Tally (sampleTallyStateDatum) where
 
+import Contract.Address (Address)
 import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, ($))
 import Contract.Time (POSIXTime(POSIXTime))
@@ -9,7 +10,6 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
-import Contract.Address (Address)
 
 sampleTallyStateDatum :: Address -> TallyStateDatum
 sampleTallyStateDatum paymentAddress =

@@ -30,7 +30,11 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash, getWalletAddress)
+import Contract.Wallet
+  ( getWalletAddress
+  , getWalletCollateral
+  , ownPaymentPubKeyHash
+  )
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
@@ -42,8 +46,8 @@ import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (fromInt) as BigInt
 import JS.BigInt (BigInt)
+import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
 import Test.Data.Address (dummyAddress)
@@ -61,7 +65,7 @@ suite = do
           ] /\ [ BigInt.fromInt 2_000_000_000 ]
       withWallets distribution \(walletOne /\ walletTwo) -> do
         walletTwoAddress <- withKeyWallet walletTwo do
-           liftedM "Could not get wallet address" getWalletAddress
+          liftedM "Could not get wallet address" getWalletAddress
 
         withKeyWallet walletOne do
 
@@ -124,7 +128,7 @@ suite = do
           (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
             treasuryFundParams
 
-          let 
+          let
             sampleTallyStateDatum' = sampleTallyStateDatum walletTwoAddress
 
             proposalParams =
@@ -157,7 +161,8 @@ suite = do
           (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) voteOnProposalTxHash
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            voteOnProposalTxHash
 
           let
             countVoteParams =
@@ -189,4 +194,4 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
 
-          -- pure unit
+-- pure unit

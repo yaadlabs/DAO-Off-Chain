@@ -14,15 +14,12 @@ import Contract.Prelude
   , mconcat
   , min
   , pure
-  , show
   , unwrap
-  , void
   , (#)
   , ($)
   , (*)
   , (+)
   , (/)
-  , (<>)
   , (>=)
   )
 import Contract.ScriptLookups as Lookups
@@ -33,13 +30,9 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
+  ( Value
   , adaSymbol
   , adaToken
-  , geq
-  , leq
   , singleton
   )
 import Dao.Component.Config.Params (mkValidatorConfig)
