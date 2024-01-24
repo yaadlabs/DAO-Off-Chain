@@ -4,10 +4,9 @@ Description: Contract for creating a proposal
 -}
 module Dao.Workflow.CreateProposal (createProposal) where
 
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.PlutusData (Datum(Datum), fromData, toData, unitRedeemer)
+import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
   ( type (/\)
   , bind
@@ -25,12 +24,9 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -38,13 +34,11 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Utils.Datum
-  ( getInlineDatumFromTxOutWithRefScript
-  )
-import Dao.Utils.Query (findUtxoByValue)
+import Dao.Component.Config.Query (ConfigInfo, getConfigInfo)
+import Dao.Component.Index.Query (IndexInfo, getIndexInfo)
+import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Utils.Value (mkTokenName)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
+import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Arguments
@@ -52,62 +46,49 @@ import LambdaBuffers.ApplicationTypes.Arguments
   )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import ScriptArguments.Types
-  ( -- ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-    TallyNftConfig(TallyNftConfig)
-  )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.IndexValidator (indexValidatorScript)
-import Scripts.TallyPolicy (unappliedTallyPolicy)
-import Scripts.TallyValidator (unappliedTallyValidator)
+import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.IndexValidator (indexValidatorScriptDebug)
+import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 
+-- | Contract for creating a proposal
 createProposal ::
-  TallyNftConfig ->
+  CreateProposalParams ->
   TallyStateDatum ->
   Contract (TransactionHash /\ CurrencySymbol)
-createProposal tallyConfig tallyStateDatum = do
+createProposal
+  proposalParams
+  tallyStateDatum = do
   logInfo' "Entering createProposal transaction"
 
-  let validatorConfig = mkValidatorConfig tallyConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  let
+    validatorConfig = mkValidatorConfig proposalParams.configSymbol
+      proposalParams.configTokenName
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
-  indexValidator :: Validator <- indexValidatorScript
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+    validatorConfig
+  indexValidator :: Validator <- indexValidatorScriptDebug
+
+  configInfo :: ConfigInfo <- getConfigInfo proposalParams.configSymbol
+    appliedConfigValidator
+  indexInfo :: IndexInfo <- getIndexInfo proposalParams.indexSymbol
 
   let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
-
-  let
-    indexValidatorAddress = scriptHashAddress
-      (validatorHash indexValidator)
-      Nothing
-  indexValidatorUtxoMap <- utxosAt indexValidatorAddress
-
-  (configUtxoTxInput /\ _) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo tallyConfig
-      configValidatorUtxoMap
-  (indexUtxoTxInput /\ indexUtxoTxOutRefScript) <-
-    liftedM "Could not find index UTXO" $ getIndexUtxo tallyConfig
-      indexValidatorUtxoMap
-
-  oldIndexDatum' :: Datum <-
-    liftContractM "No Inline index datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript indexUtxoTxOutRefScript
-  oldIndexDatum :: IndexNftDatum <-
-    liftContractM "Could not convert datum" $ fromData $ oldIndexDatum' # unwrap
-
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+    tallyConfig = mkTallyConfig proposalParams.configSymbol
+      proposalParams.indexSymbol
+      proposalParams.configTokenName
+      proposalParams.indexTokenName
+  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
     updatedIndexDatum :: IndexNftDatum
-    updatedIndexDatum = incrementIndexDatum oldIndexDatum
+    updatedIndexDatum = incrementIndexDatum indexInfo.indexDatum
 
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
-      mkTallyTokenName updatedIndexDatum
+      mkTallyTokenName indexInfo.indexDatum
 
   let
     tallySymbol :: CurrencySymbol
@@ -122,15 +103,13 @@ createProposal tallyConfig tallyStateDatum = do
     tallyNft :: Value
     tallyNft = Value.singleton tallySymbol tallyTokenName one
 
-    indexNft :: Value
-    indexNft = indexUtxoTxOutRefScript # unwrap # _.output # unwrap # _.amount
-
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
         [ Lookups.mintingPolicy appliedTallyPolicy
-        , Lookups.unspentOutputs $ Map.singleton indexUtxoTxInput
-            indexUtxoTxOutRefScript
+        , Lookups.validator indexValidator
+        , indexInfo.lookups
+        , configInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -142,13 +121,13 @@ createProposal tallyConfig tallyStateDatum = do
             (Datum $ toData tallyStateDatum)
             Constraints.DatumInline
             tallyNft
-        , Constraints.mustSpendScriptOutput indexUtxoTxInput unitRedeemer
         , Constraints.mustPayToScript
             indexValidatorHash
             (Datum $ toData updatedIndexDatum)
             Constraints.DatumInline
-            indexNft
-        , Constraints.mustReferenceOutput configUtxoTxInput
+            indexInfo.indexValue
+        , configInfo.constraints
+        , indexInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
@@ -160,29 +139,23 @@ createProposal tallyConfig tallyStateDatum = do
     IndexNftDatum { index: oldIndex + (fromInt 1) }
 
   mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
-  mkTallyTokenName (IndexNftDatum index) = mkTokenName $ show index
+  mkTallyTokenName indexDatum =
+    mkTokenName $ show $ indexDatum # unwrap # _.index
 
-  mkValidatorConfig :: TallyNftConfig -> ConfigurationValidatorConfig
-  mkValidatorConfig
-    (TallyNftConfig { tncConfigNftCurrencySymbol, tncConfigNftTokenName }) =
+  mkValidatorConfig ::
+    CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
+  mkValidatorConfig configSymbol configTokenName =
     ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: tncConfigNftCurrencySymbol
-      , cvcConfigNftTokenName: tncConfigNftTokenName
+      { cvcConfigNftCurrencySymbol: configSymbol
+      , cvcConfigNftTokenName: configTokenName
       }
 
-  getConfigUtxo ::
-    TallyNftConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    (TallyNftConfig { tncConfigNftCurrencySymbol, tncConfigNftTokenName }) =
-    findUtxoByValue
-      (Value.singleton tncConfigNftCurrencySymbol tncConfigNftTokenName one)
-
-  getIndexUtxo ::
-    TallyNftConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getIndexUtxo (TallyNftConfig { tncIndexNftPolicyId, tncIndexNftTokenName }) =
-    findUtxoByValue
-      (Value.singleton tncIndexNftPolicyId tncIndexNftTokenName one)
+  mkTallyConfig ::
+    CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
+  mkTallyConfig configSymbol indexSymbol configTokenName indexTokenName =
+    TallyNftConfig
+      { tncIndexNftPolicyId: indexSymbol
+      , tncConfigNftTokenName: configTokenName
+      , tncConfigNftCurrencySymbol: configSymbol
+      , tncIndexNftTokenName: indexTokenName
+      }

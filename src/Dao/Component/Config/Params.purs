@@ -1,8 +1,8 @@
 {-|
-Module: Dao.Components.Config.Params
+Module: Dao.Component.Config.Params
 Description: Helpers for create config workflow
 -}
-module Dao.Components.Config.Params (ConfigParams) where
+module Dao.Component.Config.Params (ConfigParams) where
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)

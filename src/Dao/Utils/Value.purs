@@ -6,8 +6,8 @@ module Dao.Utils.Value
   ( mkTokenName
   ) where
 
-import Contract.Prelude ((>>=))
-import Contract.Prim.ByteArray (hexToByteArray)
+import Contract.Prelude ((<=<))
+import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
 import Contract.Value
   ( TokenName
   , mkTokenName
@@ -15,4 +15,5 @@ import Contract.Value
 import Data.Maybe (Maybe)
 
 mkTokenName :: String -> Maybe Value.TokenName
-mkTokenName tn = hexToByteArray tn >>= Value.mkTokenName
+mkTokenName = Value.mkTokenName <=< byteArrayFromAscii
+

@@ -41,12 +41,13 @@ import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import ScriptArguments.Types (IndexNftConfig(IndexNftConfig))
-import Scripts.IndexPolicy (unappliedIndexPolicy)
-import Scripts.IndexValidator (indexValidatorScript)
+import Scripts.IndexPolicy (unappliedIndexPolicy, unappliedIndexPolicyDebug)
+import Scripts.IndexValidator (indexValidatorScript, indexValidatorScriptDebug)
 
 -- | Contract for creating index datum and locking 
 -- it at UTXO at index validator marked by index NFT
-createIndex :: TokenName -> Contract (TransactionHash /\ CurrencySymbol)
+createIndex ::
+  TokenName -> Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createIndex indexTokenName = do
   logInfo' "Entering createIndex transaction"
 
@@ -67,7 +68,7 @@ createIndex indexTokenName = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ indexInfo.symbol)
+  pure (txHash /\ indexInfo.symbol /\ indexTokenName)
 
 type IndexInfo =
   { symbol :: CurrencySymbol
@@ -83,7 +84,7 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
   do
     logInfo' "Entering buildIndex transaction"
 
-    indexValidator :: Validator <- indexValidatorScript
+    indexValidator :: Validator <- indexValidatorScriptDebug
 
     let
       indexValidatorHash :: ValidatorHash
@@ -96,7 +97,7 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
         , incIndexValidator: unwrap indexValidatorHash
         }
 
-    appliedIndexPolicy :: MintingPolicy <- unappliedIndexPolicy
+    appliedIndexPolicy :: MintingPolicy <- unappliedIndexPolicyDebug
       indexPolicyParams
 
     let

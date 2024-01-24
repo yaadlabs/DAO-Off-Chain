@@ -36,11 +36,12 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
+  , TokenName
   , Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Components.Config.Params (ConfigParams)
+import Dao.Component.Config.Params (ConfigParams)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
@@ -51,9 +52,12 @@ import LambdaBuffers.ApplicationTypes.Arguments
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   )
-import Scripts.ConfigPolicy (unappliedConfigPolicy)
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
+import Scripts.ConfigPolicy (unappliedConfigPolicy, unappliedConfigPolicyDebug)
+import Scripts.ConfigValidator
+  ( unappliedConfigValidator
+  , unappliedConfigValidatorDebug
+  )
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 import Scripts.VoteValidator (unappliedVoteValidator)
 
@@ -61,7 +65,7 @@ import Scripts.VoteValidator (unappliedVoteValidator)
 -- it at UTXO at config validator marked by config NFT
 createConfig ::
   ConfigParams ->
-  Contract (TransactionHash /\ CurrencySymbol)
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createConfig configParams = do
   logInfo' "Entering createConfig transaction"
 
@@ -85,7 +89,7 @@ createConfig configParams = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ dynamicConfigInfo.symbol)
+  pure (txHash /\ dynamicConfigInfo.symbol /\ configParams.configTokenName)
 
 type ConfigInfo =
   { symbol :: CurrencySymbol
@@ -106,7 +110,7 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
       configPolicyParams = NftConfig
         { ncInitialUtxo: txInput, ncTokenName: configParams.configTokenName }
 
-    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicy
+    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicyDebug
       configPolicyParams
 
     let
@@ -120,13 +124,13 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
           , cvcConfigNftTokenName: configParams.configTokenName
           }
 
-    appliedConfigValidator :: Validator <- unappliedConfigValidator
+    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
       configValidatorParams
 
     -- Make the scripts for the dynamic config datum
     appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
       configValidatorParams
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
       configValidatorParams
     appliedVoteValidator :: Validator <- unappliedVoteValidator
       configValidatorParams
