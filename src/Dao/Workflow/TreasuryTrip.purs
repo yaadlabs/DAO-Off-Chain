@@ -196,10 +196,10 @@ treasuryTrip params = do
             Constraints.DatumInline
             amountToSendBackToTreasuryLovelaces
         , Constraints.mustPayToPubKey
-            travelAgentPaymentKey
+            travellerPaymentKey
             amountToSendToTravellerLovelaces
         , Constraints.mustPayToPubKey
-            travellerPaymentKey
+            travelAgentPaymentKey
             amountToSendToTravelAgentLovelaces
         , treasuryInfo.constraints
         , configInfo.constraints
