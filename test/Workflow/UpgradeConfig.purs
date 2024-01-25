@@ -1,10 +1,11 @@
 {-|
-Module: Test.Workflow.CancelVote
-Description: Test the cancel vote workflow
+Module: Test.Workflow.UpgradeConfig
+Description: Test the upgrade config workflow
 -}
-module Test.Workflow.CancelVote (suite) where
+module Test.Workflow.UpgradeConfig (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
+import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
 import Contract.Prelude
   ( type (/\)
@@ -12,9 +13,12 @@ import Contract.Prelude
   , bind
   , discard
   , pure
+  , show
+  , show
   , void
   , ($)
   , (/\)
+  , (<>)
   )
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
@@ -24,51 +28,61 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
+import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Wallet
+  ( getWalletAddress
+  , getWalletCollateral
+  , ownPaymentPubKeyHash
+  )
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , UpgradeConfigParams(UpgradeConfigParams)
+  )
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   )
 import Dao.Component.Vote.Params
-  ( CancelVoteParams(CancelVoteParams)
+  ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
-import Dao.Workflow.CancelVote (cancelVote)
+import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
+import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
+import Dao.Workflow.UpgradeConfig (upgradeConfig)
 import Dao.Workflow.VoteOnProposal
   ( VoteOnProposalResult(VoteOnProposalResult)
   , voteOnProposal
   )
-import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
+import Test.Data.Address (dummyAddress)
+import Test.Data.Config (dummyNewConfig)
+import Test.Data.Tally (sampleUpgradeConfigProposalTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
-    test "Cancel vote on proposal test" do
+    test "Upgrade config test" do
       let
-        distribution :: (Array BigInt /\ Array BigInt)
+        distribution :: (Array BigInt)
         distribution =
           [ BigInt.fromInt 2_000_000_000
           , BigInt.fromInt 500_000_000
-          ] /\ [ BigInt.fromInt 2_000_000_000 ]
-      withWallets distribution \(walletOne /\ walletTwo) -> do
-        walletTwoAddress <- withKeyWallet walletTwo do
-          liftedM "Could not get wallet address" getWalletAddress
+          ]
+
+      withWallets distribution \walletOne -> do
 
         withKeyWallet walletOne do
+
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
 
@@ -81,16 +95,15 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible userPkh (BigInt.fromInt 2)
+            createFungible userPkh (BigInt.fromInt 400)
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           ContractResult
-            { txHash: indexTxHash
+            { txHash: createIndexTxHash
             , symbol: indexSymbol
             , tokenName: indexTokenName
-            } <-
-            createIndex adaToken
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) indexTxHash
+            } <- createIndex adaToken
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
           let
             sampleConfigParams :: CreateConfigParams
@@ -102,16 +115,17 @@ suite = do
               , generalRelativeMajorityPercent: BigInt.fromInt 0
               , tripMajorityPercent: BigInt.fromInt 0
               , tripRelativeMajorityPercent: BigInt.fromInt 0
-              , totalVotes: BigInt.fromInt 0
-              , maxGeneralDisbursement: BigInt.fromInt 0
-              , maxTripDisbursement: BigInt.fromInt 0
-              , agentDisbursementPercent: BigInt.fromInt 0
+              , totalVotes: BigInt.fromInt 1
+              , maxGeneralDisbursement: BigInt.fromInt 200_000_000
+              , maxTripDisbursement: BigInt.fromInt 20_000_000
+              , agentDisbursementPercent: BigInt.fromInt 1
               , proposalTallyEndOffset: BigInt.fromInt 0
               , tallyNft: adaSymbol
               , voteTokenName: adaToken
-              , voteFungibleCurrencySymbol: adaSymbol
-              , voteFungibleTokenName: adaToken
-              , fungibleVotePercent: BigInt.fromInt 0
+              , voteFungibleCurrencySymbol: fungibleSymbol
+              , voteFungibleTokenName: fungibleTokenName
+              , fungibleVotePercent: BigInt.fromInt 10
+
               -- Index needed for making tallyNft
               , indexSymbol: indexSymbol
               , indexTokenName: indexTokenName
@@ -121,13 +135,21 @@ suite = do
             { txHash: createConfigTxHash
             , symbol: configSymbol
             , tokenName: configTokenName
-            } <-
-            createConfig sampleConfigParams
+            } <- createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
           let
-            tallyStateDatum = sampleGeneralProposalTallyStateDatum
-              walletTwoAddress
+            treasuryFundParams =
+              { adaAmount: BigInt.fromInt 200_000_000
+              , configSymbol: configSymbol
+              , configTokenName: configTokenName
+              }
+
+          upgradePolicy' <- upgradePolicy
+          let
+            upgradePolicySymbol = scriptCurrencySymbol upgradePolicy'
+            tallyStateDatum = sampleUpgradeConfigProposalTallyStateDatum
+              upgradePolicySymbol
 
             proposalParams :: CreateProposalParams
             proposalParams = CreateProposalParams
@@ -142,8 +164,7 @@ suite = do
             { txHash: createProposalTxHash
             , symbol: proposalSymbol
             , tokenName: proposalTokenName
-            } <-
-            createProposal proposalParams
+            } <- createProposal proposalParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
@@ -166,24 +187,42 @@ suite = do
               }
 
           VoteOnProposalResult
-            { txHash: voteOnProposalTxHash, symbol: voteSymbol } <-
-            voteOnProposal
-              voteParams
+            { txHash: voteOnProposalTxHash
+            , symbol: voteOnProposalSymbol
+            } <- voteOnProposal voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
 
           let
-            cancelVoteParams :: CancelVoteParams
-            cancelVoteParams = CancelVoteParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
+            countVoteParams :: CountVoteParams
+            countVoteParams = CountVoteParams
+              { voteNftSymbol: votePassSymbol
               , voteTokenName: adaToken
-              , voteNftSymbol: votePassSymbol
               , voteNftTokenName: votePassTokenName
+              , configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , tallySymbol: proposalSymbol
               , fungibleSymbol: fungibleSymbol
               , fungibleTokenName: fungibleTokenName
+              , fungiblePercent: BigInt.fromInt 10
               }
-          cancelVoteTxHash <- cancelVote cancelVoteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
+          countVoteTxHash <- countVote countVoteParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            countVoteTxHash
+
+          dummyConfig <- dummyNewConfig
+          let
+            upgradeConfigParams :: UpgradeConfigParams
+            upgradeConfigParams = UpgradeConfigParams
+              { configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , tallySymbol: proposalSymbol
+              , newDynamicConfigDatum: dummyConfig
+              }
+
+          treasuryTxHash <- upgradeConfig upgradeConfigParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash

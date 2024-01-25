@@ -20,12 +20,14 @@ import Contract.Prelude
   , mconcat
   , otherwise
   , pure
+  , show
   , unwrap
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
+  , (<>)
   , (==)
   )
 import Contract.ScriptLookups as Lookups
@@ -39,15 +41,16 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
+import Contract.Value (scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicy)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
-import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
-import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
@@ -56,7 +59,6 @@ import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 
 -- | Contract for counting the votes
--- TODO: Include fungible token calculation
 countVote ::
   CountVoteParams ->
   Contract TransactionHash
@@ -69,13 +71,13 @@ countVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -88,15 +90,23 @@ countVote params' = do
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     scriptAddr
 
+  let voteSymbol = scriptCurrencySymbol appliedVotePolicy
+
   -- Collect the constraints and lookups for each vote UTXO
   -- And whether the vote was for or against
   voteDirectionsConstraintsAndLookups ::
-    Array (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints) <-
+    Array
+      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+          Constraints.TxConstraints
+      ) <-
     mkAllVoteConstraintsAndLookups
       params.voteNftSymbol
-      params.voteSymbol
+      voteSymbol
+      params.fungibleSymbol
       params.voteNftTokenName
       params.voteTokenName
+      params.fungibleTokenName
+      params.fungiblePercent
       appliedVotePolicy
       voteUtxos
 
@@ -109,8 +119,8 @@ countVote params' = do
     (votesFor /\ votesAgainst) = tallyVotes voteDirectionsConstraintsAndLookups
 
     -- Update the tally datum with the new vote count
-    tallyDatumWithUpdateVoteCount :: TallyStateDatum
-    tallyDatumWithUpdateVoteCount =
+    tallyDatumWithUpdatedVoteCount :: TallyStateDatum
+    tallyDatumWithUpdatedVoteCount =
       let
         oldDatum = tallyInfo.datum # unwrap
       in
@@ -121,6 +131,7 @@ countVote params' = do
           , against: oldDatum.against + votesAgainst
           }
 
+  let
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = validatorHash appliedTallyValidator
 
@@ -139,6 +150,7 @@ countVote params' = do
       [ voteLookups
       , tallyInfo.lookups
       , configInfo.lookups
+      , Lookups.validator appliedVoteValidator
       ]
 
     constraints :: Constraints.TxConstraints
@@ -146,13 +158,13 @@ countVote params' = do
       mconcat
         [ Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData $ tallyDatumWithUpdateVoteCount)
+            (Datum $ toData $ tallyDatumWithUpdatedVoteCount)
             Constraints.DatumInline
             tallyInfo.value
         , voteConstraints
         , configInfo.constraints
         , tallyInfo.constraints
-        , Constraints.mustValidateIn onchainTimeRange
+        -- , Constraints.mustValidateIn onchainTimeRange
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
@@ -160,10 +172,13 @@ countVote params' = do
   pure txHash
   where
   tallyVotes ::
-    Array (VoteDirection /\ Lookups.ScriptLookups /\ Constraints.TxConstraints) ->
+    Array
+      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+          Constraints.TxConstraints
+      ) ->
     (BigInt /\ BigInt)
   tallyVotes = foldr op (fromInt 0 /\ fromInt 0)
     where
-    op (voteDirection /\ _ /\ _) (for /\ against)
-      | voteDirection == VoteDirection'For = ((for + fromInt 1) /\ against)
-      | otherwise = (for /\ (against + fromInt 1))
+    op ((voteDirection /\ voteAmount) /\ _ /\ _) (for /\ against)
+      | voteDirection == VoteDirection'For = ((for + voteAmount) /\ against)
+      | otherwise = (for /\ (against + voteAmount))

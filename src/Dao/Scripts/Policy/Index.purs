@@ -1,4 +1,4 @@
-module Dao.Scripts.Policy.IndexPolicy
+module Dao.Scripts.Policy.Index
   ( unappliedIndexPolicy
   , unappliedIndexPolicyDebug
   ) where

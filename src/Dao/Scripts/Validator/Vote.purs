@@ -1,4 +1,4 @@
-module Dao.Scripts.Validator.VoteValidator
+module Dao.Scripts.Validator.Vote
   ( unappliedVoteValidator
   , unappliedVoteValidatorDebug
   ) where
@@ -6,7 +6,7 @@ module Dao.Scripts.Validator.VoteValidator
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedVoteValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedVoteValidator = mkUnappliedValidator

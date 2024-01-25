@@ -1,21 +1,18 @@
 module Dao.Web.Api where
 
-import Contract.Prelude
-import Dao.Web.Call
-import Dao.Web.Conversion
-
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
+import Dao.Web.Call (contractCallOneArg)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
   , CountVoteParams
   , CreateConfigParams
   , CreateProposalParams
+  , PaymentPubKeyHash
   , TokenName
   , TransactionHash
-  , TreasuryGeneralParams
-  , TreasuryTripParams
+  , TreasuryParams
   , UpgradeConfigParams
   , VoteOnProposalParams
   , VoteOnProposalResult
@@ -30,7 +27,6 @@ import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
-import Effect (Effect)
 import Effect.Aff.Compat (EffectFn1)
 
 createConfig ::
@@ -70,15 +66,15 @@ cancelVote env = contractCallOneArg env Dao.cancelVote
 
 treasuryGeneral ::
   ContractEnv ->
-  EffectFn1 TreasuryGeneralParams (Promise TransactionHash)
+  EffectFn1 TreasuryParams (Promise TransactionHash)
 treasuryGeneral env = contractCallOneArg env Dao.treasuryGeneral
-
-treasuryTrip ::
-  ContractEnv ->
-  EffectFn1 TreasuryTripParams (Promise TransactionHash)
-treasuryTrip env = contractCallOneArg env Dao.treasuryTrip
 
 createVotePass ::
   ContractEnv ->
-  Effect (Promise ContractResult)
-createVotePass env = contractCallNoArgs env Dao.createVotePass
+  EffectFn1 PaymentPubKeyHash (Promise ContractResult)
+createVotePass env = contractCallOneArg env Dao.createVotePass
+
+treasuryTrip ::
+  ContractEnv ->
+  EffectFn1 TreasuryParams (Promise TransactionHash)
+treasuryTrip env = contractCallOneArg env Dao.treasuryTrip

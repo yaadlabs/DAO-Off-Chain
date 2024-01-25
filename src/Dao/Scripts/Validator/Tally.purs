@@ -1,4 +1,4 @@
-module Dao.Scripts.Validator.TallyValidator
+module Dao.Scripts.Validator.Tally
   ( unappliedTallyValidator
   , unappliedTallyValidatorDebug
   ) where
@@ -6,9 +6,7 @@ module Dao.Scripts.Validator.TallyValidator
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig
-  )
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedTallyValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedTallyValidator = mkUnappliedValidator

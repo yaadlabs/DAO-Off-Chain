@@ -1,4 +1,4 @@
-module Dao.Scripts.Policy.ConfigPolicy
+module Dao.Scripts.Policy.Config
   ( unappliedConfigPolicy
   , unappliedConfigPolicyDebug
   ) where
@@ -6,7 +6,7 @@ module Dao.Scripts.Policy.ConfigPolicy
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
 import Dao.Scripts.Utils (mkUnappliedPolicy)
-import LambdaBuffers.ApplicationTypes.Arguments (NftConfig)
+import ScriptArguments.Types (NftConfig)
 
 unappliedConfigPolicy :: NftConfig -> Contract MintingPolicy
 unappliedConfigPolicy = mkUnappliedPolicy

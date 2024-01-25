@@ -11,10 +11,10 @@ module Dao.Component.Config.Params
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
-import LambdaBuffers.ApplicationTypes.Arguments
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
+import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 
 -- | Parameters passed when initially creating dynamic config
 newtype CreateConfigParams = CreateConfigParams
@@ -31,12 +31,13 @@ newtype CreateConfigParams = CreateConfigParams
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: CurrencySymbol
-  , voteCurrencySymbol :: CurrencySymbol
   , voteTokenName :: TokenName
-  , voteNft :: CurrencySymbol
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  -- Index needed for making tallyNft
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
   }
 
 derive instance Newtype CreateConfigParams _

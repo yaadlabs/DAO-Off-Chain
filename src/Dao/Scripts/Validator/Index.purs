@@ -1,4 +1,4 @@
-module Dao.Scripts.Validator.IndexValidator
+module Dao.Scripts.Validator.Index
   ( indexValidatorScript
   , indexValidatorScriptDebug
   ) where

@@ -15,11 +15,16 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
+  , mempty
   , negate
   , one
+  , otherwise
   , pure
+  , zero
   , (#)
   , ($)
+  , (<>)
+  , (==)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator)
@@ -30,7 +35,6 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
   , Value
   , scriptCurrencySymbol
   )
@@ -39,11 +43,13 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
-import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicy)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
-import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidator)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Value (countOfTokenInValue)
 import Data.Newtype (unwrap)
+import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
@@ -62,9 +68,10 @@ cancelVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   let
@@ -91,8 +98,22 @@ cancelVote params' = do
     burnVoteNft = Value.singleton voteSymbol params.voteTokenName
       (negate one)
 
+    voteNftPass :: Value
+    voteNftPass = Value.singleton params.voteNftSymbol params.voteNftTokenName
+      one
+
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
+
+    fungibleAmount :: BigInt
+    fungibleAmount = countOfTokenInValue params.fungibleSymbol voteInfo.value
+
+    fungibleToken :: Value
+    fungibleToken
+      | fungibleAmount == zero = mempty
+      | otherwise = Value.singleton params.fungibleSymbol
+          params.fungibleTokenName
+          fungibleAmount
 
     lookups :: Lookups.ScriptLookups
     lookups =
@@ -107,6 +128,9 @@ cancelVote params' = do
       mconcat
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
+        , Constraints.mustPayToPubKey voteOwnerKey
+            (voteNftPass <> fungibleToken)
+        -- ^ Pay the vote 'pass' back to the owner, and the fungibleTokens if any
         , configInfo.constraints
         , voteInfo.constraints
         ]

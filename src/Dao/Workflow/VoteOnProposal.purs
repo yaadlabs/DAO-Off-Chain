@@ -44,26 +44,27 @@ import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
-import Dao.Component.Vote.Query (spendVoteNftUtxo)
-import Dao.Scripts.Policy.VotePolicy (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.VoteValidator (unappliedVoteValidatorDebug)
+import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 
+-- | Vote result
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash
-  , voteSymbol :: CurrencySymbol
+  , symbol :: CurrencySymbol
   }
 
 -- | Contract for voting on a specific proposal
@@ -103,10 +104,14 @@ voteOnProposal params' = do
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
-  -- Check if the user has a 'voteNft' token,
-  -- which is required in order to vote on a proposal
-  -- TODO: Spend it properly, now just finding it
   voteNftToken <- spendVoteNftUtxo params.voteNftSymbol userUtxos
+  -- Look for the 'voteNft' UTXO,
+  -- get the constraints and lookups to spend this UTXO if found
+  voteNftInfo <- spendVoteNftUtxo params.voteNftSymbol userUtxos
+
+  -- Look for the 'voteFungibleCurrencySymbol' UTXO,
+  -- get the constraints and lookups to spend this UTXO if found
+  fungibleInfo <- spendFungibleUtxo params.fungibleSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -139,6 +144,8 @@ voteOnProposal params' = do
         [ Lookups.mintingPolicy appliedVotePolicy
         , configInfo.lookups
         , tallyInfo.lookups
+        , voteNftInfo.lookups
+        , fungibleInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -149,12 +156,14 @@ voteOnProposal params' = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftToken)
-        , Constraints.mustValidateIn onchainTimeRange
+            (voteValue <> voteNftInfo.value <> fungibleInfo.value)
+        -- , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
+        , voteNftInfo.constraints
+        , fungibleInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure $ VoteOnProposalResult { txHash, voteSymbol }
+  pure $ VoteOnProposalResult { txHash, symbol: voteSymbol }

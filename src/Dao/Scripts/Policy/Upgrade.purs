@@ -1,4 +1,4 @@
-module Dao.Scripts.Policy.UpgradePolicy
+module Dao.Scripts.Policy.Upgrade
   ( upgradePolicy
   ) where
 

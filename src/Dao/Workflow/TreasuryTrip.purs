@@ -4,7 +4,7 @@ Description: Contract for disbursing treasury funds based on a trip proposal
 -}
 module Dao.Workflow.TreasuryTrip (treasuryTrip) where
 
-import Contract.Address (PaymentPubKeyHash)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -41,21 +41,22 @@ import Contract.Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Component.Treasury.Params (TreasuryTripParams)
+import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
-import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
-import Dao.Scripts.Validator.TreasuryValidator (unappliedTreasuryValidator)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
+import Data.Maybe (Maybe(Just, Nothing))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
-treasuryTrip :: TreasuryTripParams -> Contract TransactionHash
+treasuryTrip :: TreasuryParams -> Contract TransactionHash
 treasuryTrip params' = do
   logInfo' "Entering treasuryTrip transaction"
 
@@ -65,10 +66,11 @@ treasuryTrip params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs
@@ -78,11 +80,6 @@ treasuryTrip params' = do
     appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo
-      ( ProposalType'Trip
-          params.travelAgentAddress
-          params.travellerAddress
-          params.totalTravelCost
-      )
       params.treasurySymbol
       appliedTreasuryValidator
 
@@ -93,6 +90,22 @@ treasuryTrip params' = do
     tallyDatum :: TallyStateDatum
     tallyDatum = tallyInfo.datum
 
+  -- Get the treasury payment info from the 'TallyStateDatum'
+  travelAgentAddress :: Address <- liftContractM "Not a trip proposal" $
+    getTravelAgentAddress tallyDatum
+  travellerAddress :: Address <- liftContractM "Not a trip proposal" $
+    getTravellerAddress tallyDatum
+  totalTravelCost :: BigInt <- liftContractM "Not a trip proposal" $
+    getTravelCost tallyDatum
+
+  travelAgentPaymentKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key" $
+      addressToPaymentPubKeyHash travelAgentAddress
+  travellerPaymentKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key" $
+      addressToPaymentPubKeyHash travellerAddress
+
+  let
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
 
@@ -126,7 +139,7 @@ treasuryTrip params' = do
       _.agentDisbursementPercent
 
     disbursementAmount :: BigInt
-    disbursementAmount = min configMaxTripDisbursement params.totalTravelCost
+    disbursementAmount = min configMaxTripDisbursement totalTravelCost
 
     disbursementAmountLovelaces :: Value
     disbursementAmountLovelaces = singleton adaSymbol adaToken
@@ -141,10 +154,10 @@ treasuryTrip params' = do
 
     amountToSendToTravelAgent :: BigInt
     amountToSendToTravelAgent =
-      (params.totalTravelCost * configAgentDisbursementPercent) / (fromInt 1000)
+      (totalTravelCost * configAgentDisbursementPercent) / (fromInt 1000)
 
     amountToSendToTraveller :: BigInt
-    amountToSendToTraveller = params.totalTravelCost - amountToSendToTravelAgent
+    amountToSendToTraveller = totalTravelCost - amountToSendToTravelAgent
 
     amountToSendToTravelAgentLovelaces :: Value
     amountToSendToTravelAgentLovelaces = singleton adaSymbol adaToken
@@ -163,14 +176,6 @@ treasuryTrip params' = do
     configTripRelativeMajorityPercent
   guardContract "Majority percent is too low" $ majorityPercent >=
     configTripMajorityPercent
-
-  travellerKey :: PaymentPubKeyHash <-
-    liftContractM "Could not convert traveller address to key" $
-      addressToPaymentPubKeyHash params.travellerAddress
-
-  travelAgentKey :: PaymentPubKeyHash <-
-    liftContractM "Could not convert travel agent address to key" $
-      addressToPaymentPubKeyHash params.travelAgentAddress
 
   let
     treasuryValidatorHash :: ValidatorHash
@@ -192,9 +197,11 @@ treasuryTrip params' = do
             unitDatum
             Constraints.DatumInline
             amountToSendBackToTreasuryLovelaces
-        , Constraints.mustPayToPubKey travelAgentKey
+        , Constraints.mustPayToPubKey
+            travellerPaymentKey
             amountToSendToTravellerLovelaces
-        , Constraints.mustPayToPubKey travellerKey
+        , Constraints.mustPayToPubKey
+            travelAgentPaymentKey
             amountToSendToTravelAgentLovelaces
         , treasuryInfo.constraints
         , configInfo.constraints
@@ -204,3 +211,30 @@ treasuryTrip params' = do
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
+  where
+  getTravelAgentAddress :: TallyStateDatum -> Maybe Address
+  getTravelAgentAddress tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip address _ _) -> Just address
+        _ -> Nothing
+
+  getTravellerAddress :: TallyStateDatum -> Maybe Address
+  getTravellerAddress tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip _ address _) -> Just address
+        _ -> Nothing
+
+  getTravelCost :: TallyStateDatum -> Maybe BigInt
+  getTravelCost tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip _ _ amount) -> Just amount
+        _ -> Nothing

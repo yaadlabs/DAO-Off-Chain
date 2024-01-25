@@ -22,6 +22,8 @@ newtype VoteOnProposalParams = VoteOnProposalParams
   , voteTokenName :: TokenName
   -- Vote NFT symbol (vote pass)
   , voteNftSymbol :: CurrencySymbol
+  -- Fungible token symbol (vote multiplier token)
+  , fungibleSymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -32,13 +34,15 @@ derive instance Newtype VoteOnProposalParams _
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { voteSymbol :: CurrencySymbol
-  , voteNftSymbol :: CurrencySymbol
+  { voteNftSymbol :: CurrencySymbol
   , voteTokenName :: TokenName
   , voteNftTokenName :: TokenName
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
+  , fungiblePercent :: BigInt
   }
 
 derive instance Newtype CountVoteParams _
@@ -48,6 +52,10 @@ newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
+  , voteNftSymbol :: CurrencySymbol
+  , voteNftTokenName :: TokenName
+  , fungibleSymbol :: CurrencySymbol
+  , fungibleTokenName :: TokenName
   }
 
 derive instance Newtype CancelVoteParams _

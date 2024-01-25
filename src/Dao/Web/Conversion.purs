@@ -9,7 +9,8 @@ import Contract.Prelude
 import Contract.Address
   ( Address
   , AddressWithNetworkTag(AddressWithNetworkTag)
-  , PubKeyHash
+  , PaymentPubKeyHash(PaymentPubKeyHash)
+  , PubKeyHash(PubKeyHash)
   , addressWithNetworkTagFromBech32
   , addressWithNetworkTagToBech32
   ) as Ctl
@@ -30,7 +31,9 @@ import Contract.Value
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
 import Ctl.Internal.Serialization.Hash (ScriptHash) as Ctl
 import Ctl.Internal.Serialization.Hash
-  ( scriptHashFromBytes
+  ( ed25519KeyHashFromBytes
+  , ed25519KeyHashToBytes
+  , scriptHashFromBytes
   , scriptHashToBytes
   )
 import Dao.Component.Config.Params
@@ -41,8 +44,7 @@ import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   ) as DaoApi
 import Dao.Component.Treasury.Params
-  ( TreasuryGeneralParams(TreasuryGeneralParams)
-  , TreasuryTripParams(TreasuryTripParams)
+  ( TreasuryParams(TreasuryParams)
   ) as DaoApi
 import Dao.Component.Vote.Params
   ( CancelVoteParams(CancelVoteParams)
@@ -205,21 +207,21 @@ instance ConvertJsToPs WebApi.ContractResult DaoApi.ContractResult where
 instance ConvertPsToJs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult where
   convertPsToJs (DaoApi.VoteOnProposalResult params) = do
     txHash <- convertPsToJs params.txHash
-    voteSymbol <- convertPsToJs params.voteSymbol
+    symbol <- convertPsToJs params.symbol
 
     pure $ WebApi.VoteOnProposalResult
       { txHash
-      , voteSymbol
+      , symbol
       }
 
 instance ConvertJsToPs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult where
   convertJsToPs (WebApi.VoteOnProposalResult params) = do
     txHash <- convertJsToPs params.txHash
-    voteSymbol <- convertJsToPs params.voteSymbol
+    symbol <- convertJsToPs params.symbol
 
     pure $ DaoApi.VoteOnProposalResult
       { txHash
-      , voteSymbol
+      , symbol
       }
 
 -- * UpgradeConfigParams
@@ -254,81 +256,33 @@ instance ConvertJsToPs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams whe
       , tallySymbol: tallySymbol'
       }
 
--- * TreasuryGeneralParams
+-- * TreasuryParams
 
-instance ConvertPsToJs WebApi.TreasuryGeneralParams DaoApi.TreasuryGeneralParams where
-  convertPsToJs (DaoApi.TreasuryGeneralParams params) = do
+instance ConvertPsToJs WebApi.TreasuryParams DaoApi.TreasuryParams where
+  convertPsToJs (DaoApi.TreasuryParams params) = do
 
-    paymentAddress <- convertPsToJs params.paymentAddress
-    configSymbol <- convertPsToJs params.configSymbol
-    tallySymbol <- convertPsToJs params.tallySymbol
-    treasurySymbol <- convertPsToJs params.treasurySymbol
-    configTokenName <- convertPsToJs params.configTokenName
-
-    pure $ WebApi.TreasuryGeneralParams
-      { paymentAddress
-      , generalPaymentAmount: params.generalPaymentAmount
-      , configSymbol
-      , tallySymbol
-      , treasurySymbol
-      , configTokenName
-      }
-
-instance ConvertJsToPs WebApi.TreasuryGeneralParams DaoApi.TreasuryGeneralParams where
-  convertJsToPs (WebApi.TreasuryGeneralParams params) = do
-
-    paymentAddress <- convertJsToPs params.paymentAddress
-    configSymbol <- convertJsToPs params.configSymbol
-    tallySymbol <- convertJsToPs params.tallySymbol
-    treasurySymbol <- convertJsToPs params.treasurySymbol
-    configTokenName <- convertJsToPs params.configTokenName
-
-    pure $ DaoApi.TreasuryGeneralParams
-      { paymentAddress
-      , generalPaymentAmount: params.generalPaymentAmount
-      , configSymbol
-      , tallySymbol
-      , treasurySymbol
-      , configTokenName
-      }
-
--- * TreasuryTripParams
-
-instance ConvertPsToJs WebApi.TreasuryTripParams DaoApi.TreasuryTripParams where
-  convertPsToJs (DaoApi.TreasuryTripParams params) = do
-
-    travelAgentAddress <- convertPsToJs params.travelAgentAddress
-    travellerAddress <- convertPsToJs params.travellerAddress
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
     treasurySymbol <- convertPsToJs params.treasurySymbol
 
-    pure $ WebApi.TreasuryTripParams
-      { travelAgentAddress
-      , travellerAddress
-      , totalTravelCost: params.totalTravelCost
-      , configSymbol
+    pure $ WebApi.TreasuryParams
+      { configSymbol
       , configTokenName
       , tallySymbol
       , treasurySymbol
       }
 
-instance ConvertJsToPs WebApi.TreasuryTripParams DaoApi.TreasuryTripParams where
-  convertJsToPs (WebApi.TreasuryTripParams params) = do
+instance ConvertJsToPs WebApi.TreasuryParams DaoApi.TreasuryParams where
+  convertJsToPs (WebApi.TreasuryParams params) = do
 
-    travelAgentAddress <- convertJsToPs params.travelAgentAddress
-    travellerAddress <- convertJsToPs params.travellerAddress
     configSymbol <- convertJsToPs params.configSymbol
-    configTokenName <- convertJsToPs params.configTokenName
     tallySymbol <- convertJsToPs params.tallySymbol
     treasurySymbol <- convertJsToPs params.treasurySymbol
+    configTokenName <- convertJsToPs params.configTokenName
 
-    pure $ DaoApi.TreasuryTripParams
-      { travelAgentAddress
-      , travellerAddress
-      , totalTravelCost: params.totalTravelCost
-      , configSymbol
+    pure $ DaoApi.TreasuryParams
+      { configSymbol
       , configTokenName
       , tallySymbol
       , treasurySymbol
@@ -340,17 +294,17 @@ instance
   ConvertPsToJs WebApi.CreateConfigParams DaoApi.CreateConfigParams where
   convertPsToJs (DaoApi.CreateConfigParams params) = do
 
-    configTokenName' <- convertPsToJs params.configTokenName
-    tallyNft' <- convertPsToJs params.tallyNft
-    voteCurrencySymbol' <- convertPsToJs params.voteCurrencySymbol
-    voteTokenName' <- convertPsToJs params.voteTokenName
-    voteNft' <- convertPsToJs params.voteNft
-    voteFungibleCurrencySymbol' <- convertPsToJs
+    configTokenName <- convertPsToJs params.configTokenName
+    tallyNft <- convertPsToJs params.tallyNft
+    voteTokenName <- convertPsToJs params.voteTokenName
+    voteFungibleCurrencySymbol <- convertPsToJs
       params.voteFungibleCurrencySymbol
-    voteFungibleTokenName' <- convertPsToJs params.voteFungibleTokenName
+    voteFungibleTokenName <- convertPsToJs params.voteFungibleTokenName
+    indexSymbol <- convertPsToJs params.indexSymbol
+    indexTokenName <- convertPsToJs params.indexTokenName
 
     pure $ WebApi.CreateConfigParams
-      { configTokenName: configTokenName'
+      { configTokenName
       , upgradeMajorityPercent: params.upgradeMajorityPercent
       , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
       , generalMajorityPercent: params.generalMajorityPercent
@@ -362,30 +316,30 @@ instance
       , maxTripDisbursement: params.maxTripDisbursement
       , agentDisbursementPercent: params.agentDisbursementPercent
       , proposalTallyEndOffset: params.proposalTallyEndOffset
-      , tallyNft: tallyNft'
-      , voteCurrencySymbol: voteCurrencySymbol'
-      , voteTokenName: voteTokenName'
-      , voteNft: voteNft'
-      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
-      , voteFungibleTokenName: voteFungibleTokenName'
+      , tallyNft
+      , voteTokenName
+      , voteFungibleCurrencySymbol
+      , voteFungibleTokenName
       , fungibleVotePercent: params.fungibleVotePercent
+      , indexSymbol
+      , indexTokenName
       }
 
 instance
   ConvertJsToPs WebApi.CreateConfigParams DaoApi.CreateConfigParams where
   convertJsToPs (WebApi.CreateConfigParams params) = do
 
-    configTokenName' <- convertJsToPs params.configTokenName
-    tallyNft' <- convertJsToPs params.tallyNft
-    voteCurrencySymbol' <- convertJsToPs params.voteCurrencySymbol
-    voteTokenName' <- convertJsToPs params.voteTokenName
-    voteNft' <- convertJsToPs params.voteNft
-    voteFungibleCurrencySymbol' <- convertJsToPs
+    configTokenName <- convertJsToPs params.configTokenName
+    tallyNft <- convertJsToPs params.tallyNft
+    voteTokenName <- convertJsToPs params.voteTokenName
+    voteFungibleCurrencySymbol <- convertJsToPs
       params.voteFungibleCurrencySymbol
-    voteFungibleTokenName' <- convertJsToPs params.voteFungibleTokenName
+    voteFungibleTokenName <- convertJsToPs params.voteFungibleTokenName
+    indexSymbol <- convertJsToPs params.indexSymbol
+    indexTokenName <- convertJsToPs params.indexTokenName
 
     pure $ DaoApi.CreateConfigParams
-      { configTokenName: configTokenName'
+      { configTokenName
       , upgradeMajorityPercent: params.upgradeMajorityPercent
       , upgradeRelativeMajorityPercent: params.upgradeRelativeMajorityPercent
       , generalMajorityPercent: params.generalMajorityPercent
@@ -397,13 +351,13 @@ instance
       , maxTripDisbursement: params.maxTripDisbursement
       , agentDisbursementPercent: params.agentDisbursementPercent
       , proposalTallyEndOffset: params.proposalTallyEndOffset
-      , tallyNft: tallyNft'
-      , voteCurrencySymbol: voteCurrencySymbol'
-      , voteTokenName: voteTokenName'
-      , voteNft: voteNft'
-      , voteFungibleCurrencySymbol: voteFungibleCurrencySymbol'
-      , voteFungibleTokenName: voteFungibleTokenName'
+      , tallyNft
+      , voteTokenName
+      , voteFungibleCurrencySymbol
+      , voteFungibleTokenName
       , fungibleVotePercent: params.fungibleVotePercent
+      , indexSymbol
+      , indexTokenName
       }
 
 -- * CreateProposalParams
@@ -447,43 +401,49 @@ instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams w
 instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
   convertPsToJs (DaoApi.CountVoteParams params) = do
 
-    voteSymbol' <- convertPsToJs params.voteSymbol
-    voteNftSymbol' <- convertPsToJs params.voteNftSymbol
-    voteTokenName' <- convertPsToJs params.voteTokenName
-    voteNftTokenName' <- convertPsToJs params.voteNftTokenName
-    configSymbol' <- convertPsToJs params.configSymbol
-    configTokenName' <- convertPsToJs params.configTokenName
-    tallySymbol' <- convertPsToJs params.tallySymbol
+    voteNftSymbol <- convertPsToJs params.voteNftSymbol
+    voteTokenName <- convertPsToJs params.voteTokenName
+    voteNftTokenName <- convertPsToJs params.voteNftTokenName
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    tallySymbol <- convertPsToJs params.tallySymbol
+    fungibleSymbol <- convertPsToJs params.fungibleSymbol
+    fungibleTokenName <- convertPsToJs params.fungibleTokenName
 
     pure $ WebApi.CountVoteParams
-      { voteSymbol: voteSymbol'
-      , voteNftSymbol: voteNftSymbol'
-      , voteTokenName: voteTokenName'
-      , voteNftTokenName: voteNftTokenName'
-      , configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , tallySymbol: tallySymbol'
+      { voteNftSymbol
+      , voteTokenName
+      , voteNftTokenName
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , fungibleSymbol
+      , fungibleTokenName
+      , fungiblePercent: params.fungiblePercent
       }
 
 instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
   convertJsToPs (WebApi.CountVoteParams params) = do
 
-    voteSymbol' <- convertJsToPs params.voteSymbol
-    voteNftSymbol' <- convertJsToPs params.voteNftSymbol
-    voteTokenName' <- convertJsToPs params.voteTokenName
-    voteNftTokenName' <- convertJsToPs params.voteNftTokenName
-    configSymbol' <- convertJsToPs params.configSymbol
-    configTokenName' <- convertJsToPs params.configTokenName
-    tallySymbol' <- convertJsToPs params.tallySymbol
+    voteNftSymbol <- convertJsToPs params.voteNftSymbol
+    voteTokenName <- convertJsToPs params.voteTokenName
+    voteNftTokenName <- convertJsToPs params.voteNftTokenName
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    tallySymbol <- convertJsToPs params.tallySymbol
+    fungibleSymbol <- convertJsToPs params.fungibleSymbol
+    fungibleTokenName <- convertJsToPs params.fungibleTokenName
 
     pure $ DaoApi.CountVoteParams
-      { voteSymbol: voteSymbol'
-      , voteNftSymbol: voteNftSymbol'
-      , voteTokenName: voteTokenName'
-      , voteNftTokenName: voteNftTokenName'
-      , configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , tallySymbol: tallySymbol'
+      { voteNftSymbol
+      , voteTokenName
+      , voteNftTokenName
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , fungibleSymbol
+      , fungibleTokenName
+      , fungiblePercent: params.fungiblePercent
       }
 
 -- * CancelVoteParams
@@ -491,27 +451,43 @@ instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
 instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
   convertPsToJs (DaoApi.CancelVoteParams params) = do
 
-    configSymbol' <- convertPsToJs params.configSymbol
-    configTokenName' <- convertPsToJs params.configTokenName
-    voteTokenName' <- convertPsToJs params.voteTokenName
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    voteTokenName <- convertPsToJs params.voteTokenName
+    voteNftSymbol <- convertPsToJs params.voteNftSymbol
+    voteNftTokenName <- convertPsToJs params.voteNftTokenName
+    fungibleSymbol <- convertPsToJs params.fungibleSymbol
+    fungibleTokenName <- convertPsToJs params.fungibleTokenName
 
     pure $ WebApi.CancelVoteParams
-      { configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , voteTokenName: voteTokenName'
+      { configSymbol
+      , configTokenName
+      , voteTokenName
+      , voteNftSymbol
+      , voteNftTokenName
+      , fungibleSymbol
+      , fungibleTokenName
       }
 
 instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
   convertJsToPs (WebApi.CancelVoteParams params) = do
 
-    configSymbol' <- convertJsToPs params.configSymbol
-    configTokenName' <- convertJsToPs params.configTokenName
-    voteTokenName' <- convertJsToPs params.voteTokenName
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    voteTokenName <- convertJsToPs params.voteTokenName
+    voteNftSymbol <- convertJsToPs params.voteNftSymbol
+    voteNftTokenName <- convertJsToPs params.voteNftTokenName
+    fungibleSymbol <- convertJsToPs params.fungibleSymbol
+    fungibleTokenName <- convertJsToPs params.fungibleTokenName
 
     pure $ DaoApi.CancelVoteParams
-      { configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , voteTokenName: voteTokenName'
+      { configSymbol
+      , configTokenName
+      , voteTokenName
+      , voteNftSymbol
+      , voteNftTokenName
+      , fungibleSymbol
+      , fungibleTokenName
       }
 
 -- * VoteOnProposalParams
@@ -524,6 +500,7 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     configTokenName <- convertPsToJs params.configTokenName
     voteTokenName <- convertPsToJs params.voteTokenName
     voteNftSymbol <- convertPsToJs params.voteNftSymbol
+    fungibleSymbol <- convertPsToJs params.fungibleSymbol
     proposalTokenName <- convertPsToJs params.proposalTokenName
     voteDirection <- convertPsToJs params.voteDirection
 
@@ -533,6 +510,7 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       , configTokenName
       , voteTokenName
       , voteNftSymbol
+      , fungibleSymbol
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda
@@ -546,6 +524,7 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     configTokenName <- convertJsToPs params.configTokenName
     voteTokenName <- convertJsToPs params.voteTokenName
     voteNftSymbol <- convertJsToPs params.voteNftSymbol
+    fungibleSymbol <- convertJsToPs params.fungibleSymbol
     proposalTokenName <- convertJsToPs params.proposalTokenName
     voteDirection <- convertJsToPs params.voteDirection
 
@@ -555,6 +534,7 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       , configTokenName
       , voteTokenName
       , voteNftSymbol
+      , fungibleSymbol
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda
@@ -677,6 +657,25 @@ instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
     note ("Invalid ScriptHash: " <> show scriptHash)
       $ Ctl.hexToByteArray scriptHash
       >>= scriptHashFromBytes
+
+-- * PaymentPubKeyHash
+
+instance ConvertPsToJs WebApi.PaymentPubKeyHash Ctl.PaymentPubKeyHash where
+  convertPsToJs =
+    pure
+      <<< WebApi.PaymentPubKeyHash
+      <<< rawBytesToHex
+      <<< ed25519KeyHashToBytes
+      <<< unwrap
+      <<< unwrap
+
+instance ConvertJsToPs WebApi.PaymentPubKeyHash Ctl.PaymentPubKeyHash where
+  convertJsToPs (WebApi.PaymentPubKeyHash pkh) = do
+    bytes <- note ("Invalid PaymentPubKeyHash: " <> show pkh) $
+      Ctl.hexToByteArray pkh
+    edKey <- note ("Invalid PaymentPubKeyHash: " <> show pkh) $
+      ed25519KeyHashFromBytes bytes
+    pure $ Ctl.PaymentPubKeyHash $ Ctl.PubKeyHash edKey
 
 -- * TransactionHash
 

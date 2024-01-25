@@ -1,4 +1,4 @@
-module Dao.Scripts.Policy.VotePolicy
+module Dao.Scripts.Policy.Vote
   ( unappliedVotePolicy
   , unappliedVotePolicyDebug
   ) where
@@ -6,7 +6,7 @@ module Dao.Scripts.Policy.VotePolicy
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
 import Dao.Scripts.Utils (mkUnappliedPolicy)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy
 unappliedVotePolicy = mkUnappliedPolicy

@@ -1,4 +1,4 @@
-module Dao.Scripts.Validator.ConfigValidator
+module Dao.Scripts.Validator.Config
   ( unappliedConfigValidator
   , unappliedConfigValidatorDebug
   ) where
@@ -7,7 +7,7 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedConfigValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator

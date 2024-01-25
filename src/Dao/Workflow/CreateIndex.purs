@@ -34,14 +34,8 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Scripts.Policy.IndexPolicy
-  ( unappliedIndexPolicy
-  , unappliedIndexPolicyDebug
-  )
-import Dao.Scripts.Validator.IndexValidator
-  ( indexValidatorScript
-  , indexValidatorScriptDebug
-  )
+import Dao.Scripts.Policy.Index (unappliedIndexPolicyDebug)
+import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)

@@ -23,6 +23,7 @@ You can edit this file as you like.
   , "foreign-object"
   , "gen"
   , "js-bigints"
+  , "lambda-buffers"
   , "maybe"
   , "monad-logger"
   , "mote"

@@ -41,6 +41,9 @@ derive newtype instance Aeson.DecodeAeson Hash32
 -- | ScriptHash represented as a wrapped String
 newtype ScriptHash = ScriptHash String
 
+-- | PaymentPubKeyHash represented as a wrapped String
+newtype PaymentPubKeyHash = PaymentPubKeyHash String
+
 -- | TransactionHash represented as a 64-character String
 type TransactionHash = Hash32
 
@@ -67,12 +70,12 @@ newtype CreateConfigParams = CreateConfigParams
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: Hash28
-  , voteCurrencySymbol :: Hash28
   , voteTokenName :: TokenName
-  , voteNft :: Hash28
   , voteFungibleCurrencySymbol :: Hash28
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  , indexSymbol :: Hash28
+  , indexTokenName :: TokenName
   }
 
 -- | Parameters passed for the upgrade config proposal contract
@@ -92,22 +95,9 @@ newtype CreateProposalParams = CreateProposalParams
   , tallyStateDatum :: TallyStateDatum
   }
 
--- | Parameters for treasury trip contract
-newtype TreasuryTripParams = TreasuryTripParams
-  { travelAgentAddress :: Address
-  , travellerAddress :: Address
-  , totalTravelCost :: BigInt
-  , configSymbol :: Hash28
-  , configTokenName :: TokenName
-  , tallySymbol :: Hash28
-  , treasurySymbol :: Hash28
-  }
-
 -- | Parameters for treasury general contract
-newtype TreasuryGeneralParams = TreasuryGeneralParams
-  { paymentAddress :: Address
-  , generalPaymentAmount :: BigInt
-  , configSymbol :: Hash28
+newtype TreasuryParams = TreasuryParams
+  { configSymbol :: Hash28
   , tallySymbol :: Hash28
   , treasurySymbol :: Hash28
   , configTokenName :: TokenName
@@ -121,6 +111,8 @@ newtype VoteOnProposalParams = VoteOnProposalParams
   , voteTokenName :: TokenName
   -- Vote NFT symbol (vote pass)
   , voteNftSymbol :: Hash28
+  -- Fungible token symbol (vote multiplier token)
+  , fungibleSymbol :: Hash28
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -129,13 +121,15 @@ newtype VoteOnProposalParams = VoteOnProposalParams
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { voteSymbol :: Hash28
-  , voteNftSymbol :: Hash28
+  { voteNftSymbol :: Hash28
   , voteTokenName :: TokenName
   , voteNftTokenName :: TokenName
   , configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
+  , fungibleSymbol :: Hash28
+  , fungibleTokenName :: TokenName
+  , fungiblePercent :: BigInt
   }
 
 -- | Cancel vote contract paramaters
@@ -143,6 +137,10 @@ newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
+  , voteNftSymbol :: Hash28
+  , voteNftTokenName :: TokenName
+  , fungibleSymbol :: Hash28
+  , fungibleTokenName :: TokenName
   }
 
 -- * Contract Results
@@ -157,7 +155,7 @@ newtype ContractResult = ContractResult
 -- | VoteOnProposalResult
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash
-  , voteSymbol :: Hash28
+  , symbol :: Hash28
   }
 
 -- * Datums

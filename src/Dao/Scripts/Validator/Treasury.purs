@@ -1,4 +1,4 @@
-module Dao.Scripts.Validator.TreasuryValidator
+module Dao.Scripts.Validator.Treasury
   ( unappliedTreasuryValidator
   , unappliedTreasuryValidatorDebug
   ) where
@@ -6,7 +6,7 @@ module Dao.Scripts.Validator.TreasuryValidator
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import LambdaBuffers.ApplicationTypes.Arguments (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedTreasuryValidator :: ConfigurationValidatorConfig -> Contract Validator
 unappliedTreasuryValidator = mkUnappliedValidator

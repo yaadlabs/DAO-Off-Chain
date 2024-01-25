@@ -15,7 +15,6 @@ import Contract.Prelude
   , one
   , pure
   , show
-  , unwrap
   , (#)
   , ($)
   , (+)
@@ -39,20 +38,17 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
-import Dao.Scripts.Policy.TallyPolicy (unappliedTallyPolicyDebug)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.IndexValidator (indexValidatorScriptDebug)
-import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Component.Tally.Params (mkTallyConfig)
+import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
+import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
-import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 
 -- | Contract for creating a proposal
 createProposal ::
@@ -66,7 +62,8 @@ createProposal params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
@@ -93,7 +90,7 @@ createProposal params' = do
   -- The tally token name corresponds to the index field of the index datum
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
-      mkTallyTokenName updatedIndexDatum
+      mkTallyTokenName indexInfo.datum
 
   let
     tallySymbol :: CurrencySymbol
@@ -145,14 +142,5 @@ createProposal params' = do
     IndexNftDatum { index: oldIndex + (fromInt 1) }
 
   mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
-  mkTallyTokenName (IndexNftDatum index) = mkTokenName $ show index
-
-  mkTallyConfig ::
-    CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
-  mkTallyConfig configSymbol' indexSymbol' configTokenName' indexTokenName' =
-    TallyNftConfig
-      { tncConfigNftCurrencySymbol: configSymbol'
-      , tncConfigNftTokenName: configTokenName'
-      , tncIndexNftPolicyId: indexSymbol'
-      , tncIndexNftTokenName: indexTokenName'
-      }
+  mkTallyTokenName indexDatum =
+    mkTokenName $ show $ indexDatum # unwrap # _.index

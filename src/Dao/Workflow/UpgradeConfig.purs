@@ -1,6 +1,6 @@
 {-|
 Module: Dao.Workflow.UpgradeConfig
-Description: Contract for upgrading a the dynamic config based on an upgrade proposal
+Description: Contract for upgrading the dynamic config based on an upgrade proposal
 -}
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
@@ -23,6 +23,7 @@ import Contract.Prelude
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
+import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
   , submitTxFromConstraints
@@ -37,14 +38,17 @@ import Contract.Value
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Scripts.Policy.UpgradePolicy (upgradePolicy)
-import Dao.Scripts.Validator.ConfigValidator (unappliedConfigValidator)
-import Dao.Scripts.Validator.TallyValidator (unappliedTallyValidator)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Error (guardContract)
+import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 
+-- | Contract for upgrading the dynamic config based on an upgrade proposal
 upgradeConfig ::
   UpgradeConfigParams ->
   Contract TransactionHash
@@ -58,9 +62,9 @@ upgradeConfig params' =
     let
       validatorConfig = mkValidatorConfig params.configSymbol
         params.configTokenName
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
       validatorConfig
-    appliedConfigValidator :: Validator <- unappliedConfigValidator
+    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
       validatorConfig
 
     -- Query the UTXOs
@@ -68,6 +72,10 @@ upgradeConfig params' =
       appliedConfigValidator
     tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
       appliedTallyValidator
+
+    -- Make on-chain time range
+    timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
+    onchainTimeRange <- mkOnchainTimeRange timeRange
 
     let
       newConfigDatum :: Datum
@@ -139,6 +147,7 @@ upgradeConfig params' =
               Constraints.DatumInline
               configInfo.value
           , Constraints.mustMintValue upgradeToken
+          -- , Constraints.mustValidateIn onchainTimeRange
           , configInfo.constraints
           , tallyInfo.constraints
           ]

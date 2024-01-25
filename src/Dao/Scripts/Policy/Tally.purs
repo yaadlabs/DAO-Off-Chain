@@ -1,4 +1,4 @@
-module Dao.Scripts.Policy.TallyPolicy
+module Dao.Scripts.Policy.Tally
   ( unappliedTallyPolicy
   , unappliedTallyPolicyDebug
   ) where
