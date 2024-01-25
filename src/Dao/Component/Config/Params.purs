@@ -10,10 +10,10 @@ module Dao.Component.Config.Params
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 
 -- | Parameters passed when initially creating dynamic config
 type ConfigParams =
