@@ -1,4 +1,16 @@
-module Dao.Web.Api where
+module Dao.Web.Api
+  ( createConfig
+  , createIndex
+  , createProposal
+  , voteOnProposal
+  , upgradeConfig
+  , countVote
+  , cancelVote
+  , treasuryGeneral
+  , treasuryTrip
+  , createVotePass
+  , createFungible
+  ) where
 
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
@@ -8,6 +20,7 @@ import Dao.Web.Types
   , ContractResult
   , CountVoteParams
   , CreateConfigParams
+  , CreateFungibleParams
   , CreateProposalParams
   , PaymentPubKeyHash
   , TokenName
@@ -20,6 +33,7 @@ import Dao.Web.Types
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
 import Dao.Workflow.CreateConfig (createConfig) as Dao
+import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
@@ -73,6 +87,11 @@ createVotePass ::
   ContractEnv ->
   EffectFn1 PaymentPubKeyHash (Promise ContractResult)
 createVotePass env = contractCallOneArg env Dao.createVotePass
+
+createFungible ::
+  ContractEnv ->
+  EffectFn1 CreateFungibleParams (Promise ContractResult)
+createFungible env = contractCallOneArg env Dao.createFungible
 
 treasuryTrip ::
   ContractEnv ->

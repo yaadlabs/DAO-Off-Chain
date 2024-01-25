@@ -4,8 +4,6 @@ Description: For conversions between JavaScript and PureScript
 -}
 module Dao.Web.Conversion where
 
-import Contract.Prelude
-
 import Contract.Address
   ( Address
   , AddressWithNetworkTag(AddressWithNetworkTag)
@@ -17,6 +15,16 @@ import Contract.Address
 import Contract.Config
   ( NetworkId
   ) as Ctl
+import Contract.Prelude
+  ( bind
+  , pure
+  , show
+  , unwrap
+  , ($)
+  , (<<<)
+  , (<>)
+  , (>>=)
+  )
 import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
 import Contract.Prim.ByteArray (rawBytesToHex)
 import Contract.Transaction (TransactionHash(TransactionHash)) as Ctl
@@ -40,6 +48,9 @@ import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
   , UpgradeConfigParams(UpgradeConfigParams)
   ) as DaoApi
+import Dao.Component.Fungible.Params
+  ( CreateFungibleParams(CreateFungibleParams)
+  ) as DaoApi
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   ) as DaoApi
@@ -55,6 +66,7 @@ import Dao.Utils.Contract (ContractResult(ContractResult)) as DaoApi
 import Dao.Web.Types as WebApi
 import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult)) as DaoApi
 import Data.Either (Either(Left))
+import Data.Maybe (Maybe(Just, Nothing))
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   ) as DaoApi
@@ -286,6 +298,28 @@ instance ConvertJsToPs WebApi.TreasuryParams DaoApi.TreasuryParams where
       , configTokenName
       , tallySymbol
       , treasurySymbol
+      }
+
+-- * CreateFungibleParams
+
+instance ConvertPsToJs WebApi.CreateFungibleParams DaoApi.CreateFungibleParams where
+  convertPsToJs (DaoApi.CreateFungibleParams params) = do
+
+    userPkh <- convertPsToJs params.userPkh
+
+    pure $ WebApi.CreateFungibleParams
+      { userPkh
+      , amount: params.amount
+      }
+
+instance ConvertJsToPs WebApi.CreateFungibleParams DaoApi.CreateFungibleParams where
+  convertJsToPs (WebApi.CreateFungibleParams params) = do
+
+    userPkh <- convertJsToPs params.userPkh
+
+    pure $ DaoApi.CreateFungibleParams
+      { userPkh
+      , amount: params.amount
       }
 
 -- * CreateConfigParams

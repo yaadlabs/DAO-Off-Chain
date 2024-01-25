@@ -1,7 +1,7 @@
-module Dao.Web.Call where
-
-import Contract.Prelude
-import Dao.Web.Conversion
+module Dao.Web.Call
+  ( contractCallOneArg
+  , contractCallNoArgs
+  ) where
 
 import Contract.Address (getNetworkId)
 import Contract.Monad
@@ -10,8 +10,14 @@ import Contract.Monad
   , liftContractE
   , runContractInEnv
   ) as Ctl
+import Contract.Prelude (Effect, bind, ($))
 import Control.Promise (Promise, fromAff)
-import Dao.Workflow.CreateConfig (createConfig) as Dao
+import Dao.Web.Conversion
+  ( class ConvertJsToPs
+  , class ConvertPsToJs
+  , runConvertJsToPs
+  , runConvertPsToJs
+  )
 import Effect.Aff.Compat (EffectFn1, mkEffectFn1)
 
 contractCallOneArg ::

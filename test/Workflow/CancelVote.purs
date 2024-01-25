@@ -27,6 +27,9 @@ import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
 import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
+import Dao.Component.Fungible.Params
+  ( CreateFungibleParams(CreateFungibleParams)
+  )
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   )
@@ -80,8 +83,16 @@ suite = do
             createVotePass userPkh
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
-          (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible userPkh (BigInt.fromInt 2)
+          let
+            fungibleParams :: CreateFungibleParams
+            fungibleParams = CreateFungibleParams
+              { userPkh, amount: BigInt.fromInt 400 }
+
+          ContractResult
+            { txHash: fungibleTxHash
+            , symbol: fungibleSymbol
+            , tokenName: fungibleTokenName
+            } <- createFungible fungibleParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           ContractResult

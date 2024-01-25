@@ -1,9 +1,9 @@
 module Dao.Web.Types where
 
-import Contract.Prelude
-
 import Aeson as Aeson
 import Contract.Time (POSIXTime)
+import Data.Newtype (class Newtype)
+import Data.Show (class Show, show)
 import JS.BigInt (BigInt)
 
 -- * Non app-specific / CTL types
@@ -141,6 +141,12 @@ newtype CancelVoteParams = CancelVoteParams
   , voteNftTokenName :: TokenName
   , fungibleSymbol :: Hash28
   , fungibleTokenName :: TokenName
+  }
+
+-- | Create fungible contract paramaters
+newtype CreateFungibleParams = CreateFungibleParams
+  { userPkh :: PaymentPubKeyHash
+  , amount :: BigInt
   }
 
 -- * Contract Results
