@@ -150,7 +150,6 @@ mkVoteUtxoConstraintsAndLookups
       fungibleAmount = countOfToken fungibleSymbol txOut
       fungibleVoteWeight = (fungibleAmount * fungiblePercent) / (fromInt 1000)
 
-    let
       voteDirection' :: VoteDirection
       voteDirection' = voteDatum # unwrap # _.direction
 

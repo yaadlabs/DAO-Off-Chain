@@ -31,7 +31,7 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Value (TokenName, adaSymbol, adaToken, scriptCurrencySymbol)
 import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
 import Dao.Component.Fungible.Params
@@ -48,6 +48,7 @@ import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Contract (ContractResult(ContractResult))
+import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
@@ -69,7 +70,7 @@ import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
-    test "Count votes on proposal test" do
+    test "Multiple votes on proposal test" do
       let
         distribution ::
           ( Array BigInt
@@ -96,20 +97,22 @@ suite = do
               getWalletAddress
             pure walletAddress
 
-          -- ******************************************************************************* --
-          -- ******************************************************************************* --
-          -- * Get the wallet address for user three to use in the create proposal         * --
-          -- * section below. This will be used as the payment address for the tally datum * --
+          -- ************************************************************************ --
+          -- ************************************************************************ --
+          -- * Get the wallet address for user three to use in the create proposal  * --
+          -- * section below. We need this in order to send a vote pass to the user * --
+          -- * so they can cast a vote, and to send fungible tokens to them so they * --
+          -- * can increase the value of their vote.                                * --
           userThreeWalletAddress :: Address <- withKeyWallet walletThree do
             logInfo' "Running in wallet three - first time"
             walletAddress :: Address <- liftedM "Could not get wallet address"
               getWalletAddress
             pure walletAddress
 
-          -- ******************************************************************************* --
-          -- ******************************************************************************* --
-          -- * Get the wallet address for user three to use in the create proposal         * --
-          -- * section below. This will be used as the payment address for the tally datum * --
+          -- ************************************************************************ --
+          -- ************************************************************************ --
+          -- * Get the wallet address for user four to use in the create proposal   * --
+          -- * section below, for the same reasons stated above.                    * --
           userFourWalletAddress :: Address <- withKeyWallet walletFour do
             logInfo' "Running in wallet three - first time"
             walletAddress :: Address <- liftedM "Could not get wallet address"
@@ -122,7 +125,7 @@ suite = do
           ( proposalSymbol /\ proposalTokenName /\ configSymbol /\
               configTokenName
           ) <- withKeyWallet walletOne do
-            logInfo' "Running in walletOne - first time"
+            logInfo' "Running in walletOne - walletOne creates a proposal"
 
             -- Create the index UTXO with the index datum
             ContractResult
@@ -137,6 +140,11 @@ suite = do
 
             -- The policy for the 'fungible' token (vote multiplier)
             fungiblePolicy' <- fungiblePolicy
+
+            -- The fungible token name is hardcoded to this for now
+            fungibleTokenName :: TokenName <-
+              liftContractM "Could not make voteNft token name" $ mkTokenName
+                "vote_fungible"
             let
               -- The symbol for the 'voteNft' 
               -- This is the vote 'pass' that a user must possess
@@ -166,7 +174,7 @@ suite = do
                 , tallyNft: adaSymbol
                 , voteTokenName: adaToken
                 , voteFungibleCurrencySymbol: fungibleSymbol
-                , voteFungibleTokenName: adaToken
+                , voteFungibleTokenName: fungibleTokenName
                 , voteNftSymbol: votePassSymbol
                 , fungibleVotePercent: BigInt.fromInt 10
                 -- Index needed for making tallyNft
@@ -185,7 +193,7 @@ suite = do
 
             let
               -- The 'TallyStateDatum' to be sent to the proposal UTXO
-              -- This proposal type for this proposal will be a 'General' one
+              -- The proposal type for this proposal will be a 'General' one
               tallyStateDatum = sampleGeneralProposalTallyStateDatum
                 userTwoWalletAddress
 
@@ -225,7 +233,7 @@ suite = do
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               votePassTxHashUserThree
 
-            -- Create the fungible token (amount 400) for user three (walletThree) 
+            -- Create the fungible token (amount 400) for user three (walletThree)
             let
               fungibleParamsUserThree :: CreateFungibleParams
               fungibleParamsUserThree = CreateFungibleParams
@@ -254,11 +262,11 @@ suite = do
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               votePassTxHashUserFour
 
-            -- Create the fungible token (amount 100) for user four (walletFour) 
+            -- Create the fungible token (amount 200) for user four (walletFour)
             let
               fungibleParamsUserFour :: CreateFungibleParams
               fungibleParamsUserFour = CreateFungibleParams
-                { userPkh: userFourPkh, amount: BigInt.fromInt 100 }
+                { userPkh: userFourPkh, amount: BigInt.fromInt 200 }
 
             ContractResult
               { txHash: fungibleTxHashUserFour
@@ -301,8 +309,6 @@ suite = do
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               voteOnProposalTxHash
 
-            pure unit
-
           -- ************************************************** --
           -- ************************************************** --
           -- * User four (walletFour) votes on the proposal * --
@@ -331,11 +337,19 @@ suite = do
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               voteOnProposalTxHash
 
-            pure unit
-
           -- ********************************************************* --
           -- ********************************************************* --
           -- * User one (walletOne) counts the votes on the proposal * --
+
+          -- The votes 'For' should sum to 8
+          -- Two voters vote 'For' the proposal - so we have a base amount of 2
+          -- Voter 'walletThree' has 400 fungible tokens
+          -- With the 'dynamicConfigDatum'fungibleVotePercent' set to 10
+          -- So we have: (400 * 10) / 1000 = 4
+          -- So: 'walletThree' votes: (Base 1 + Fungible 4 = 5 in total)
+          -- Vote 'walletFour' has 200 fungible tokens, so using the same calculations
+          -- they will have: (Base 1 + Fungible 2 = 3)
+          -- So we have a total of 8 votes for the proposal
           withKeyWallet walletFour do
             logInfo'
               "Running in wallet one - counting the votes on the proposal created by walletOne"
@@ -347,7 +361,6 @@ suite = do
                 , configSymbol: configSymbol
                 , configTokenName: configTokenName
                 , tallySymbol: proposalSymbol
-                , fungiblePercent: BigInt.fromInt 10
                 }
 
             countVoteTxHash <- countVote countVoteParams

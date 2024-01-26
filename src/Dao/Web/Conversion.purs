@@ -449,7 +449,6 @@ instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
       , configTokenName
       , tallySymbol
       , voteTokenName
-      , fungiblePercent: params.fungiblePercent
       }
 
 instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
@@ -465,7 +464,6 @@ instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
       , configTokenName
       , voteTokenName
       , tallySymbol
-      , fungiblePercent: params.fungiblePercent
       }
 
 -- * CancelVoteParams

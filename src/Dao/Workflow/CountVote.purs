@@ -20,14 +20,12 @@ import Contract.Prelude
   , mconcat
   , otherwise
   , pure
-  , show
   , unwrap
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
-  , (<>)
   , (==)
   )
 import Contract.ScriptLookups as Lookups
@@ -57,6 +55,7 @@ import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (BigInt, fromInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 
@@ -103,6 +102,12 @@ countVote params' = do
     voteNftSymbol :: CurrencySymbol
     voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
 
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
+
+    fungiblePercent :: BigInt
+    fungiblePercent = configDatum # unwrap # _.fungibleVotePercent
+
   -- Collect the constraints and lookups for each vote UTXO
   -- And whether the vote was for or against
   voteDirectionsConstraintsAndLookups ::
@@ -115,7 +120,7 @@ countVote params' = do
       voteSymbol
       fungibleSymbol
       params.voteTokenName
-      params.fungiblePercent
+      fungiblePercent
       appliedVotePolicy
       voteUtxos
 
@@ -139,10 +144,6 @@ countVote params' = do
           , for: oldDatum.for + votesFor
           , against: oldDatum.against + votesAgainst
           }
-
-  logInfo' $ "countVote - oldTallyDatum: " <> show (tallyInfo.datum # unwrap)
-  logInfo' $ "countVote - newTallyDatum: " <> show
-    tallyDatumWithUpdatedVoteCount
 
   let
     tallyValidatorHash :: ValidatorHash

@@ -122,7 +122,6 @@ newtype CountVoteParams = CountVoteParams
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
   , voteTokenName :: TokenName
-  , fungiblePercent :: BigInt
   }
 
 -- | Cancel vote contract paramaters
