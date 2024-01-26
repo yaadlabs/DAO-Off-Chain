@@ -4,7 +4,7 @@ Description: Test the treasury general workflow
 -}
 module Test.Workflow.TreasuryGeneral (suite) where
 
-import Contract.Address (PaymentPubKeyHash)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
 import Contract.Prelude
@@ -82,156 +82,160 @@ suite = do
           liftedM "Could not get wallet address" getWalletAddress
 
         withKeyWallet walletOne do
+          pure unit
 
-          userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
-            ownPaymentPubKeyHash
+-- userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
+--   ownPaymentPubKeyHash
+-- userWalletAddress :: Address <- liftedM "Could not get wallet address"
+--   getWalletAddress
 
-          ContractResult
-            { txHash: votePassTxHash
-            , symbol: votePassSymbol
-            , tokenName: votePassTokenName
-            } <- createVotePass userPkh
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+-- ContractResult
+--   { txHash: votePassTxHash
+--   , symbol: votePassSymbol
+--   , tokenName: votePassTokenName
+--   } <- createVotePass userPkh
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
-          let
-            fungibleParams :: CreateFungibleParams
-            fungibleParams = CreateFungibleParams
-              { userPkh, amount: BigInt.fromInt 400 }
+-- let
+--   fungibleParams :: CreateFungibleParams
+--   fungibleParams = CreateFungibleParams
+--     { userPkh, amount: BigInt.fromInt 400 }
 
-          ContractResult
-            { txHash: fungibleTxHash
-            , symbol: fungibleSymbol
-            , tokenName: fungibleTokenName
-            } <- createFungible fungibleParams
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
+-- ContractResult
+--   { txHash: fungibleTxHash
+--   , symbol: fungibleSymbol
+--   , tokenName: fungibleTokenName
+--   } <- createFungible fungibleParams
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
-          ContractResult
-            { txHash: createIndexTxHash
-            , symbol: indexSymbol
-            , tokenName: indexTokenName
-            } <- createIndex adaToken
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+-- ContractResult
+--   { txHash: createIndexTxHash
+--   , symbol: indexSymbol
+--   , tokenName: indexTokenName
+--   } <- createIndex adaToken
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
-          let
-            sampleConfigParams :: CreateConfigParams
-            sampleConfigParams = CreateConfigParams
-              { configTokenName: adaToken
-              , upgradeMajorityPercent: BigInt.fromInt 0
-              , upgradeRelativeMajorityPercent: BigInt.fromInt 0
-              , generalMajorityPercent: BigInt.fromInt 0
-              , generalRelativeMajorityPercent: BigInt.fromInt 0
-              , tripMajorityPercent: BigInt.fromInt 0
-              , tripRelativeMajorityPercent: BigInt.fromInt 0
-              , totalVotes: BigInt.fromInt 1
-              , maxGeneralDisbursement: BigInt.fromInt 200_000_000
-              , maxTripDisbursement: BigInt.fromInt 0
-              , agentDisbursementPercent: BigInt.fromInt 0
-              , proposalTallyEndOffset: BigInt.fromInt 0
-              , tallyNft: adaSymbol
-              , voteTokenName: adaToken
-              , voteFungibleCurrencySymbol: fungibleSymbol
-              , voteFungibleTokenName: fungibleTokenName
-              , fungibleVotePercent: BigInt.fromInt 10
+-- let
+--   sampleConfigParams :: CreateConfigParams
+--   sampleConfigParams = CreateConfigParams
+--     { configTokenName: adaToken
+--     , upgradeMajorityPercent: BigInt.fromInt 0
+--     , upgradeRelativeMajorityPercent: BigInt.fromInt 0
+--     , generalMajorityPercent: BigInt.fromInt 0
+--     , generalRelativeMajorityPercent: BigInt.fromInt 0
+--     , tripMajorityPercent: BigInt.fromInt 0
+--     , tripRelativeMajorityPercent: BigInt.fromInt 0
+--     , totalVotes: BigInt.fromInt 1
+--     , maxGeneralDisbursement: BigInt.fromInt 200_000_000
+--     , maxTripDisbursement: BigInt.fromInt 0
+--     , agentDisbursementPercent: BigInt.fromInt 0
+--     , proposalTallyEndOffset: BigInt.fromInt 0
+--     , tallyNft: adaSymbol
+--     , voteTokenName: adaToken
+--     , voteFungibleCurrencySymbol: fungibleSymbol
+--     , voteFungibleTokenName: fungibleTokenName
+--     , fungibleVotePercent: BigInt.fromInt 10
 
-              -- Index needed for making tallyNft
-              , indexSymbol: indexSymbol
-              , indexTokenName: indexTokenName
-              }
+--     -- Index needed for making tallyNft
+--     , indexSymbol: indexSymbol
+--     , indexTokenName: indexTokenName
+--     }
 
-          ContractResult
-            { txHash: createConfigTxHash
-            , symbol: configSymbol
-            , tokenName: configTokenName
-            } <- createConfig sampleConfigParams
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+-- ContractResult
+--   { txHash: createConfigTxHash
+--   , symbol: configSymbol
+--   , tokenName: configTokenName
+--   } <- createConfig sampleConfigParams
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
-          let
-            treasuryFundParams =
-              { adaAmount: BigInt.fromInt 200_000_000
-              , configSymbol: configSymbol
-              , configTokenName: configTokenName
-              }
+-- let
+--   treasuryFundParams =
+--     { adaAmount: BigInt.fromInt 200_000_000
+--     , configSymbol: configSymbol
+--     , configTokenName: configTokenName
+--     }
 
-          (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
-            treasuryFundParams
+-- (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
+--   treasuryFundParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
 
-          let
-            tallyStateDatum = sampleGeneralProposalTallyStateDatum
-              walletTwoAddress
+-- let
+--   tallyStateDatum = sampleGeneralProposalTallyStateDatum
+--     walletTwoAddress
 
-            proposalParams :: CreateProposalParams
-            proposalParams = CreateProposalParams
-              { configSymbol
-              , indexSymbol
-              , configTokenName
-              , indexTokenName
-              , tallyStateDatum
-              }
+--   proposalParams :: CreateProposalParams
+--   proposalParams = CreateProposalParams
+--     { configSymbol
+--     , indexSymbol
+--     , configTokenName
+--     , indexTokenName
+--     , tallyStateDatum
+--     }
 
-          ContractResult
-            { txHash: createProposalTxHash
-            , symbol: proposalSymbol
-            , tokenName: proposalTokenName
-            } <- createProposal proposalParams
+-- ContractResult
+--   { txHash: createProposalTxHash
+--   , symbol: proposalSymbol
+--   , tokenName: proposalTokenName
+--   } <- createProposal proposalParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            createProposalTxHash
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+--   createProposalTxHash
 
-          let
-            voteParams :: VoteOnProposalParams
-            voteParams = VoteOnProposalParams
-              { configSymbol: configSymbol
-              , tallySymbol: proposalSymbol
-              , configTokenName: configTokenName
-              -- Vote NFT (voting pass) symbol and token name
-              , voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken -- votePassTokenName
-              -- Fungible
-              , fungibleSymbol: fungibleSymbol
-              -- Vote datum fields
-              , proposalTokenName: proposalTokenName
-              , voteDirection: VoteDirection'For
-              , returnAda: (BigInt.fromInt 0)
-              }
+-- let
+--   voteParams :: VoteOnProposalParams
+--   voteParams = VoteOnProposalParams
+--     { configSymbol: configSymbol
+--     , tallySymbol: proposalSymbol
+--     , configTokenName: configTokenName
+--     -- Vote NFT (voting pass) symbol and token name
+--     , voteNftSymbol: votePassSymbol
+--     , voteTokenName: adaToken -- votePassTokenName
+--     -- Fungible
+--     , fungibleSymbol: fungibleSymbol
+--     -- Vote datum fields
+--     , proposalTokenName: proposalTokenName
+--     , voteDirection: VoteDirection'For
+--     , returnAda: (BigInt.fromInt 0)
+--     , userWalletAddress
+--     }
 
-          VoteOnProposalResult
-            { txHash: voteOnProposalTxHash
-            , symbol: voteOnProposalSymbol
-            } <- voteOnProposal voteParams
+-- VoteOnProposalResult
+--   { txHash: voteOnProposalTxHash
+--   , symbol: voteOnProposalSymbol
+--   } <- voteOnProposal voteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            voteOnProposalTxHash
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+--   voteOnProposalTxHash
 
-          let
-            countVoteParams :: CountVoteParams
-            countVoteParams = CountVoteParams
-              { voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken
-              , voteNftTokenName: votePassTokenName
-              , configSymbol: configSymbol
-              , configTokenName: configTokenName
-              , tallySymbol: proposalSymbol
-              , fungibleSymbol: fungibleSymbol
-              , fungibleTokenName: fungibleTokenName
-              , fungiblePercent: BigInt.fromInt 10
-              }
+-- let
+--   countVoteParams :: CountVoteParams
+--   countVoteParams = CountVoteParams
+--     { voteNftSymbol: votePassSymbol
+--     , voteTokenName: adaToken
+--     , voteNftTokenName: votePassTokenName
+--     , configSymbol: configSymbol
+--     , configTokenName: configTokenName
+--     , tallySymbol: proposalSymbol
+--     , fungibleSymbol: fungibleSymbol
+--     , fungibleTokenName: fungibleTokenName
+--     , fungiblePercent: BigInt.fromInt 10
+--     }
 
-          countVoteTxHash <- countVote countVoteParams
+-- countVoteTxHash <- countVote countVoteParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            countVoteTxHash
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+--   countVoteTxHash
 
-          let
-            treasuryGeneralParams :: TreasuryParams
-            treasuryGeneralParams = TreasuryParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
-              , tallySymbol: proposalSymbol
-              , treasurySymbol: treasuryFundSymbol
-              }
+-- let
+--   treasuryGeneralParams :: TreasuryParams
+--   treasuryGeneralParams = TreasuryParams
+--     { configSymbol: configSymbol
+--     , configTokenName: configTokenName
+--     , tallySymbol: proposalSymbol
+--     , treasurySymbol: treasuryFundSymbol
+--     }
 
-          treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+-- treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+-- void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash

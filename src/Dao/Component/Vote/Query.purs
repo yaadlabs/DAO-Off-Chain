@@ -56,6 +56,7 @@ import Dao.Utils.Query
   )
 import Dao.Utils.Query (SpendPubKeyResult, findKeyUtxoBySymbol)
 import Dao.Utils.Value (countOfTokenInValue)
+import Dao.Utils.Value (mkTokenName)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -73,8 +74,6 @@ mkAllVoteConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
   TokenName ->
-  TokenName ->
-  TokenName ->
   BigInt ->
   MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
@@ -88,9 +87,7 @@ mkAllVoteConstraintsAndLookups
   voteNftSymbol
   voteSymbol
   fungibleSymbol
-  voteNftTokenName
   voteTokenName
-  fungibleTokenName
   fungiblePercent
   votePolicyScript
   utxos =
@@ -99,9 +96,7 @@ mkAllVoteConstraintsAndLookups
         voteNftSymbol
         voteSymbol
         fungibleSymbol
-        voteNftTokenName
         voteTokenName
-        fungibleTokenName
         fungiblePercent
         votePolicyScript
     )
@@ -111,8 +106,6 @@ mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
   CurrencySymbol ->
-  TokenName ->
-  TokenName ->
   TokenName ->
   BigInt ->
   MintingPolicy ->
@@ -125,9 +118,7 @@ mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
   voteSymbol
   fungibleSymbol
-  voteNftTokenName
   voteTokenName
-  fungibleTokenName
   fungiblePercent
   votePolicyScript
   (txIn /\ txOut) =
@@ -145,6 +136,13 @@ mkVoteUtxoConstraintsAndLookups
       liftContractM "Cannot get pkh" $ addressToPaymentPubKeyHash $ voteDatum
         # unwrap
         # _.voteOwner
+
+    voteNftTokenName :: TokenName <-
+      liftContractM "Could not make voteNft token name" $ mkTokenName
+        "vote_pass"
+    fungibleTokenName :: TokenName <-
+      liftContractM "Could not make voteNft token name" $ mkTokenName
+        "vote_fungible"
 
     let
       -- If the user holds fungible tokens we need to add the calculated weight

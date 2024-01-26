@@ -8,6 +8,7 @@ module Dao.Component.Vote.Params
   , CancelVoteParams(..)
   ) where
 
+import Contract.Address (Address)
 import Contract.Scripts (MintingPolicy)
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.Newtype (class Newtype)
@@ -17,13 +18,9 @@ import LambdaBuffers.ApplicationTypes.Vote (VoteDirection)
 -- | Create proposal contract paramaters
 newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: CurrencySymbol
-  , tallySymbol :: CurrencySymbol
   , configTokenName :: TokenName
+  , tallySymbol :: CurrencySymbol
   , voteTokenName :: TokenName
-  -- Vote NFT symbol (vote pass)
-  , voteNftSymbol :: CurrencySymbol
-  -- Fungible token symbol (vote multiplier token)
-  , fungibleSymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -34,14 +31,10 @@ derive instance Newtype VoteOnProposalParams _
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { voteNftSymbol :: CurrencySymbol
-  , voteTokenName :: TokenName
-  , voteNftTokenName :: TokenName
-  , configSymbol :: CurrencySymbol
+  { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
-  , fungibleSymbol :: CurrencySymbol
-  , fungibleTokenName :: TokenName
+  , voteTokenName :: TokenName
   , fungiblePercent :: BigInt
   }
 

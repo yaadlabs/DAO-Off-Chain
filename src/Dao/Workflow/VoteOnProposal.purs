@@ -45,7 +45,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
@@ -91,6 +93,15 @@ voteOnProposal params' = do
   appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
     validatorConfig
 
+  fungiblePolicy' :: MintingPolicy <- fungiblePolicy
+  voteNftPolicy' :: MintingPolicy <- voteNftPolicy
+  let
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+
+    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
+
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
@@ -104,14 +115,13 @@ voteOnProposal params' = do
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
-  voteNftToken <- spendVoteNftUtxo params.voteNftSymbol userUtxos
   -- Look for the 'voteNft' UTXO,
   -- get the constraints and lookups to spend this UTXO if found
-  voteNftInfo <- spendVoteNftUtxo params.voteNftSymbol userUtxos
+  voteNftInfo <- spendVoteNftUtxo voteNftSymbol userUtxos
 
   -- Look for the 'voteFungibleCurrencySymbol' UTXO,
   -- get the constraints and lookups to spend this UTXO if found
-  fungibleInfo <- spendFungibleUtxo params.fungibleSymbol userUtxos
+  fungibleInfo <- spendFungibleUtxo fungibleSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let

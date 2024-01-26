@@ -41,13 +41,15 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Contract.Value (scriptCurrencySymbol)
+import Contract.Value (CurrencySymbol, scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
@@ -92,6 +94,15 @@ countVote params' = do
 
   let voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
+  fungiblePolicy' :: MintingPolicy <- fungiblePolicy
+  voteNftPolicy' :: MintingPolicy <- voteNftPolicy
+  let
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+
+    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
+
   -- Collect the constraints and lookups for each vote UTXO
   -- And whether the vote was for or against
   voteDirectionsConstraintsAndLookups ::
@@ -100,12 +111,10 @@ countVote params' = do
           Constraints.TxConstraints
       ) <-
     mkAllVoteConstraintsAndLookups
-      params.voteNftSymbol
+      voteNftSymbol
       voteSymbol
-      params.fungibleSymbol
-      params.voteNftTokenName
+      fungibleSymbol
       params.voteTokenName
-      params.fungibleTokenName
       params.fungiblePercent
       appliedVotePolicy
       voteUtxos
@@ -130,6 +139,10 @@ countVote params' = do
           , for: oldDatum.for + votesFor
           , against: oldDatum.against + votesAgainst
           }
+
+  logInfo' $ "countVote - oldTallyDatum: " <> show (tallyInfo.datum # unwrap)
+  logInfo' $ "countVote - newTallyDatum: " <> show
+    tallyDatumWithUpdatedVoteCount
 
   let
     tallyValidatorHash :: ValidatorHash

@@ -333,6 +333,7 @@ instance
     voteTokenName <- convertPsToJs params.voteTokenName
     voteFungibleCurrencySymbol <- convertPsToJs
       params.voteFungibleCurrencySymbol
+    voteNftSymbol <- convertPsToJs params.voteNftSymbol
     voteFungibleTokenName <- convertPsToJs params.voteFungibleTokenName
     indexSymbol <- convertPsToJs params.indexSymbol
     indexTokenName <- convertPsToJs params.indexTokenName
@@ -352,6 +353,7 @@ instance
       , proposalTallyEndOffset: params.proposalTallyEndOffset
       , tallyNft
       , voteTokenName
+      , voteNftSymbol
       , voteFungibleCurrencySymbol
       , voteFungibleTokenName
       , fungibleVotePercent: params.fungibleVotePercent
@@ -366,6 +368,7 @@ instance
     configTokenName <- convertJsToPs params.configTokenName
     tallyNft <- convertJsToPs params.tallyNft
     voteTokenName <- convertJsToPs params.voteTokenName
+    voteNftSymbol <- convertJsToPs params.voteNftSymbol
     voteFungibleCurrencySymbol <- convertJsToPs
       params.voteFungibleCurrencySymbol
     voteFungibleTokenName <- convertJsToPs params.voteFungibleTokenName
@@ -387,6 +390,7 @@ instance
       , proposalTallyEndOffset: params.proposalTallyEndOffset
       , tallyNft
       , voteTokenName
+      , voteNftSymbol
       , voteFungibleCurrencySymbol
       , voteFungibleTokenName
       , fungibleVotePercent: params.fungibleVotePercent
@@ -435,48 +439,32 @@ instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams w
 instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
   convertPsToJs (DaoApi.CountVoteParams params) = do
 
-    voteNftSymbol <- convertPsToJs params.voteNftSymbol
-    voteTokenName <- convertPsToJs params.voteTokenName
-    voteNftTokenName <- convertPsToJs params.voteNftTokenName
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
-    fungibleSymbol <- convertPsToJs params.fungibleSymbol
-    fungibleTokenName <- convertPsToJs params.fungibleTokenName
+    voteTokenName <- convertPsToJs params.voteTokenName
 
     pure $ WebApi.CountVoteParams
-      { voteNftSymbol
-      , voteTokenName
-      , voteNftTokenName
-      , configSymbol
+      { configSymbol
       , configTokenName
       , tallySymbol
-      , fungibleSymbol
-      , fungibleTokenName
+      , voteTokenName
       , fungiblePercent: params.fungiblePercent
       }
 
 instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
   convertJsToPs (WebApi.CountVoteParams params) = do
 
-    voteNftSymbol <- convertJsToPs params.voteNftSymbol
-    voteTokenName <- convertJsToPs params.voteTokenName
-    voteNftTokenName <- convertJsToPs params.voteNftTokenName
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
+    voteTokenName <- convertJsToPs params.voteTokenName
     tallySymbol <- convertJsToPs params.tallySymbol
-    fungibleSymbol <- convertJsToPs params.fungibleSymbol
-    fungibleTokenName <- convertJsToPs params.fungibleTokenName
 
     pure $ DaoApi.CountVoteParams
-      { voteNftSymbol
-      , voteTokenName
-      , voteNftTokenName
-      , configSymbol
+      { configSymbol
       , configTokenName
+      , voteTokenName
       , tallySymbol
-      , fungibleSymbol
-      , fungibleTokenName
       , fungiblePercent: params.fungiblePercent
       }
 
@@ -533,8 +521,6 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     tallySymbol <- convertPsToJs params.tallySymbol
     configTokenName <- convertPsToJs params.configTokenName
     voteTokenName <- convertPsToJs params.voteTokenName
-    voteNftSymbol <- convertPsToJs params.voteNftSymbol
-    fungibleSymbol <- convertPsToJs params.fungibleSymbol
     proposalTokenName <- convertPsToJs params.proposalTokenName
     voteDirection <- convertPsToJs params.voteDirection
 
@@ -543,8 +529,6 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       , tallySymbol
       , configTokenName
       , voteTokenName
-      , voteNftSymbol
-      , fungibleSymbol
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda
@@ -557,8 +541,6 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     tallySymbol <- convertJsToPs params.tallySymbol
     configTokenName <- convertJsToPs params.configTokenName
     voteTokenName <- convertJsToPs params.voteTokenName
-    voteNftSymbol <- convertJsToPs params.voteNftSymbol
-    fungibleSymbol <- convertJsToPs params.fungibleSymbol
     proposalTokenName <- convertJsToPs params.proposalTokenName
     voteDirection <- convertJsToPs params.voteDirection
 
@@ -567,8 +549,6 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       , tallySymbol
       , configTokenName
       , voteTokenName
-      , voteNftSymbol
-      , fungibleSymbol
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda

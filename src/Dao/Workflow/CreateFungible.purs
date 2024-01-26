@@ -35,7 +35,7 @@ import Contract.Value
   )
 import Contract.Value (singleton) as Value
 import Dao.Component.Fungible.Params (CreateFungibleParams)
-import Dao.Scripts.Policy.Fungible (unappliedFungiblePolicyDebug)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)
@@ -43,37 +43,28 @@ import JS.BigInt (BigInt, fromInt)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
-createFungible ::
-  CreateFungibleParams ->
-  Contract ContractResult
+-- | Uses an 'always-succeed' on-chain script as a placeholder
+createFungible :: CreateFungibleParams -> Contract ContractResult
 createFungible params' = do
-  logInfo' "Entering createVotePass transaction"
+  logInfo' "Entering createFungible transaction"
 
   let params = params' # unwrap
 
-  -- Script sets these arbitrary bounds on number of tokens allowed
-  guardContract "Token amount must be greater than 0"
-    (params.amount > (fromInt 0))
-  guardContract "Token amount must be less than 500"
-    (params.amount < (fromInt 500))
-
-  appliedFungiblePolicy :: MintingPolicy <- unappliedFungiblePolicyDebug
-    params.amount
-
+  fungiblePolicy' :: MintingPolicy <- fungiblePolicy
   fungibleTokenName :: TokenName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
       "vote_fungible"
 
   let
     fungibleSymbol :: CurrencySymbol
-    fungibleSymbol = scriptCurrencySymbol appliedFungiblePolicy
+    fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
 
     fungibleValue :: Value
     fungibleValue = Value.singleton fungibleSymbol fungibleTokenName
       params.amount
 
     lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.mintingPolicy appliedFungiblePolicy ]
+    lookups = mconcat [ Lookups.mintingPolicy fungiblePolicy' ]
 
     constraints :: Constraints.TxConstraints
     constraints = mconcat
