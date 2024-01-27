@@ -39,7 +39,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Contract.Value (CurrencySymbol, scriptCurrencySymbol)
+import Contract.Value (CurrencySymbol, TokenName, scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
@@ -102,6 +102,9 @@ countVote params' = do
     voteSymbol :: CurrencySymbol
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
+    voteTokenName :: TokenName
+    voteTokenName = configDatum # unwrap # _.voteTokenName
+
     fungiblePercent :: BigInt
     fungiblePercent = configDatum # unwrap # _.fungibleVotePercent
 
@@ -116,7 +119,7 @@ countVote params' = do
       voteNftSymbol
       voteSymbol
       fungibleSymbol
-      params.voteTokenName
+      voteTokenName
       fungiblePercent
       appliedVotePolicy
       voteUtxos

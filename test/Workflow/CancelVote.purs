@@ -187,7 +187,6 @@ suite = do
               { configSymbol: configSymbol
               , configTokenName: configTokenName
               , tallySymbol: proposalSymbol
-              , voteTokenName: adaToken
               -- Vote datum fields
               , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For
@@ -207,7 +206,6 @@ suite = do
             cancelVoteParams = CancelVoteParams
               { configSymbol: configSymbol
               , configTokenName: configTokenName
-              , voteTokenName: adaToken
               }
           cancelVoteTxHash <- cancelVote cancelVoteParams
 

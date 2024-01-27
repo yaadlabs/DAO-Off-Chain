@@ -89,6 +89,9 @@ cancelVote params' = do
     voteSymbol :: CurrencySymbol
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
+    voteTokenName :: TokenName
+    voteTokenName = configDatum # unwrap # _.voteTokenName
+
   voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel
     voteSymbol
     appliedVoteValidator
@@ -116,7 +119,7 @@ cancelVote params' = do
     voteNftSymbol = configDatum # unwrap # _.voteNft
 
     burnVoteNft :: Value
-    burnVoteNft = Value.singleton voteSymbol params.voteTokenName
+    burnVoteNft = Value.singleton voteSymbol voteTokenName
       (negate one)
 
     voteNftPass :: Value

@@ -20,7 +20,6 @@ newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
-  , voteTokenName :: TokenName
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -43,7 +42,6 @@ derive instance Newtype CountVoteParams _
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
   }
 
 derive instance Newtype CancelVoteParams _

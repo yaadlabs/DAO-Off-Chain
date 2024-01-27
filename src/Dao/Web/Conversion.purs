@@ -473,12 +473,10 @@ instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
-    voteTokenName <- convertPsToJs params.voteTokenName
 
     pure $ WebApi.CancelVoteParams
       { configSymbol
       , configTokenName
-      , voteTokenName
       }
 
 instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
@@ -486,12 +484,10 @@ instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
-    voteTokenName <- convertJsToPs params.voteTokenName
 
     pure $ DaoApi.CancelVoteParams
       { configSymbol
       , configTokenName
-      , voteTokenName
       }
 
 -- * VoteOnProposalParams
@@ -502,7 +498,6 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     configSymbol <- convertPsToJs params.configSymbol
     tallySymbol <- convertPsToJs params.tallySymbol
     configTokenName <- convertPsToJs params.configTokenName
-    voteTokenName <- convertPsToJs params.voteTokenName
     proposalTokenName <- convertPsToJs params.proposalTokenName
     voteDirection <- convertPsToJs params.voteDirection
 
@@ -510,7 +505,6 @@ instance ConvertPsToJs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       { configSymbol
       , tallySymbol
       , configTokenName
-      , voteTokenName
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda
@@ -522,7 +516,6 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
     configSymbol <- convertJsToPs params.configSymbol
     tallySymbol <- convertJsToPs params.tallySymbol
     configTokenName <- convertJsToPs params.configTokenName
-    voteTokenName <- convertJsToPs params.voteTokenName
     proposalTokenName <- convertJsToPs params.proposalTokenName
     voteDirection <- convertJsToPs params.voteDirection
 
@@ -530,7 +523,6 @@ instance ConvertJsToPs WebApi.VoteOnProposalParams DaoApi.VoteOnProposalParams w
       { configSymbol
       , tallySymbol
       , configTokenName
-      , voteTokenName
       , proposalTokenName
       , voteDirection
       , returnAda: params.returnAda

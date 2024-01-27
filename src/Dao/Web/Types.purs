@@ -109,7 +109,6 @@ newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
-  , voteTokenName :: TokenName
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -128,7 +127,6 @@ newtype CountVoteParams = CountVoteParams
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
   }
 
 -- | Create fungible contract paramaters

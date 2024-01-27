@@ -294,7 +294,6 @@ suite = do
                 { configSymbol: configSymbol
                 , configTokenName: configTokenName
                 , tallySymbol: proposalSymbol
-                , voteTokenName: adaToken
                 -- Vote datum fields
                 , proposalTokenName: proposalTokenName
                 , voteDirection: VoteDirection'For
@@ -322,7 +321,6 @@ suite = do
                 { configSymbol: configSymbol
                 , configTokenName: configTokenName
                 , tallySymbol: proposalSymbol
-                , voteTokenName: adaToken
                 -- Vote datum fields
                 , proposalTokenName: proposalTokenName
                 , voteDirection: VoteDirection'For
