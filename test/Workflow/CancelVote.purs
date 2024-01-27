@@ -5,7 +5,9 @@ Description: Test the cancel vote workflow
 module Test.Workflow.CancelVote (suite) where
 
 import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Chain (waitNSlots)
 import Contract.Monad (liftContractM, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
@@ -89,7 +91,9 @@ suite = do
             , tokenName: votePassTokenName
             } <-
             createVotePass userPkh
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             fungibleParams :: CreateFungibleParams
@@ -101,7 +105,9 @@ suite = do
             , symbol: fungibleSymbol
             , tokenName: fungibleTokenName
             } <- createFungible fungibleParams
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           ContractResult
             { txHash: indexTxHash
@@ -109,7 +115,9 @@ suite = do
             , tokenName: indexTokenName
             } <-
             createIndex adaToken
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) indexTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           -- The policy for the 'voteNft' token (vote pass)
           votePassPolicy <- voteNftPolicy
@@ -156,7 +164,9 @@ suite = do
             , tokenName: configTokenName
             } <-
             createConfig sampleConfigParams
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             tallyStateDatum = sampleGeneralProposalTallyStateDatum
@@ -180,6 +190,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams :: VoteOnProposalParams
@@ -200,6 +211,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             cancelVoteParams :: CancelVoteParams
@@ -210,3 +222,4 @@ suite = do
           cancelVoteTxHash <- cancelVote cancelVoteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
+          void $ waitNSlots (Natural.fromInt' 2)

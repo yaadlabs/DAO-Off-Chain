@@ -5,9 +5,11 @@ Description: Test the count vote workflow, where multiple votes have been cast
 module Test.Workflow.MultipleVotes (suite) where
 
 import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Chain (waitNSlots)
 import Contract.Config (NetworkId(TestnetId))
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
@@ -133,7 +135,9 @@ suite = do
               , symbol: indexSymbol
               , tokenName: indexTokenName
               } <- createIndex adaToken
+
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
 
             -- The policy for the 'voteNft' token (vote pass)
             votePassPolicy <- voteNftPolicy
@@ -188,8 +192,10 @@ suite = do
               , symbol: configSymbol
               , tokenName: configTokenName
               } <- createConfig sampleConfigParams
+
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               createConfigTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
 
             let
               -- The 'TallyStateDatum' to be sent to the proposal UTXO
@@ -216,6 +222,7 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               createProposalTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
 
             -- Get the PKH for user three (walletThree)
             userThreePkh :: PaymentPubKeyHash <-
@@ -232,6 +239,7 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               votePassTxHashUserThree
+            void $ waitNSlots (Natural.fromInt' 2)
 
             -- Create the fungible token (amount 400) for user three (walletThree)
             let
@@ -244,8 +252,10 @@ suite = do
               , symbol: fungibleSymbolUserThree
               , tokenName: fungibleTokenNameUserThree
               } <- createFungible fungibleParamsUserThree
+
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               fungibleTxHashUserThree
+            void $ waitNSlots (Natural.fromInt' 2)
 
             -- Get the PKH for user four (walletFour)
             userFourPkh :: PaymentPubKeyHash <-
@@ -261,6 +271,7 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               votePassTxHashUserFour
+            void $ waitNSlots (Natural.fromInt' 2)
 
             -- Create the fungible token (amount 200) for user four (walletFour)
             let
@@ -273,8 +284,10 @@ suite = do
               , symbol: fungibleSymbolUserFour
               , tokenName: fungibleTokenNameUserFour
               } <- createFungible fungibleParamsUserFour
+
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               fungibleTxHashUserFour
+            void $ waitNSlots (Natural.fromInt' 2)
 
             pure
               ( proposalSymbol /\ proposalTokenName /\ configSymbol /\
@@ -307,6 +320,7 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               voteOnProposalTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
 
           -- ************************************************** --
           -- ************************************************** --
@@ -334,6 +348,7 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               voteOnProposalTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
 
           -- ********************************************************* --
           -- ********************************************************* --
@@ -365,3 +380,4 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               countVoteTxHash
+            void $ waitNSlots (Natural.fromInt' 2)
