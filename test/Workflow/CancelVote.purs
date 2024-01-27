@@ -93,7 +93,7 @@ suite = do
             createVotePass userPkh
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             fungibleParams :: CreateFungibleParams
@@ -107,7 +107,7 @@ suite = do
             } <- createFungible fungibleParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           ContractResult
             { txHash: indexTxHash
@@ -117,7 +117,7 @@ suite = do
             createIndex adaToken
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) indexTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           -- The policy for the 'voteNft' token (vote pass)
           votePassPolicy <- voteNftPolicy
@@ -166,7 +166,7 @@ suite = do
             createConfig sampleConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             tallyStateDatum = sampleGeneralProposalTallyStateDatum
@@ -190,7 +190,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             voteParams :: VoteOnProposalParams
@@ -211,7 +211,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             cancelVoteParams :: CancelVoteParams
@@ -222,4 +222,4 @@ suite = do
           cancelVoteTxHash <- cancelVote cancelVoteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+          void $ waitNSlots (Natural.fromInt' 3)

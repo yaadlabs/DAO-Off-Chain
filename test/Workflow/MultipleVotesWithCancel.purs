@@ -1,8 +1,9 @@
 {-|
-Module: Test.Workflow.MultipleVotes
-Description: Test the count vote workflow, where multiple votes have been cast
+Module: Test.Workflow.MultipleVotesWithCancel
+Description: Workflow that includes multiple votes and one user cancelling their
+  vote before votes are counted and the general treasury effect is executed.
 -}
-module Test.Workflow.MultipleVotes (suite) where
+module Test.Workflow.MultipleVotesWithCancel (suite) where
 
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
@@ -42,6 +43,7 @@ import Dao.Component.Fungible.Params
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   )
+import Dao.Component.Treasury.Params (TreasuryParams(TreasuryParams))
 import Dao.Component.Vote.Params
   ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
@@ -56,7 +58,9 @@ import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
+import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
+import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal
   ( VoteOnProposalResult(VoteOnProposalResult)
   , voteOnProposal
@@ -79,6 +83,7 @@ suite = do
               /\ Array BigInt
               /\ Array BigInt
               /\ Array BigInt
+              /\ Array BigInt
           )
         distribution =
           [ BigInt.fromInt 2_000_000_000
@@ -86,8 +91,16 @@ suite = do
           ] /\ [ BigInt.fromInt 2_000_000_000 ]
             /\ [ BigInt.fromInt 2_000_000_000 ]
             /\ [ BigInt.fromInt 2_000_000_000 ]
+            /\ [ BigInt.fromInt 2_000_000_000 ]
+            /\ [ BigInt.fromInt 2_000_000_000 ]
       withWallets distribution
-        \(walletOne /\ walletTwo /\ walletThree /\ walletFour) -> do
+        \( walletOne
+             /\ walletTwo
+             /\ walletThree
+             /\ walletFour
+             /\ walletFive
+             /\ walletSix
+         ) -> do
 
           -- ******************************************************************************* --
           -- ******************************************************************************* --
@@ -117,6 +130,16 @@ suite = do
           -- * section below, for the same reasons stated above.                    * --
           userFourWalletAddress :: Address <- withKeyWallet walletFour do
             logInfo' "Running in wallet four - first time"
+            walletAddress :: Address <- liftedM "Could not get wallet address"
+              getWalletAddress
+            pure walletAddress
+
+          -- ************************************************************************ --
+          -- ************************************************************************ --
+          -- * Get the wallet address for user five to use in the create proposal   * --
+          -- * section below, for the same reasons stated above.                    * --
+          userFiveWalletAddress :: Address <- withKeyWallet walletFive do
+            logInfo' "Running in wallet five - first time"
             walletAddress :: Address <- liftedM "Could not get wallet address"
               getWalletAddress
             pure walletAddress
@@ -170,8 +193,8 @@ suite = do
                 , generalRelativeMajorityPercent: BigInt.fromInt 0
                 , tripMajorityPercent: BigInt.fromInt 0
                 , tripRelativeMajorityPercent: BigInt.fromInt 0
-                , totalVotes: BigInt.fromInt 0
-                , maxGeneralDisbursement: BigInt.fromInt 0
+                , totalVotes: BigInt.fromInt 1
+                , maxGeneralDisbursement: BigInt.fromInt 200_000_000
                 , maxTripDisbursement: BigInt.fromInt 0
                 , agentDisbursementPercent: BigInt.fromInt 0
                 , proposalTallyEndOffset: BigInt.fromInt 0
@@ -294,6 +317,28 @@ suite = do
                   configTokenName
               )
 
+          -- ************************************************************ --
+          -- ************************************************************ --
+          -- * User one creates a proposal on which the others can vote * --
+          treasuryFundSymbol <- withKeyWallet walletOne do
+
+            logInfo' "Running in wallet one - creating treasury fund"
+            let
+              treasuryFundParams =
+                { adaAmount: BigInt.fromInt 200_000_000
+                , configSymbol: configSymbol
+                , configTokenName: configTokenName
+                }
+
+            (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
+              treasuryFundParams
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+              treasuryFundTxHash
+            void $ waitNSlots (Natural.fromInt' 3)
+
+            pure treasuryFundSymbol
+
           -- ************************************************** --
           -- ************************************************** --
           -- * User three (walletThree) votes on the proposal * --
@@ -322,8 +367,8 @@ suite = do
               voteOnProposalTxHash
             void $ waitNSlots (Natural.fromInt' 3)
 
-          -- ************************************************** --
-          -- ************************************************** --
+          -- ************************************************ --
+          -- ************************************************ --
           -- * User four (walletFour) votes on the proposal * --
           withKeyWallet walletFour do
             logInfo'
@@ -380,4 +425,27 @@ suite = do
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               countVoteTxHash
+            void $ waitNSlots (Natural.fromInt' 3)
+
+          -- ************************************************************ --
+          -- ************************************************************ --
+          -- * User one executes the effect of the proposal, that is to * --
+          -- * disburse treasury funds to the 'General' payment address * --
+          -- * specified in the 'TallyStateDatum'                       * --
+          withKeyWallet walletOne do
+            logInfo'
+              "Running in wallet one - executing the treasury general effect"
+
+            let
+              treasuryGeneralParams :: TreasuryParams
+              treasuryGeneralParams = TreasuryParams
+                { configSymbol: configSymbol
+                , configTokenName: configTokenName
+                , tallySymbol: proposalSymbol
+                , treasurySymbol: treasuryFundSymbol
+                }
+
+            treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
             void $ waitNSlots (Natural.fromInt' 3)

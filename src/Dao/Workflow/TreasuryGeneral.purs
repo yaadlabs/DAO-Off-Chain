@@ -15,11 +15,13 @@ import Contract.Prelude
   , min
   , pure
   , unwrap
+  , zero
   , (#)
   , ($)
   , (*)
   , (+)
   , (/)
+  , (>)
   , (>=)
   )
 import Contract.ScriptLookups as Lookups
@@ -148,6 +150,11 @@ treasuryGeneral params' = do
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive
     amountToSendBackToTreasury
+
+  guardContract
+    "The totalVotes field of the config datum must be greater than zero"
+    $ configTotalVotes
+    > zero
 
   -- Check for sufficient votes
   guardContract "Relative majority is too low" $ relativeMajority >=

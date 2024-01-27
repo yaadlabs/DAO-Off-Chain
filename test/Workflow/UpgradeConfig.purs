@@ -5,8 +5,10 @@ Description: Test the upgrade config workflow
 module Test.Workflow.UpgradeConfig (suite) where
 
 import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
@@ -105,7 +107,9 @@ suite = do
             , tokenName: votePassTokenName
             } <-
             createVotePass userPkh
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             fungibleParams :: CreateFungibleParams
@@ -124,7 +128,9 @@ suite = do
             , symbol: indexSymbol
             , tokenName: indexTokenName
             } <- createIndex adaToken
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           -- The policy for the 'voteNft' token (vote pass)
           votePassPolicy <- voteNftPolicy
@@ -177,7 +183,9 @@ suite = do
             , symbol: configSymbol
             , tokenName: configTokenName
             } <- createConfig sampleConfigParams
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             treasuryFundParams =
@@ -209,6 +217,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             voteParams :: VoteOnProposalParams
@@ -229,6 +238,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             countVoteParams :: CountVoteParams
@@ -243,6 +253,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             countVoteTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           dummyConfig <- dummyNewConfig
           let
@@ -257,3 +268,4 @@ suite = do
           treasuryTxHash <- upgradeConfig upgradeConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
