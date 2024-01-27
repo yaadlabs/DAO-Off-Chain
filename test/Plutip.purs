@@ -36,13 +36,12 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts plutipConfig do
-        -- CountVote.suite
+        MultipleVotes.suite
+        CancelVote.suite
         TreasuryGeneral.suite
+        TreasuryTrip.suite
 
--- TreasuryTrip.suite
 -- UpgradeConfig.suite
--- CancelVote.suite
--- MultipleVotes.suite
 
 plutipConfig :: PlutipConfig
 plutipConfig =
