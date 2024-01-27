@@ -45,9 +45,7 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
@@ -91,19 +89,18 @@ countVote params' = do
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     scriptAddr
 
-  let voteSymbol = scriptCurrencySymbol appliedVotePolicy
-
-  fungiblePolicy' :: MintingPolicy <- fungiblePolicy
-  voteNftPolicy' :: MintingPolicy <- voteNftPolicy
   let
-    fungibleSymbol :: CurrencySymbol
-    fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
-
-    voteNftSymbol :: CurrencySymbol
-    voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
-
     configDatum :: DynamicConfigDatum
     configDatum = configInfo.datum
+
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
+
+    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol = configDatum # unwrap # _.voteNft
+
+    voteSymbol :: CurrencySymbol
+    voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
     fungiblePercent :: BigInt
     fungiblePercent = configDatum # unwrap # _.fungibleVotePercent

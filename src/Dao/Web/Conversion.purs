@@ -474,19 +474,11 @@ instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
     voteTokenName <- convertPsToJs params.voteTokenName
-    voteNftSymbol <- convertPsToJs params.voteNftSymbol
-    voteNftTokenName <- convertPsToJs params.voteNftTokenName
-    fungibleSymbol <- convertPsToJs params.fungibleSymbol
-    fungibleTokenName <- convertPsToJs params.fungibleTokenName
 
     pure $ WebApi.CancelVoteParams
       { configSymbol
       , configTokenName
       , voteTokenName
-      , voteNftSymbol
-      , voteNftTokenName
-      , fungibleSymbol
-      , fungibleTokenName
       }
 
 instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
@@ -495,19 +487,11 @@ instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
     voteTokenName <- convertJsToPs params.voteTokenName
-    voteNftSymbol <- convertJsToPs params.voteNftSymbol
-    voteNftTokenName <- convertJsToPs params.voteNftTokenName
-    fungibleSymbol <- convertJsToPs params.fungibleSymbol
-    fungibleTokenName <- convertJsToPs params.fungibleTokenName
 
     pure $ DaoApi.CancelVoteParams
       { configSymbol
       , configTokenName
       , voteTokenName
-      , voteNftSymbol
-      , voteNftTokenName
-      , fungibleSymbol
-      , fungibleTokenName
       }
 
 -- * VoteOnProposalParams

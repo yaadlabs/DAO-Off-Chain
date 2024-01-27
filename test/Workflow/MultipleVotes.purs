@@ -347,7 +347,7 @@ suite = do
           -- With the 'dynamicConfigDatum'fungibleVotePercent' set to 10
           -- So we have: (400 * 10) / 1000 = 4
           -- So: 'walletThree' votes: (Base 1 + Fungible 4 = 5 in total)
-          -- Vote 'walletFour' has 200 fungible tokens, so using the same calculations
+          -- Voter 'walletFour' has 200 fungible tokens, so using the same calculations
           -- they will have: (Base 1 + Fungible 2 = 3)
           -- So we have a total of 8 votes for the proposal
           withKeyWallet walletFour do

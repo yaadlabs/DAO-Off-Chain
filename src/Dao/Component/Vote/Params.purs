@@ -44,10 +44,6 @@ newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
-  , voteNftSymbol :: CurrencySymbol
-  , voteNftTokenName :: TokenName
-  , fungibleSymbol :: CurrencySymbol
-  , fungibleTokenName :: TokenName
   }
 
 derive instance Newtype CancelVoteParams _

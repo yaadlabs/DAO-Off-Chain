@@ -129,10 +129,6 @@ newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
   , voteTokenName :: TokenName
-  , voteNftSymbol :: Hash28
-  , voteNftTokenName :: TokenName
-  , fungibleSymbol :: Hash28
-  , fungibleTokenName :: TokenName
   }
 
 -- | Create fungible contract paramaters

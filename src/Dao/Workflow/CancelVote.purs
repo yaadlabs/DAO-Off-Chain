@@ -35,6 +35,7 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
+  , TokenName
   , Value
   , scriptCurrencySymbol
   )
@@ -47,9 +48,12 @@ import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
-import Dao.Utils.Value (countOfTokenInValue)
+import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Newtype (unwrap)
 import JS.BigInt (BigInt)
+import LambdaBuffers.ApplicationTypes.Configuration
+  ( DynamicConfigDatum(DynamicConfigDatum)
+  )
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
@@ -74,13 +78,17 @@ cancelVote params' = do
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
-  let
-    voteSymbol :: CurrencySymbol
-    voteSymbol = scriptCurrencySymbol appliedVotePolicy
-
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
+
+  let
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
+
+    voteSymbol :: CurrencySymbol
+    voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
+
   voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel
     voteSymbol
     appliedVoteValidator
@@ -93,26 +101,38 @@ cancelVote params' = do
       # unwrap
       # _.voteOwner
 
+  -- TODO: Add this field to the 'DynamicConfigDatum'
+  voteNftTokenName :: TokenName <-
+    liftContractM "Could not make voteNft token name" $ mkTokenName
+      "vote_pass"
   let
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
+
+    fungibleTokenName :: TokenName
+    fungibleTokenName = configDatum # unwrap # _.voteFungibleTokenName
+
+    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol = configDatum # unwrap # _.voteNft
+
     burnVoteNft :: Value
     burnVoteNft = Value.singleton voteSymbol params.voteTokenName
       (negate one)
 
     voteNftPass :: Value
-    voteNftPass = Value.singleton params.voteNftSymbol params.voteNftTokenName
-      one
+    voteNftPass = Value.singleton voteNftSymbol voteNftTokenName one
 
     burnVoteRedeemer :: Redeemer
     burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
     fungibleAmount :: BigInt
-    fungibleAmount = countOfTokenInValue params.fungibleSymbol voteInfo.value
+    fungibleAmount = countOfTokenInValue fungibleSymbol voteInfo.value
 
     fungibleToken :: Value
     fungibleToken
       | fungibleAmount == zero = mempty
-      | otherwise = Value.singleton params.fungibleSymbol
-          params.fungibleTokenName
+      | otherwise = Value.singleton fungibleSymbol
+          fungibleTokenName
           fungibleAmount
 
     lookups :: Lookups.ScriptLookups
