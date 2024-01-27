@@ -25,7 +25,6 @@ import Effect.Aff
   )
 import Test.Spec.Runner (defaultConfig)
 import Test.Workflow.CancelVote as CancelVote
-import Test.Workflow.CountVote as CountVote
 import Test.Workflow.MultipleVotes as MultipleVotes
 import Test.Workflow.TreasuryGeneral as TreasuryGeneral
 import Test.Workflow.TreasuryTrip as TreasuryTrip

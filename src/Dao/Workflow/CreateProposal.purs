@@ -8,8 +8,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , one
@@ -18,14 +17,15 @@ import Contract.Prelude
   , (#)
   , ($)
   , (+)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
   )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
@@ -42,12 +42,12 @@ import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 
 -- | Contract for creating a proposal
@@ -62,8 +62,6 @@ createProposal params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
-    validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
@@ -93,14 +91,17 @@ createProposal params' = do
       mkTallyTokenName indexInfo.datum
 
   let
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
+
+    tallyValidatorHash :: ValidatorHash
+    tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
+
     tallySymbol :: CurrencySymbol
     tallySymbol = scriptCurrencySymbol appliedTallyPolicy
 
     indexValidatorHash :: ValidatorHash
     indexValidatorHash = validatorHash indexValidator
-
-    tallyValidatorHash :: ValidatorHash
-    tallyValidatorHash = validatorHash appliedTallyValidator
 
     tallyNft :: Value
     tallyNft = Value.singleton tallySymbol tallyTokenName one

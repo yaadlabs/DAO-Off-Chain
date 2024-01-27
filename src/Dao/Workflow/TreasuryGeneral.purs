@@ -85,8 +85,8 @@ treasuryGeneral params' = do
       appliedTreasuryValidator
 
   let
-    dynamicConfig :: DynamicConfigDatum
-    dynamicConfig = configInfo.datum
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
 
     tallyDatum :: TallyStateDatum
     tallyDatum = tallyInfo.datum
@@ -111,7 +111,7 @@ treasuryGeneral params' = do
     totalVotes = votesFor + votesAgainst
 
     configTotalVotes :: BigInt
-    configTotalVotes = dynamicConfig # unwrap # _.totalVotes
+    configTotalVotes = configDatum # unwrap # _.totalVotes
 
     relativeMajority :: BigInt
     relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
@@ -120,15 +120,15 @@ treasuryGeneral params' = do
     majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
 
     configGeneralRelativeMajorityPercent :: BigInt
-    configGeneralRelativeMajorityPercent = dynamicConfig # unwrap #
+    configGeneralRelativeMajorityPercent = configDatum # unwrap #
       _.generalRelativeMajorityPercent
 
     configGeneralMajorityPercent :: BigInt
-    configGeneralMajorityPercent = dynamicConfig # unwrap #
+    configGeneralMajorityPercent = configDatum # unwrap #
       _.generalMajorityPercent
 
     configMaxGeneralDisbursement :: BigInt
-    configMaxGeneralDisbursement = dynamicConfig # unwrap #
+    configMaxGeneralDisbursement = configDatum # unwrap #
       _.maxGeneralDisbursement
 
     disbursementAmount :: BigInt

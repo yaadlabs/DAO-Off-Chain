@@ -37,7 +37,6 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
-  , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
@@ -51,9 +50,7 @@ import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Newtype (unwrap)
 import JS.BigInt (BigInt)
-import LambdaBuffers.ApplicationTypes.Configuration
-  ( DynamicConfigDatum(DynamicConfigDatum)
-  )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
