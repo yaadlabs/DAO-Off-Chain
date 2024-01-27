@@ -27,7 +27,6 @@ import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
 import Scripts.VoteNft (voteNftPolicy)
-import Test.Data.Config (sampleConfigParams)
 import Test.Data.Tally (sampleTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit
@@ -43,13 +42,15 @@ suite = do
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
 
-          (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
+          (votePassTxHash /\ votePassSymbol /\ _votePassTokenName) <-
             createVotePass
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             sampleConfigParams :: ConfigParams
@@ -75,13 +76,14 @@ suite = do
               , fungibleVotePercent: BigInt.fromInt 0
 
               -- Index needed for making tallyNft
-              , indexSymbol: indexSymbol
-              , indexTokenName: indexTokenName
+              , indexSymbol
+              , indexTokenName
               }
 
           (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           sampleTallyStateDatum' <- sampleTallyStateDatum
 
@@ -96,25 +98,27 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams =
-              { configSymbol: configSymbol
+              { configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
               -- Vote NFT (voting pass) symbol and token name
               , voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken -- votePassTokenName
+              , voteTokenName: adaToken
               -- Vote datum fields
-              , proposalTokenName: proposalTokenName
+              , proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+          (voteOnProposalTxHash /\ _voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           pure unit

@@ -5,8 +5,10 @@ Description: Contract for voting on a proposal
 module Dao.Workflow.VoteOnProposal (voteOnProposal) where
 
 import Contract.Address (Address)
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prelude
   ( type (/\)
@@ -17,6 +19,7 @@ import Contract.Prelude
   , pure
   , show
   , unwrap
+  , void
   , (#)
   , ($)
   , (*)
@@ -93,6 +96,10 @@ voteOnProposal voteParams = do
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
+  -- Hack to work around Ogmios submitted too early error (in Plutip test)
+  -- TODO: Find a better solution
+  void $ waitNSlots (Natural.fromInt' 10)
+
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
@@ -143,7 +150,7 @@ voteOnProposal voteParams = do
             (Datum $ toData voteDatum)
             Constraints.DatumInline
             (voteValue <> voteNftInfo.value)
-        -- , Constraints.mustValidateIn onchainTimeRange
+        , Constraints.mustValidateIn onchainTimeRange
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints

@@ -5,8 +5,10 @@ Description: Contract for counting a vote on a proposal
 module Dao.Workflow.CountVote (countVote) where
 
 import Contract.Address (scriptHashAddress)
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData
   ( Datum
   , Redeemer(Redeemer)
@@ -20,6 +22,7 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
+  , void
   , ($)
   , (*)
   , (/\)
@@ -113,6 +116,9 @@ countVote validatorConfig voteInfo tallyInfo = do
 
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
+
+  -- Hack to work around Ogmios submitted too early error (in Plutip test)
+  void $ waitNSlots (Natural.fromInt' 10)
 
   let
     voteNft :: Value
