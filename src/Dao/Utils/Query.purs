@@ -131,12 +131,13 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
--- | This function is called by the 'cancelVoteUtxo' function
+-- | This function is called by the 'cancelVoteUtxo' function.
 -- | It ensures that the 'voteUtxo' we spend has a 'VoteDatum' where the
 -- | 'voteOwner' field of the datum matches the 'PaymentPubKeyHash' of the
--- | pkh of the user calling the function. This is to ensure that the user
--- | is cancelling their own vote and not another user's vote, in which case
--- | the 'cancelVote' transaction would fail with a 'missing signatures' error
+-- | user calling the function (the wallet executing the 'cancelVote' transaction).
+-- | This is to ensure that the user is cancelling their own vote and not
+-- | another user's vote, in which case the 'cancelVote' transaction would
+-- | fail with a 'missing signatures' error.
 findScriptUtxoBySymbolAndPkhInDatum ::
   Redeemer ->
   CurrencySymbol ->

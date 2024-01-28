@@ -1,3 +1,7 @@
+{-|
+Module: Dao.Component.Vote.Query
+Description: Helpers for voting related contracts
+-}
 module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
@@ -71,6 +75,9 @@ import LambdaBuffers.ApplicationTypes.Vote
   )
 import Type.Proxy (Proxy(Proxy))
 
+-- | Helper used by the 'countVote' contract.
+-- | Make the constraints and lookups for all the vote UTXOs
+-- | Also returns the 'VoteDirection' and amount for each vote encountered
 mkAllVoteConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
@@ -104,6 +111,9 @@ mkAllVoteConstraintsAndLookups
     )
     (Map.toUnfoldableUnordered utxos)
 
+-- | Make the constraints and lookups for spending a particular vote UTXO
+-- | Also calculate vote count for this vote, account for fungible tokens
+-- | that act as a vote multiplier
 mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
@@ -218,6 +228,7 @@ mkVoteUtxoConstraintsAndLookups
 
 type VoteInfo = UtxoInfo VoteDatum
 
+-- | Reference vote UTXO (don't spend it)
 referenceVoteUtxo ::
   CurrencySymbol ->
   Validator ->
@@ -231,6 +242,7 @@ referenceVoteUtxo voteSymbol voteValidator = do
     voteSymbol
     voteValidator
 
+-- | Spend vote UTXO
 spendVoteUtxo ::
   VoteActionRedeemer ->
   CurrencySymbol ->
@@ -245,6 +257,7 @@ spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
     voteSymbol
     voteValidator
 
+-- | Spend the vote UTXO corresponding to the user's PKH
 cancelVoteUtxo ::
   VoteActionRedeemer ->
   CurrencySymbol ->
@@ -259,6 +272,7 @@ cancelVoteUtxo voteActionRedeemer symbol userPkh voteValidator = do
     userPkh
     voteValidator
 
+-- | Spend vote pass ('voteNft') UTXO
 spendVoteNftUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
@@ -267,6 +281,7 @@ spendVoteNftUtxo voteNftSymbol utxoMap = do
   logInfo' "Entering spendVoteNftUtxo contract"
   findKeyUtxoBySymbol voteNftSymbol utxoMap
 
+-- | Spend vote fungible (vote multiplier) UTXO
 spendFungibleUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->

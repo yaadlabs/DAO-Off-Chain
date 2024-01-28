@@ -1,6 +1,6 @@
 {-|
 Module: Dao.Component.Vote.Params
-Description: Helpers for vote on proposal workflow
+Description: Helpers for voting related contracts
 -}
 module Dao.Component.Vote.Params
   ( VoteOnProposalParams(..)

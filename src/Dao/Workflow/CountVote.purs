@@ -32,7 +32,12 @@ import Contract.Prelude
   , (==)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
+  )
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
@@ -92,6 +97,7 @@ countVote params' = do
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     scriptAddr
 
+  -- Extract the config values
   let
     configDatum :: DynamicConfigDatum
     configDatum = configInfo.datum
@@ -153,7 +159,7 @@ countVote params' = do
 
   let
     tallyValidatorHash :: ValidatorHash
-    tallyValidatorHash = validatorHash appliedTallyValidator
+    tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
 
     -- Collect the vote lookups
     voteLookups :: Lookups.ScriptLookups
