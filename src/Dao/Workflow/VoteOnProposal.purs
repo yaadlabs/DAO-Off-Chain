@@ -104,12 +104,15 @@ voteOnProposal params' = do
     appliedTallyValidator
 
   let
+    -- The main config referenced at the config UTXO
     configDatum :: DynamicConfigDatum
     configDatum = configInfo.datum
 
+    -- Symbol of the vote 'multiplier' token
     fungibleSymbol :: CurrencySymbol
     fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
 
+    -- Symbol of the vote 'pass' token (required to vote on a proposal)
     voteNftSymbol :: CurrencySymbol
     voteNftSymbol = configDatum # unwrap # _.voteNft
 
@@ -134,9 +137,13 @@ voteOnProposal params' = do
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
+    -- The 'voteOwner' field of the 'VoteDatum' must correspond to the
+    -- address of the wallet executing this transaction
     ownerAddress :: Address
     ownerAddress = paymentPubKeyHashToAddress ownPaymentPkh
 
+    -- The datum includes the user's key, the type of proposal
+    -- and whether the user is voting for or against the proposal
     voteDatum :: VoteDatum
     voteDatum = VoteDatum
       { proposalTokenName: params.proposalTokenName
@@ -145,18 +152,25 @@ voteOnProposal params' = do
       , voteOwner: ownerAddress
       }
 
+    -- The 'voteSymbol' is the symbol of the 'votePolicy'
+    -- used when a user votes on a proposal
     voteSymbol :: CurrencySymbol
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
+    -- The token name for the token created with the 'voteSymbol'
     voteTokenName :: TokenName
     voteTokenName = configDatum # unwrap # _.voteTokenName
 
+    -- The vote value to be minted
     voteValue :: Value
     voteValue = Value.singleton voteSymbol voteTokenName one
 
+    -- The 'votePolicy' minting policy takes two possible redeemers, Mint or Burn
+    -- In this case we wish to mint a vote token in order to vote on the proposal
     votePolicyRedeemer :: Redeemer
     votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint
 
+    -- We require the hash in order to pay to the vote validator script
     voteValidatorHash :: ValidatorHash
     voteValidatorHash = ValidatorHash $ configDatum # unwrap # _.voteValidator
 
@@ -179,7 +193,11 @@ voteOnProposal params' = do
             (Datum $ toData voteDatum)
             Constraints.DatumInline
             (voteValue <> voteNftInfo.value <> fungibleInfo.value)
+        -- ^ We send the 'VoteDatum' along with the relevant vote
+        -- tokens to a UTXO at the 'vote validator' script
         , Constraints.mustValidateIn onchainTimeRange
+        -- ^ A time-range is required by the on-chain script in
+        -- order to ensure that we are still within the voting period
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints

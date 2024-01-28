@@ -112,7 +112,7 @@ treasuryGeneral params' = do
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
 
-    -- The number of votes cast against the proposal
+    -- The number of votes cast in opposition to the proposal
     votesAgainst :: BigInt
     votesAgainst = tallyDatum # unwrap # _.against
 

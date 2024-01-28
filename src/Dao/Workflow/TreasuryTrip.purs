@@ -108,38 +108,52 @@ treasuryTrip params' = do
       addressToPaymentPubKeyHash travellerAddress
 
   let
+    -- The number of votes cast in favour of the proposal
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
 
+    -- The number of votes cast in opposition to the proposal
     votesAgainst :: BigInt
     votesAgainst = tallyDatum # unwrap # _.against
 
     totalVotes :: BigInt
     totalVotes = votesFor + votesAgainst
 
+    -- Set in 'createConfig' tx, must not be zero
     configTotalVotes :: BigInt
     configTotalVotes = dynamicConfig # unwrap # _.totalVotes
 
+    -- Calculates the 'relative majority' based on on-chain script requirements
+    -- This value must exceed 'configTripRelativeMajorityPercent' threshold
+    -- set in the 'DynamicConfigDatum'
     relativeMajority :: BigInt
     relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
 
+    -- Calculates the 'majority' based on on-chain script requirements
+    -- This value must exceed 'configTripMajorityPercent' threshold
+    -- set in the 'DynamicConfigDatum'
     majorityPercent :: BigInt
     majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
 
+    -- Get the 'configTripRelativeMajorityPercent' threshold from the config
     configTripRelativeMajorityPercent :: BigInt
     configTripRelativeMajorityPercent = dynamicConfig # unwrap #
       _.tripRelativeMajorityPercent
 
+    -- Get the 'configTripRelativeMajorityPercent' threshold from the config
     configTripMajorityPercent :: BigInt
     configTripMajorityPercent = dynamicConfig # unwrap # _.tripMajorityPercent
 
+    -- A max threshold for the disbursement amount
     configMaxTripDisbursement :: BigInt
     configMaxTripDisbursement = dynamicConfig # unwrap # _.maxTripDisbursement
 
+    -- Get the amount to send to the travel agent's address
     configAgentDisbursementPercent :: BigInt
     configAgentDisbursementPercent = dynamicConfig # unwrap #
       _.agentDisbursementPercent
 
+    -- Get the total cost, which cannot exceed the max threshold specified
     disbursementAmount :: BigInt
     disbursementAmount = min configMaxTripDisbursement totalTravelCost
 
@@ -147,17 +161,22 @@ treasuryTrip params' = do
     disbursementAmountLovelaces = singleton adaSymbol adaToken
       disbursementAmount
 
+    -- The value held at the treasury input UTXO which
+    -- must cover the disbursement amount
     treasuryInputAmount :: Value
     treasuryInputAmount = treasuryInfo.value
 
+    -- The change to send back to the treasury
     amountToSendBackToTreasuryLovelaces :: Value
     amountToSendBackToTreasuryLovelaces = normaliseValue
       (valueSubtraction treasuryInputAmount disbursementAmountLovelaces)
 
+    -- Caluclate amount to send to the travel agent
     amountToSendToTravelAgent :: BigInt
     amountToSendToTravelAgent =
       (totalTravelCost * configAgentDisbursementPercent) / (fromInt 1000)
 
+    -- Caluclate the amount to send to the traveller
     amountToSendToTraveller :: BigInt
     amountToSendToTraveller = totalTravelCost - amountToSendToTravelAgent
 
@@ -199,12 +218,15 @@ treasuryTrip params' = do
             unitDatum
             Constraints.DatumInline
             amountToSendBackToTreasuryLovelaces
+        -- ^ Pay the change back to the treasury
         , Constraints.mustPayToPubKey
             travellerPaymentKey
             amountToSendToTravellerLovelaces
+        -- Pay the traveller their share
         , Constraints.mustPayToPubKey
             travelAgentPaymentKey
             amountToSendToTravelAgentLovelaces
+        -- Pay the travel agent their share
         , treasuryInfo.constraints
         , configInfo.constraints
         , tallyInfo.constraints
@@ -214,6 +236,7 @@ treasuryTrip params' = do
 
   pure txHash
   where
+  -- Get the travel agent's address from the tally datum
   getTravelAgentAddress :: TallyStateDatum -> Maybe Address
   getTravelAgentAddress tallyDatum =
     let
@@ -223,6 +246,7 @@ treasuryTrip params' = do
         (ProposalType'Trip address _ _) -> Just address
         _ -> Nothing
 
+  -- Get the traveller's address from the tally datum
   getTravellerAddress :: TallyStateDatum -> Maybe Address
   getTravellerAddress tallyDatum =
     let
@@ -232,6 +256,7 @@ treasuryTrip params' = do
         (ProposalType'Trip _ address _) -> Just address
         _ -> Nothing
 
+  -- Get the total cost of the disbursement from the tally datum
   getTravelCost :: TallyStateDatum -> Maybe BigInt
   getTravelCost tallyDatum =
     let
