@@ -67,6 +67,7 @@ import Data.Newtype (unwrap)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum))
 import Type.Proxy (Proxy(Proxy))
 
+-- | Result of querying UTXO
 type UtxoInfo (datum' :: Type) =
   { lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
@@ -125,6 +126,7 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
   pure { datum, value, lookups, constraints }
 
 -- | Extract the output datum or throw an error
+-- | if it isn't an 'OutputDatum' or 'fromData' conversion fails
 extractDatum ::
   forall (datum' :: Type).
   FromData datum' =>

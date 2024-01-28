@@ -4,7 +4,7 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
-import Contract.Address (scriptHashAddress)
+import Contract.Address (Address, scriptHashAddress)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
@@ -93,32 +93,51 @@ countVote params' = do
     appliedTallyValidator
 
   let
-    scriptAddr = scriptHashAddress (validatorHash appliedVoteValidator) Nothing
-  voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
-    scriptAddr
-
-  -- Extract the config values
-  let
+    -- The main config referenced at the config UTXO
     configDatum :: DynamicConfigDatum
     configDatum = configInfo.datum
 
-    fungibleSymbol :: CurrencySymbol
-    fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
+    voteValidatorHash :: ValidatorHash
+    voteValidatorHash = ValidatorHash $ configDatum # unwrap # _.voteValidator
 
-    voteNftSymbol :: CurrencySymbol
-    voteNftSymbol = configDatum # unwrap # _.voteNft
+    -- We need the address of the vote validator in order to retrieve the vote UTXOs
+    voteValidatorAddress :: Address
+    voteValidatorAddress = scriptHashAddress voteValidatorHash Nothing
 
+  -- Get the UTXOs at the vote validator
+  voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
+    voteValidatorAddress
+
+  -- Extract the config values
+  let
+    -- The 'voteSymbol' is the symbol of the 'votePolicy'
+    -- used when a user votes on a proposal
     voteSymbol :: CurrencySymbol
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
+    -- The token name for the token created with the 'voteSymbol'
     voteTokenName :: TokenName
     voteTokenName = configDatum # unwrap # _.voteTokenName
 
+    -- The symbol of the vote 'pass'
+    -- A user requires this token in order to vote on a proposal
+    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol = configDatum # unwrap # _.voteNft
+
+    -- The symbol of the vote 'multiplier' token
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
+
+    -- This percentage is used when calculating the value of the user's
+    -- fungible tokens in terms of how much it will add to the weight of their vote
+    -- The calculation at the script is:
+    -- (fungibleTokens * fungibleVotePercent) `divide` 1000
     fungiblePercent :: BigInt
     fungiblePercent = configDatum # unwrap # _.fungibleVotePercent
 
   -- Collect the constraints and lookups for each vote UTXO
-  -- And whether the vote was for or against
+  -- Includes whether the vote was for or against the proposal,
+  -- and the weight each vote has (fungible tokens can increase vote weight)
   voteDirectionsConstraintsAndLookups ::
     Array
       ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
@@ -158,6 +177,8 @@ countVote params' = do
           }
 
   let
+    -- We need to pay the updated datum with its corresponding token
+    -- to the tally validator, hence we need its hash
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
 
@@ -197,6 +218,7 @@ countVote params' = do
 
   pure txHash
   where
+  -- Calculate the total number of votes for and against
   tallyVotes ::
     Array
       ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\

@@ -80,6 +80,7 @@ type IndexInfo =
   , constraints :: Constraints.TxConstraints
   }
 
+-- | Build the constraints and lookups for the tx
 buildIndex ::
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   TokenName ->
@@ -108,9 +109,13 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
       indexSymbol :: CurrencySymbol
       indexSymbol = scriptCurrencySymbol appliedIndexPolicy
 
+      -- The token that will mark the UTXO containing
+      -- the index datum at the index validator
       indexNft :: Value
       indexNft = Value.singleton indexSymbol indexTokenName one
 
+      -- The 'index' field of the datum keeps track of the number of proposals
+      -- Hence, we need to set this to zero to initially
       indexDatum' :: IndexNftDatum
       indexDatum' = IndexNftDatum { index: fromInt 0 }
 
@@ -132,6 +137,8 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
             indexDatum
             Constraints.DatumInline
             indexNft
+        -- ^ We pay the newly created index datum to a UTXO at
+        -- the index validator, marked by the 'indexNft'
         ]
 
     pure { symbol: indexSymbol, lookups: lookups', constraints: constraints' }

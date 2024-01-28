@@ -110,6 +110,7 @@ type ConfigInfo =
   , constraints :: Constraints.TxConstraints
   }
 
+-- Build the lookups and constraints for the transaction
 buildDynamicConfig ::
   CreateConfigParams ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
@@ -216,9 +217,12 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         }
 
     let
+      -- We need to pay the config to the config validator so we require its hash
       configValidatorHash :: ValidatorHash
       configValidatorHash = validatorHash appliedConfigValidator
 
+      -- This NFT is used to mark the UTXO at the
+      -- config validator containing the config
       nftConfig :: Value
       nftConfig = Value.singleton configSymbol params.configTokenName one
 
@@ -240,6 +244,8 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
             configDatum
             Constraints.DatumInline
             nftConfig
+        -- ^ We pay the newly created config to a UTXO at the config
+        -- validator, marked by the 'nftConfig'
         ]
 
     pure { symbol: configSymbol, lookups: lookups', constraints: constraints' }

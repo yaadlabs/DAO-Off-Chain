@@ -84,9 +84,11 @@ treasuryTrip params' = do
       appliedTreasuryValidator
 
   let
+    -- The main config referenced at the config UTXO
     dynamicConfig :: DynamicConfigDatum
     dynamicConfig = configInfo.datum
 
+    -- Get the treasury payment info from the 'TallyStateDatum'
     tallyDatum :: TallyStateDatum
     tallyDatum = tallyInfo.datum
 
