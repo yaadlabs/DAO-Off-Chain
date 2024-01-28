@@ -6,7 +6,7 @@ module Dao.Workflow.CancelVote (cancelVote) where
 
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -39,10 +39,11 @@ import Contract.Value
   , Value
   )
 import Contract.Value (singleton) as Value
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
-import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
+import Dao.Component.Vote.Query (VoteInfo, cancelVoteUtxo, spendVoteUtxo)
 import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
@@ -89,11 +90,15 @@ cancelVote params' = do
     voteTokenName :: TokenName
     voteTokenName = configDatum # unwrap # _.voteTokenName
 
-  voteInfo :: VoteInfo <- spendVoteUtxo VoteActionRedeemer'Cancel
-    voteSymbol
+  userPkh :: PaymentPubKeyHash <- liftedM "Could not get own PKH"
+    ownPaymentPubKeyHash
+  voteInfo :: VoteInfo <- cancelVoteUtxo VoteActionRedeemer'Cancel voteSymbol
+    userPkh
     appliedVoteValidator
 
   -- Extract the vote owner from the vote datum
+  -- Should be equivalent to result of 'ownPaymentPubKeyHash',
+  -- otherwise 'cancelVoteUtxo' would have have failed
   voteOwnerKey :: PaymentPubKeyHash <-
     liftContractM "Could not convert address to key"
       $ addressToPaymentPubKeyHash

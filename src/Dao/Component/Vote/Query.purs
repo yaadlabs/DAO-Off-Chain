@@ -5,6 +5,7 @@ module Dao.Component.Vote.Query
   , spendVoteUtxo
   , spendVoteNftUtxo
   , spendFungibleUtxo
+  , cancelVoteUtxo
   ) where
 
 import Contract.Address (PaymentPubKeyHash)
@@ -50,11 +51,12 @@ import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
+  , SpendPubKeyResult
   , UtxoInfo
   , findKeyUtxoBySymbol
   , findScriptUtxoBySymbol
+  , findScriptUtxoBySymbolAndPkhInDatum
   )
-import Dao.Utils.Query (SpendPubKeyResult, findKeyUtxoBySymbol)
 import Dao.Utils.Value (countOfTokenInValue)
 import Dao.Utils.Value (mkTokenName)
 import Data.Map (Map)
@@ -241,6 +243,20 @@ spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
     Spend
     (Redeemer $ toData $ voteActionRedeemer)
     voteSymbol
+    voteValidator
+
+cancelVoteUtxo ::
+  VoteActionRedeemer ->
+  CurrencySymbol ->
+  PaymentPubKeyHash ->
+  Validator ->
+  Contract VoteInfo
+cancelVoteUtxo voteActionRedeemer symbol userPkh voteValidator = do
+  logInfo' "Entering cancelVoteUtxo contract"
+  findScriptUtxoBySymbolAndPkhInDatum
+    (Redeemer $ toData $ voteActionRedeemer)
+    symbol
+    userPkh
     voteValidator
 
 spendVoteNftUtxo ::

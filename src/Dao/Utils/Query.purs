@@ -9,9 +9,10 @@ module Dao.Utils.Query
   , getAllWalletUtxos
   , findScriptUtxoBySymbol
   , findKeyUtxoBySymbol
+  , findScriptUtxoBySymbolAndPkhInDatum
   ) where
 
-import Contract.Address (scriptHashAddress)
+import Contract.Address (PaymentPubKeyHash, scriptHashAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
@@ -37,6 +38,7 @@ import Contract.Prelude
   , show
   , (#)
   , ($)
+  , (&&)
   , (/\)
   , (<>)
   , (==)
@@ -55,11 +57,13 @@ import Contract.Value
   , symbols
   )
 import Contract.Wallet (getWalletUtxos)
+import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Data.Array (filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap)
+import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum))
 import Type.Proxy (Proxy)
 
 type UtxoInfo (datum' :: Type) =
@@ -90,15 +94,11 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
   utxos <- utxosAt scriptAddr
 
-  let
-    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
-
   (txIn /\ TransactionOutputWithRefScript txOut) ::
     (TransactionInput /\ TransactionOutputWithRefScript) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter hasNft
+      $ filter (hasTokenWithSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 
@@ -131,6 +131,90 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
+-- | This function is called by the 'cancelVoteUtxo' function
+-- | It ensures that the 'voteUtxo' we spend has a 'VoteDatum' where the
+-- | 'voteOwner' field of the datum matches the 'PaymentPubKeyHash' of the
+-- | pkh of the user calling the function. This is to ensure that the user
+-- | is cancelling their own vote and not another user's vote, in which case
+-- | the 'cancelVote' transaction would fail with a 'missing signatures' error
+findScriptUtxoBySymbolAndPkhInDatum ::
+  Redeemer ->
+  CurrencySymbol ->
+  PaymentPubKeyHash ->
+  Validator ->
+  Contract (UtxoInfo VoteDatum)
+findScriptUtxoBySymbolAndPkhInDatum
+  redeemer
+  symbol
+  userPkh
+  validatorScript = do
+  logInfo' "Entering findScriptUtxoBySymbolAndPkhInDatum contract"
+
+  let
+    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+  utxos <- utxosAt scriptAddr
+
+  (txIn /\ TransactionOutputWithRefScript txOut) ::
+    (TransactionInput /\ TransactionOutputWithRefScript) <-
+    liftContractM "Cannot find UTxO with NFT"
+      $ head
+      $ filter (hasTokenWithSymbol symbol && hasPkhInVoteDatum userPkh)
+      $ Map.toUnfoldable
+      $ utxos
+
+  let
+    constraints' :: Constraints.TxConstraints
+    constraints' = Constraints.mustSpendScriptOutput txIn redeemer
+
+    lookups' :: Lookups.ScriptLookups
+    lookups' = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn
+          (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
+      ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  case txOut.output # unwrap # _.datum of
+    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
+      Just (datum :: VoteDatum) -> do
+        pure
+          { datum
+          , value
+          , lookups: lookups'
+          , constraints: constraints'
+          }
+      Nothing -> throwContractError "Cannot parse datum"
+    dat -> throwContractError $ "Missing inline datum, got: " <> show dat
+
+-- | Check that the 'userPkh' is equivalent to
+-- | the 'voteOwner' field of the 'VoteDatum'
+hasPkhInVoteDatum ::
+  PaymentPubKeyHash ->
+  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  Boolean
+hasPkhInVoteDatum userPkh (_ /\ TransactionOutputWithRefScript txOut) =
+  case txOut.output # unwrap # _.datum of
+    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
+      Just (datum :: VoteDatum) ->
+        case
+          addressToPaymentPubKeyHash $ datum # unwrap # _.voteOwner
+          of
+          Just datumPkh -> datumPkh == userPkh
+          _ -> false
+      _ -> false
+    _ -> false
+
+-- | Check for the presence of a token with the given symbol
+-- | at the provided transactioun output
+hasTokenWithSymbol ::
+  CurrencySymbol ->
+  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  Boolean
+hasTokenWithSymbol symbol (_ /\ TransactionOutputWithRefScript txOut) =
+  any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
+
 -- | Result type for 'findKeyUtxoBySymbol' function
 type SpendPubKeyResult =
   { lookups :: Lookups.ScriptLookups
@@ -146,14 +230,10 @@ findKeyUtxoBySymbol ::
 findKeyUtxoBySymbol symbol utxos = do
   logInfo' "Entering findKeyUtxoBySymbol contract"
 
-  let
-    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
-
   (txIn /\ TransactionOutputWithRefScript txOut) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter hasNft
+      $ filter (hasTokenWithSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 

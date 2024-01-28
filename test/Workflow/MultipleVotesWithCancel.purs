@@ -45,7 +45,8 @@ import Dao.Component.Proposal.Params
   )
 import Dao.Component.Treasury.Params (TreasuryParams(TreasuryParams))
 import Dao.Component.Vote.Params
-  ( CountVoteParams(CountVoteParams)
+  ( CancelVoteParams(CancelVoteParams)
+  , CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
 import Dao.Scripts.Policy.Fungible (fungiblePolicy)
@@ -53,6 +54,7 @@ import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
+import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
@@ -92,14 +94,12 @@ suite = do
             /\ [ BigInt.fromInt 2_000_000_000 ]
             /\ [ BigInt.fromInt 2_000_000_000 ]
             /\ [ BigInt.fromInt 2_000_000_000 ]
-            /\ [ BigInt.fromInt 2_000_000_000 ]
       withWallets distribution
         \( walletOne
              /\ walletTwo
              /\ walletThree
              /\ walletFour
              /\ walletFive
-             /\ walletSix
          ) -> do
 
           -- ******************************************************************************* --
@@ -137,7 +137,6 @@ suite = do
           -- ************************************************************************ --
           -- ************************************************************************ --
           -- * Get the wallet address for user five to use in the create proposal   * --
-          -- * section below, for the same reasons stated above.                    * --
           userFiveWalletAddress :: Address <- withKeyWallet walletFive do
             logInfo' "Running in wallet five - first time"
             walletAddress :: Address <- liftedM "Could not get wallet address"
@@ -247,6 +246,9 @@ suite = do
               createProposalTxHash
             void $ waitNSlots (Natural.fromInt' 3)
 
+            -- **************************************************************************** --
+            -- Create the voting credentials (vote pass and fungible tokens) for user three --
+
             -- Get the PKH for user three (walletThree)
             userThreePkh :: PaymentPubKeyHash <-
               liftContractM "Could not get pkh" $
@@ -280,6 +282,9 @@ suite = do
               fungibleTxHashUserThree
             void $ waitNSlots (Natural.fromInt' 3)
 
+            -- ******************************************************************************* --
+            -- * Create the voting credentials (vote pass and fungible tokens) for user four * --
+
             -- Get the PKH for user four (walletFour)
             userFourPkh :: PaymentPubKeyHash <-
               liftContractM "Could not get pkh" $
@@ -307,6 +312,41 @@ suite = do
               , symbol: fungibleSymbolUserFour
               , tokenName: fungibleTokenNameUserFour
               } <- createFungible fungibleParamsUserFour
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+              fungibleTxHashUserFour
+            void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ******************************************************************************* --
+            -- * Create the voting credentials (vote pass and fungible tokens) for user five * --
+
+            -- Get the PKH for user five (walletFive)
+            userFivePkh :: PaymentPubKeyHash <-
+              liftContractM "Could not get pkh" $
+                addressToPaymentPubKeyHash userFiveWalletAddress
+
+            -- Create a vote pass for a third user (fifth wallet)
+            ContractResult
+              { txHash: votePassTxHashUserFive
+              , symbol: votePassSymbolUserFive
+              , tokenName: votePassTokenNameUserFive
+              } <- createVotePass userFivePkh
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+              votePassTxHashUserFive
+            void $ waitNSlots (Natural.fromInt' 3)
+
+            -- Create the fungible token (amount 600) for user five (walletFive)
+            let
+              fungibleParamsUserFive :: CreateFungibleParams
+              fungibleParamsUserFive = CreateFungibleParams
+                { userPkh: userFivePkh, amount: BigInt.fromInt 600 }
+
+            ContractResult
+              { txHash: fungibleTxHashUserFive
+              , symbol: fungibleSymbolUserFive
+              , tokenName: fungibleTokenNameUserFive
+              } <- createFungible fungibleParamsUserFive
 
             void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
               fungibleTxHashUserFour
@@ -395,6 +435,56 @@ suite = do
               voteOnProposalTxHash
             void $ waitNSlots (Natural.fromInt' 3)
 
+          -- ************************************************ --
+          -- ************************************************ --
+          -- * User five (walletFive) votes on the proposal * --
+          withKeyWallet walletFive do
+            logInfo'
+              "Running in wallet five - voting on proposal created by walletOne"
+
+            let
+              voteParams :: VoteOnProposalParams
+              voteParams = VoteOnProposalParams
+                { configSymbol: configSymbol
+                , configTokenName: configTokenName
+                , tallySymbol: proposalSymbol
+                -- Vote datum fields
+                , proposalTokenName: proposalTokenName
+                , voteDirection: VoteDirection'For
+                , returnAda: (BigInt.fromInt 0)
+                }
+
+            VoteOnProposalResult
+              { txHash: voteOnProposalTxHash
+              , symbol: voteOnProposalSymbol
+              } <- voteOnProposal voteParams
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+              voteOnProposalTxHash
+            void $ waitNSlots (Natural.fromInt' 3)
+
+          -- ************************************************************** --
+          -- ************************************************************** --
+          -- * User five (walletFive) cancels their vote on the proposal ** --
+          withKeyWallet walletFive do
+            logInfo'
+              "Running in wallet five - cancelling their vote on the proposal"
+
+            userFivePkh :: PaymentPubKeyHash <-
+              liftContractM "Could not get pkh" $
+                addressToPaymentPubKeyHash userFiveWalletAddress
+
+            let
+              cancelVoteParams :: CancelVoteParams
+              cancelVoteParams = CancelVoteParams
+                { configSymbol: configSymbol
+                , configTokenName: configTokenName
+                }
+            cancelVoteTxHash <- cancelVote cancelVoteParams
+
+            void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
+            void $ waitNSlots (Natural.fromInt' 3)
+
           -- ********************************************************* --
           -- ********************************************************* --
           -- * User one (walletOne) counts the votes on the proposal * --
@@ -408,6 +498,8 @@ suite = do
           -- Voter 'walletFour' has 200 fungible tokens, so using the same calculations
           -- they will have: (Base 1 + Fungible 2 = 3)
           -- So we have a total of 8 votes for the proposal
+          -- Note: It would have been 15 votes for, if we counted user five's (walletFive) vote
+          -- But they then cancelled their vote so the total was just the sum of the other two votes (8)
           withKeyWallet walletOne do
             logInfo'
               "Running in wallet one - counting the votes on the proposal created by walletOne"
@@ -431,7 +523,8 @@ suite = do
           -- ************************************************************ --
           -- * User one executes the effect of the proposal, that is to * --
           -- * disburse treasury funds to the 'General' payment address * --
-          -- * specified in the 'TallyStateDatum'                       * --
+          -- * specified in the 'TallyStateDatum'. In this case that is * --
+          -- * 'walletTwoAddress', the address of the user 'walletTwo'. * --
           withKeyWallet walletOne do
             logInfo'
               "Running in wallet one - executing the treasury general effect"
