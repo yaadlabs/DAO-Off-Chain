@@ -47,6 +47,7 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Transaction
   ( TransactionInput
+  , TransactionOutput
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints as Constraints
@@ -64,7 +65,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum))
-import Type.Proxy (Proxy)
+import Type.Proxy (Proxy(Proxy))
 
 type UtxoInfo (datum' :: Type) =
   { lookups :: Lookups.ScriptLookups
@@ -103,14 +104,14 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
       $ utxos
 
   let
-    constraints' :: Constraints.TxConstraints
-    constraints' =
+    constraints :: Constraints.TxConstraints
+    constraints =
       case spendOrReference of
         Spend -> Constraints.mustSpendScriptOutput txIn redeemer
         Reference -> Constraints.mustReferenceOutput txIn
 
-    lookups' :: Lookups.ScriptLookups
-    lookups' = mconcat
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
           (TransactionOutputWithRefScript txOut)
       , Lookups.validator validatorScript
@@ -119,15 +120,21 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     value :: Value
     value = txOut.output # unwrap # _.amount
 
-  case txOut.output # unwrap # _.datum of
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+
+  pure { datum, value, lookups, constraints }
+
+-- | Extract the output datum or throw an error
+extractDatum ::
+  forall (datum' :: Type).
+  FromData datum' =>
+  Proxy datum' ->
+  TransactionOutput ->
+  Contract datum'
+extractDatum _ txOut =
+  case txOut # unwrap # _.datum of
     OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: datum') -> do
-        pure
-          { datum
-          , value
-          , lookups: lookups'
-          , constraints: constraints'
-          }
+      Just (datum :: datum') -> pure datum
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
@@ -164,11 +171,11 @@ findScriptUtxoBySymbolAndPkhInDatum
       $ utxos
 
   let
-    constraints' :: Constraints.TxConstraints
-    constraints' = Constraints.mustSpendScriptOutput txIn redeemer
+    constraints :: Constraints.TxConstraints
+    constraints = Constraints.mustSpendScriptOutput txIn redeemer
 
-    lookups' :: Lookups.ScriptLookups
-    lookups' = mconcat
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
           (TransactionOutputWithRefScript txOut)
       , Lookups.validator validatorScript
@@ -177,17 +184,9 @@ findScriptUtxoBySymbolAndPkhInDatum
     value :: Value
     value = txOut.output # unwrap # _.amount
 
-  case txOut.output # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: VoteDatum) -> do
-        pure
-          { datum
-          , value
-          , lookups: lookups'
-          , constraints: constraints'
-          }
-      Nothing -> throwContractError "Cannot parse datum"
-    dat -> throwContractError $ "Missing inline datum, got: " <> show dat
+  datum :: VoteDatum <- extractDatum (Proxy :: Proxy VoteDatum) txOut.output
+
+  pure { datum, value, lookups, constraints }
 
 -- | Check that the 'userPkh' is equivalent to
 -- | the 'voteOwner' field of the 'VoteDatum'
