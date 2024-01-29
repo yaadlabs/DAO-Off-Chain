@@ -9,7 +9,7 @@ module.exports = {
   mode: "development",
 
   experiments: {
-    asyncWebAssembly: true,
+    asyncWebAssembly: false,
     layers: false,
     lazyCompilation: false,
     outputModule: true,
@@ -51,6 +51,13 @@ module.exports = {
             options: {
               limit: 8192,
             },
+          },
+        ],
+      },
+      {
+        test: /\.wasm$/,
+        use: [
+          { loader: "wasm-loader",
           },
         ],
       },
