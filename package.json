@@ -11,7 +11,8 @@
       "test": "spago run --main Test.Plutip",
       "dev": "make run-dev",
       "build": "make run-build",
-      "start-runtime": "nix run -L .#dao-offchain-runtime"
+      "start-runtime": "nix run -L .#dao-offchain-runtime",
+      "bundle": "spago bundle-module --main Dao.Web.Api --to library.js"
   },
   "files": [
     "dist",
@@ -41,10 +42,13 @@
     "utf-8-validate": "^5.0.10",
     "terser-loader": "^2.0.3",
     "terser-webpack-plugin": "^5.3.6",
+    "node-polyfill-webpack-plugin": "2.0.1",
     "wasm-loader": "1.3.0",
+    "purs-loader": "4.0.0",
+    "file-loader": "6.2.0",
+    "esbuild-plugin-wasm": "^1.1.0",
     "ws": "8.4.0",
-    "xhr2": "0.2.1",
-    "stream": "0.0.2"
+    "xhr2": "0.2.1"
   },
   "devDependencies": {
     "buffer": "6.0.3",
@@ -59,16 +63,5 @@
   },
   "prettier": {
     "arrowParens": "avoid"
-  },
-  "browser": {
-    "fs": false,
-    "path": false,
-    "os": false,
-    "net": false,
-    "tls": false,
-    "http": false,
-    "https": false,
-    "crypto": false,
-    "zlib": false
   }
 }
