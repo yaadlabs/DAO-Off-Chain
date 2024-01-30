@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "noImplicitAny": false,
+    "outDir": "./dist",
+    "sourceMap": true,
+    "declaration": true,
+    "composite": false,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "paths": {
+      "*": [
+        "/nix/store/0llz7v6g2n911kl1flc7fxy3jcbi87lg-node-dependencies-triphut-dao-offchain-0.1.0/lib/node_modules/.bin/webpack /nix/store/rm20hzdmj5jdr8yij0s55ns3gkswx4zz-node-dependencies-triphut-dao-offchain-0.1.0/lib/node_modules/*"
+      ]
+    }
+  },
+  "include": [
+    "./index.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
