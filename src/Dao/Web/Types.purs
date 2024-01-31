@@ -186,6 +186,14 @@ newtype TallyStateDatum = TallyStateDatum
   , against :: BigInt
   }
 
+-- | Vote datum
+newtype VoteDatum = VoteDatum
+  { proposalTokenName :: TokenName
+  , direction :: VoteDirection
+  , voteOwner :: Address
+  , returnAda :: BigInt
+  }
+
 -- | Index datum
 newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
 
