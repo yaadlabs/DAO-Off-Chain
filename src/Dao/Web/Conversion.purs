@@ -477,10 +477,12 @@ instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
+    proposalTokenName <- convertPsToJs params.proposalTokenName
 
     pure $ WebApi.CancelVoteParams
       { configSymbol
       , configTokenName
+      , proposalTokenName
       }
 
 instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
@@ -488,10 +490,12 @@ instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
+    proposalTokenName <- convertJsToPs params.proposalTokenName
 
     pure $ DaoApi.CancelVoteParams
       { configSymbol
       , configTokenName
+      , proposalTokenName
       }
 
 -- * VoteOnProposalParams

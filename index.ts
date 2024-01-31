@@ -204,6 +204,7 @@ export namespace Foreign {
   export interface CancelVoteParams {
     configSymbol: CurrencySymbol;
     configTokenName: TokenName;
+    proposalTokenName: TokenName;
   }
 
   export interface CountVoteParams {

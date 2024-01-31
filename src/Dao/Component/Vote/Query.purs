@@ -60,7 +60,7 @@ import Dao.Utils.Query
   , UtxoInfo
   , findKeyUtxoBySymbol
   , findScriptUtxoBySymbol
-  , findScriptUtxoBySymbolAndPkhInDatum
+  , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Map (Map)
@@ -150,7 +150,7 @@ mkVoteUtxoConstraintsAndLookups
     let
       -- Extract the 'proposalTokenName' from the 'VoteDatum'
       -- This represents what proposal this vote was for
-      -- The check below ensures that this is equal the 'proposalTokenName'
+      -- The check below ensures that this is equal to the 'proposalTokenName'
       -- passed as an argument, otherwise the vote will not be counted
       voteProposalTokenName :: TokenName
       voteProposalTokenName = voteDatum # unwrap # _.proposalTokenName
@@ -280,19 +280,24 @@ spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
     voteValidator
 
 -- | Spend the vote UTXO corresponding to the user's PKH
+-- | Ensure it is owned by the user and was a vote on
+-- | the provided proposal (proposalTokenName is checked for this)
 cancelVoteUtxo ::
   VoteActionRedeemer ->
   CurrencySymbol ->
   PaymentPubKeyHash ->
+  TokenName ->
   Validator ->
   Contract VoteInfo
-cancelVoteUtxo voteActionRedeemer symbol userPkh voteValidator = do
-  logInfo' "Entering cancelVoteUtxo contract"
-  findScriptUtxoBySymbolAndPkhInDatum
-    (Redeemer $ toData $ voteActionRedeemer)
-    symbol
-    userPkh
-    voteValidator
+cancelVoteUtxo voteActionRedeemer symbol userPkh proposalTokenName voteValidator =
+  do
+    logInfo' "Entering cancelVoteUtxo contract"
+    findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
+      (Redeemer $ toData $ voteActionRedeemer)
+      symbol
+      userPkh
+      proposalTokenName
+      voteValidator
 
 -- | Spend vote pass ('voteNft') UTXO
 spendVoteNftUtxo ::

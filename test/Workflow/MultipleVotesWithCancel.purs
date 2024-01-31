@@ -480,8 +480,9 @@ suite = do
               let
                 cancelVoteParams :: CancelVoteParams
                 cancelVoteParams = CancelVoteParams
-                  { configSymbol: configSymbol
-                  , configTokenName: configTokenName
+                  { configSymbol
+                  , configTokenName
+                  , proposalTokenName
                   }
               cancelVoteTxHash <- cancelVote cancelVoteParams
 
