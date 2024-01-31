@@ -53,6 +53,7 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , SpendPubKeyResult
@@ -61,8 +62,7 @@ import Dao.Utils.Query
   , findScriptUtxoBySymbol
   , findScriptUtxoBySymbolAndPkhInDatum
   )
-import Dao.Utils.Value (countOfTokenInValue)
-import Dao.Utils.Value (mkTokenName)
+import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -83,6 +83,7 @@ mkAllVoteConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
   TokenName ->
+  TokenName ->
   BigInt ->
   MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
@@ -96,6 +97,7 @@ mkAllVoteConstraintsAndLookups
   voteNftSymbol
   voteSymbol
   fungibleSymbol
+  proposalTokenName
   voteTokenName
   fungiblePercent
   votePolicyScript
@@ -105,6 +107,7 @@ mkAllVoteConstraintsAndLookups
         voteNftSymbol
         voteSymbol
         fungibleSymbol
+        proposalTokenName
         voteTokenName
         fungiblePercent
         votePolicyScript
@@ -119,6 +122,7 @@ mkVoteUtxoConstraintsAndLookups ::
   CurrencySymbol ->
   CurrencySymbol ->
   TokenName ->
+  TokenName ->
   BigInt ->
   MintingPolicy ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
@@ -130,6 +134,7 @@ mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
   voteSymbol
   fungibleSymbol
+  proposalTokenName
   voteTokenName
   fungiblePercent
   votePolicyScript
@@ -137,9 +142,23 @@ mkVoteUtxoConstraintsAndLookups
   do
     logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
 
+    -- Extract the 'VoteDatum' fields
     voteDatum :: VoteDatum <- liftContractM "Failed to extract datum" $
       extractOutputDatum
         txOut
+
+    let
+      -- Extract the 'proposalTokenName' from the 'VoteDatum'
+      -- This represents what proposal this vote was for
+      -- The check below ensures that this is equal the 'proposalTokenName'
+      -- passed as an argument, otherwise the vote will not be counted
+      voteProposalTokenName :: TokenName
+      voteProposalTokenName = voteDatum # unwrap # _.proposalTokenName
+
+    guardContract "Vote is for another proposal"
+      $ voteProposalTokenName
+      == proposalTokenName
+
     voteValue :: Value <-
       liftContractM "Vote value does not contain both vote NFT and vote token" $
         extractToken voteNftSymbol voteSymbol txOut
@@ -149,9 +168,12 @@ mkVoteUtxoConstraintsAndLookups
         # unwrap
         # _.voteOwner
 
+    -- The vote 'pass' token name
     voteNftTokenName :: TokenName <-
       liftContractM "Could not make voteNft token name" $ mkTokenName
         "vote_pass"
+
+    -- The vote 'multiplier' token name
     fungibleTokenName :: TokenName <-
       liftContractM "Could not make voteNft token name" $ mkTokenName
         "vote_fungible"

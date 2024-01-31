@@ -222,11 +222,11 @@ suite = do
           let
             voteParams :: VoteOnProposalParams
             voteParams = VoteOnProposalParams
-              { configSymbol: configSymbol
-              , tallySymbol: proposalSymbol
-              , configTokenName: configTokenName
+              { tallySymbol: proposalSymbol
+              , configSymbol
+              , configTokenName
               -- Vote datum fields
-              , proposalTokenName: proposalTokenName
+              , proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
@@ -244,9 +244,10 @@ suite = do
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
               { voteTokenName: adaToken
-              , configSymbol: configSymbol
-              , configTokenName: configTokenName
               , tallySymbol: proposalSymbol
+              , configSymbol
+              , configTokenName
+              , proposalTokenName
               }
 
           countVoteTxHash <- countVote countVoteParams

@@ -33,6 +33,7 @@ newtype CountVoteParams = CountVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , proposalTokenName :: TokenName
   , voteTokenName :: TokenName
   }
 

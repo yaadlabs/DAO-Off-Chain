@@ -120,6 +120,7 @@ newtype CountVoteParams = CountVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   , voteTokenName :: TokenName
   }
 

@@ -209,6 +209,9 @@ export namespace Foreign {
   export interface CountVoteParams {
     configSymbol: CurrencySymbol;
     configTokenName: TokenName;
+    tallySymbol: CurrencySymbol;
+    proposalTokenName: TokenName;
+    voteTokenName: TokenName;
   }
 
   export interface VoteOnProposalParams {
