@@ -55,11 +55,12 @@ import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , SpendPubKeyResult
   , UtxoInfo
-  , findKeyUtxoBySymbol
   , findScriptUtxoBySymbol
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
+  , hasTokenWithSymbol
   )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
+import Data.Array (filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -272,6 +273,25 @@ spendVoteNftUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract SpendPubKeyResult
-spendVoteNftUtxo voteNftSymbol utxoMap = do
+spendVoteNftUtxo voteNftSymbol utxos = do
   logInfo' "Entering spendVoteNftUtxo contract"
-  findKeyUtxoBySymbol voteNftSymbol utxoMap
+
+  (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
+    liftContractM
+      "User does not hold a voteNft token (votePass) so is ineligble to vote"
+      $ head
+      $ filter (hasTokenWithSymbol voteNftSymbol)
+      $ Map.toUnfoldable
+      $ utxos
+
+  let
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat [ Lookups.unspentOutputs $ Map.singleton txIn txOut' ]
+
+    constraints :: Constraints.TxConstraints
+    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  pure { lookups, constraints, value }

@@ -7,9 +7,9 @@ module Dao.Utils.Query
   , QueryType(..)
   , SpendPubKeyResult
   , getAllWalletUtxos
+  , hasTokenWithSymbol
   , findScriptUtxoBySymbol
   , findScriptUtxoByToken
-  , findKeyUtxoBySymbol
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   ) where
 
@@ -317,33 +317,6 @@ type SpendPubKeyResult =
   , constraints :: Constraints.TxConstraints
   , value :: Value
   }
-
--- | Spend UTXO marked by an NFT with the given CurrencySymbol
-findKeyUtxoBySymbol ::
-  CurrencySymbol ->
-  Map TransactionInput TransactionOutputWithRefScript ->
-  Contract SpendPubKeyResult
-findKeyUtxoBySymbol symbol utxos = do
-  logInfo' "Entering findKeyUtxoBySymbol contract"
-
-  (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
-    liftContractM "Cannot find UTxO with NFT"
-      $ head
-      $ filter (hasTokenWithSymbol symbol)
-      $ Map.toUnfoldable
-      $ utxos
-
-  let
-    lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.unspentOutputs $ Map.singleton txIn txOut' ]
-
-    constraints :: Constraints.TxConstraints
-    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
-
-    value :: Value
-    value = txOut.output # unwrap # _.amount
-
-  pure { lookups, constraints, value }
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::
