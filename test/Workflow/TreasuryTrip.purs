@@ -265,9 +265,10 @@ suite = do
           let
             treasuryTripParams :: TreasuryParams
             treasuryTripParams = TreasuryParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
+              { configSymbol
+              , configTokenName
               , tallySymbol: proposalSymbol
+              , proposalTokenName
               , treasurySymbol: treasuryFundSymbol
               }
 

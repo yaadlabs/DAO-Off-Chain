@@ -241,31 +241,35 @@ instance ConvertJsToPs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult w
 instance ConvertPsToJs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams where
   convertPsToJs (DaoApi.UpgradeConfigParams params) = do
 
-    newDynamicConfigDatum' <- convertPsToJs params.newDynamicConfigDatum
-    configSymbol' <- convertPsToJs params.configSymbol
-    configTokenName' <- convertPsToJs params.configTokenName
-    tallySymbol' <- convertPsToJs params.tallySymbol
+    newDynamicConfigDatum <- convertPsToJs params.newDynamicConfigDatum
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    tallySymbol <- convertPsToJs params.tallySymbol
+    proposalTokenName <- convertPsToJs params.proposalTokenName
 
     pure $ WebApi.UpgradeConfigParams
-      { newDynamicConfigDatum: newDynamicConfigDatum'
-      , configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , tallySymbol: tallySymbol'
+      { newDynamicConfigDatum
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , proposalTokenName
       }
 
 instance ConvertJsToPs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams where
   convertJsToPs (WebApi.UpgradeConfigParams params) = do
 
-    newDynamicConfigDatum' <- convertJsToPs params.newDynamicConfigDatum
-    configSymbol' <- convertJsToPs params.configSymbol
-    configTokenName' <- convertJsToPs params.configTokenName
-    tallySymbol' <- convertJsToPs params.tallySymbol
+    newDynamicConfigDatum <- convertJsToPs params.newDynamicConfigDatum
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    tallySymbol <- convertJsToPs params.tallySymbol
+    proposalTokenName <- convertJsToPs params.proposalTokenName
 
     pure $ DaoApi.UpgradeConfigParams
-      { newDynamicConfigDatum: newDynamicConfigDatum'
-      , configSymbol: configSymbol'
-      , configTokenName: configTokenName'
-      , tallySymbol: tallySymbol'
+      { newDynamicConfigDatum
+      , configSymbol
+      , configTokenName
+      , tallySymbol
+      , proposalTokenName
       }
 
 -- * TreasuryParams
@@ -276,12 +280,14 @@ instance ConvertPsToJs WebApi.TreasuryParams DaoApi.TreasuryParams where
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
+    proposalTokenName <- convertPsToJs params.proposalTokenName
     treasurySymbol <- convertPsToJs params.treasurySymbol
 
     pure $ WebApi.TreasuryParams
       { configSymbol
       , configTokenName
       , tallySymbol
+      , proposalTokenName
       , treasurySymbol
       }
 
@@ -290,6 +296,7 @@ instance ConvertJsToPs WebApi.TreasuryParams DaoApi.TreasuryParams where
 
     configSymbol <- convertJsToPs params.configSymbol
     tallySymbol <- convertJsToPs params.tallySymbol
+    proposalTokenName <- convertJsToPs params.proposalTokenName
     treasurySymbol <- convertJsToPs params.treasurySymbol
     configTokenName <- convertJsToPs params.configTokenName
 
@@ -297,6 +304,7 @@ instance ConvertJsToPs WebApi.TreasuryParams DaoApi.TreasuryParams where
       { configSymbol
       , configTokenName
       , tallySymbol
+      , proposalTokenName
       , treasurySymbol
       }
 

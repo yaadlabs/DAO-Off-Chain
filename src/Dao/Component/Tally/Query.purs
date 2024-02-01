@@ -13,7 +13,6 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , UtxoInfo
-  , findScriptUtxoBySymbol
   , findScriptUtxoByToken
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
@@ -23,15 +22,17 @@ type TallyInfo = UtxoInfo TallyStateDatum
 
 referenceTallyUtxo ::
   CurrencySymbol ->
+  TokenName ->
   Validator ->
   Contract TallyInfo
-referenceTallyUtxo tallySymbol tallyValidator = do
+referenceTallyUtxo tallySymbol proposalTokenName tallyValidator = do
   logInfo' "Entering referenceTallyUtxo contract"
-  findScriptUtxoBySymbol
+  findScriptUtxoByToken
     (Proxy :: Proxy TallyStateDatum)
     Reference
     unitRedeemer
     tallySymbol
+    proposalTokenName
     tallyValidator
 
 spendTallyUtxo ::

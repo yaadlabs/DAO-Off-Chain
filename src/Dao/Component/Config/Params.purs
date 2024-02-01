@@ -50,6 +50,7 @@ newtype UpgradeConfigParams = UpgradeConfigParams
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , proposalTokenName :: TokenName
   }
 
 derive instance Newtype UpgradeConfigParams _

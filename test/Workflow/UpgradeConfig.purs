@@ -259,9 +259,10 @@ suite = do
           let
             upgradeConfigParams :: UpgradeConfigParams
             upgradeConfigParams = UpgradeConfigParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
+              { configSymbol
+              , configTokenName
               , tallySymbol: proposalSymbol
+              , proposalTokenName
               , newDynamicConfigDatum: dummyConfig
               }
 

@@ -77,6 +77,7 @@ treasuryTrip params' = do
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
   tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
+    params.proposalTokenName
     appliedTallyValidator
   treasuryInfo :: TreasuryInfo <-
     spendTreasuryUtxo

@@ -84,6 +84,7 @@ newtype UpgradeConfigParams = UpgradeConfigParams
   , configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   }
 
 -- | Create proposal contract paramaters
@@ -99,6 +100,7 @@ newtype CreateProposalParams = CreateProposalParams
 newtype TreasuryParams = TreasuryParams
   { configSymbol :: Hash28
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   , treasurySymbol :: Hash28
   , configTokenName :: TokenName
   }
