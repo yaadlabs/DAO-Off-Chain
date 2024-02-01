@@ -79,7 +79,12 @@ suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
     test
-      "Full workflow - with multiple votes on proposal and vote cancelled - test"
+      "Full workflow -
+        with multiple proposals,
+        multiple votes on the proposals,
+        a vote cancelled,
+        a vote cancelled but then cast again,
+        treasury effects executed"
       do
         let
           distribution ::
