@@ -5,8 +5,6 @@ Description: Helpers for voting related contracts
 module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
-  , referenceVoteUtxo
-  , spendVoteUtxo
   , spendVoteNftUtxo
   , spendFungibleUtxo
   , cancelVoteUtxo
@@ -249,35 +247,6 @@ mkVoteUtxoConstraintsAndLookups
       else Nothing
 
 type VoteInfo = UtxoInfo VoteDatum
-
--- | Reference vote UTXO (don't spend it)
-referenceVoteUtxo ::
-  CurrencySymbol ->
-  Validator ->
-  Contract VoteInfo
-referenceVoteUtxo voteSymbol voteValidator = do
-  logInfo' "Entering referenceVoteUtxo contract"
-  findScriptUtxoBySymbol
-    (Proxy :: Proxy VoteDatum)
-    Reference
-    unitRedeemer
-    voteSymbol
-    voteValidator
-
--- | Spend vote UTXO
-spendVoteUtxo ::
-  VoteActionRedeemer ->
-  CurrencySymbol ->
-  Validator ->
-  Contract VoteInfo
-spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
-  logInfo' "Entering spendVoteUtxo contract"
-  findScriptUtxoBySymbol
-    (Proxy :: Proxy VoteDatum)
-    Spend
-    (Redeemer $ toData $ voteActionRedeemer)
-    voteSymbol
-    voteValidator
 
 -- | Spend the vote UTXO corresponding to the user's PKH
 -- | Ensure it is owned by the user and was a vote on
