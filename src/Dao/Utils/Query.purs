@@ -326,7 +326,7 @@ findKeyUtxoBySymbol ::
 findKeyUtxoBySymbol symbol utxos = do
   logInfo' "Entering findKeyUtxoBySymbol contract"
 
-  (txIn /\ TransactionOutputWithRefScript txOut) <-
+  (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter (hasTokenWithSymbol symbol)
@@ -335,7 +335,7 @@ findKeyUtxoBySymbol symbol utxos = do
 
   let
     lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.unspentOutputs utxos ] -- TODO: Make this more precise
+    lookups = mconcat [ Lookups.unspentOutputs $ Map.singleton txIn txOut' ]
 
     constraints :: Constraints.TxConstraints
     constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]

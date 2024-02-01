@@ -158,11 +158,12 @@ suite = do
                 getWalletAddress
               pure walletAddress
 
-            -- ************************************************************ --
-            -- ************************************************************ --
-            -- * User one creates a proposal on which the others can vote * --
-            ( proposalSymbol /\ proposalTokenName /\ configSymbol /\
-                configTokenName
+            -- *************************************************************** --
+            -- *************************************************************** --
+            -- * User one creates two proposals on which the others can vote * --
+            ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+                /\ configTokenName
+                /\ proposalTwoTokenName
             ) <- withKeyWallet walletOne do
               logInfo' "Running in walletOne - walletOne creates a proposal"
 
@@ -256,8 +257,8 @@ suite = do
               -- Create the first proposal UTXO
               ContractResult
                 { txHash: createProposalTxHash
-                , symbol: proposalSymbol
-                , tokenName: proposalTokenName
+                , symbol: proposalOneSymbol
+                , tokenName: proposalOneTokenName
                 } <- createProposal proposalParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
@@ -286,8 +287,8 @@ suite = do
               -- Create the proposal UTXO
               ContractResult
                 { txHash: createProposalTxHashTwo
-                , symbol: proposalSymbolTwo
-                , tokenName: proposalTokenNameTwo
+                , symbol: proposalTwoSymbol
+                , tokenName: proposalTwoTokenName
                 } <- createProposal proposalParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
@@ -401,8 +402,9 @@ suite = do
               void $ waitNSlots (Natural.fromInt' 3)
 
               pure
-                ( proposalSymbol /\ proposalTokenName /\ configSymbol /\
-                    configTokenName
+                ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+                    /\ configTokenName
+                    /\ proposalTwoTokenName
                 )
 
             -- ************************************************************ --
@@ -429,7 +431,7 @@ suite = do
 
             -- ************************************************** --
             -- ************************************************** --
-            -- * User three (walletThree) votes on the proposal * --
+            -- * User three (walletThree) votes on proposal one * --
             withKeyWallet walletThree do
               logInfo'
                 "Running in wallet three - voting on proposal created by walletOne"
@@ -439,9 +441,9 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalSymbol
+                  , tallySymbol: proposalOneSymbol
                   -- Vote datum fields
-                  , proposalTokenName: proposalTokenName
+                  , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
                   , returnAda: (BigInt.fromInt 0)
                   }
@@ -457,7 +459,7 @@ suite = do
 
             -- ************************************************ --
             -- ************************************************ --
-            -- * User four (walletFour) votes on the proposal * --
+            -- * User four (walletFour) votes on proposal one * --
             withKeyWallet walletFour do
               logInfo'
                 "Running in wallet four - voting on proposal created by walletOne"
@@ -467,9 +469,9 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalSymbol
+                  , tallySymbol: proposalOneSymbol
                   -- Vote datum fields
-                  , proposalTokenName: proposalTokenName
+                  , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
                   , returnAda: (BigInt.fromInt 0)
                   }
@@ -485,7 +487,7 @@ suite = do
 
             -- ************************************************ --
             -- ************************************************ --
-            -- * User five (walletFive) votes on the proposal * --
+            -- * User five (walletFive) votes on proposal one * --
             withKeyWallet walletFive do
               logInfo'
                 "Running in wallet five - voting on proposal created by walletOne"
@@ -495,9 +497,9 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalSymbol
+                  , tallySymbol: proposalOneSymbol
                   -- Vote datum fields
-                  , proposalTokenName: proposalTokenName
+                  , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
                   , returnAda: (BigInt.fromInt 0)
                   }
@@ -523,7 +525,7 @@ suite = do
                 cancelVoteParams = CancelVoteParams
                   { configSymbol
                   , configTokenName
-                  , proposalTokenName
+                  , proposalTokenName: proposalOneTokenName
                   }
               cancelVoteTxHash <- cancelVote cancelVoteParams
 
@@ -533,7 +535,7 @@ suite = do
 
             -- ********************************************************* --
             -- ********************************************************* --
-            -- * User one (walletOne) counts the votes on the proposal * --
+            -- * User one (walletOne) counts the votes on proposal one * --
 
             -- The votes 'For' should sum to 8
             -- Two voters vote 'For' the proposal - so we have a base amount of 2
@@ -556,8 +558,8 @@ suite = do
                   { voteTokenName: adaToken
                   , configSymbol
                   , configTokenName
-                  , tallySymbol: proposalSymbol
-                  , proposalTokenName
+                  , tallySymbol: proposalOneSymbol
+                  , proposalTokenName: proposalOneTokenName
                   }
 
               countVoteTxHash <- countVote countVoteParams
@@ -581,12 +583,116 @@ suite = do
                 treasuryGeneralParams = TreasuryParams
                   { configSymbol
                   , configTokenName
-                  , proposalTokenName
-                  , tallySymbol: proposalSymbol
+                  , proposalTokenName: proposalOneTokenName
+                  , tallySymbol: proposalOneSymbol
                   , treasurySymbol: treasuryFundSymbol
                   }
 
               treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
--- void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ************************************************** --
+            -- ************************************************** --
+            -- * User three (walletThree) votes on proposal two * --
+            withKeyWallet walletThree do
+              logInfo'
+                "Running in wallet three - voting on proposal two created by walletOne"
+
+              let
+                voteParams :: VoteOnProposalParams
+                voteParams = VoteOnProposalParams
+                  { configSymbol: configSymbol
+                  , configTokenName: configTokenName
+                  , tallySymbol: proposalOneSymbol
+                  -- Vote datum fields
+                  , proposalTokenName: proposalTwoTokenName
+                  , voteDirection: VoteDirection'For
+                  , returnAda: (BigInt.fromInt 0)
+                  }
+
+              VoteOnProposalResult
+                { txHash: voteOnProposalTxHash
+                , symbol: voteOnProposalSymbol
+                } <- voteOnProposal voteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                voteOnProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ************************************************ --
+            -- ************************************************ --
+            -- * User four (walletFour) votes on proposal two * --
+            withKeyWallet walletFour do
+              logInfo'
+                "Running in wallet four - voting on proposal two created by walletOne"
+
+              let
+                voteParams :: VoteOnProposalParams
+                voteParams = VoteOnProposalParams
+                  { configSymbol: configSymbol
+                  , configTokenName: configTokenName
+                  , tallySymbol: proposalOneSymbol
+                  -- Vote datum fields
+                  , proposalTokenName: proposalTwoTokenName
+                  , voteDirection: VoteDirection'For
+                  , returnAda: (BigInt.fromInt 0)
+                  }
+
+              VoteOnProposalResult
+                { txHash: voteOnProposalTxHash
+                , symbol: voteOnProposalSymbol
+                } <- voteOnProposal voteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                voteOnProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ********************************************************* --
+            -- ********************************************************* --
+            -- * User one (walletOne) counts the votes on proposal two * --
+            withKeyWallet walletOne do
+              logInfo'
+                "Running in wallet one - counting the votes on the second proposal created by walletOne"
+
+              let
+                countVoteParams :: CountVoteParams
+                countVoteParams = CountVoteParams
+                  { voteTokenName: adaToken
+                  , configSymbol
+                  , configTokenName
+                  , tallySymbol: proposalOneSymbol
+                  , proposalTokenName: proposalTwoTokenName
+                  }
+
+              countVoteTxHash <- countVote countVoteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                countVoteTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ****************************************************************** --
+            -- ****************************************************************** --
+            -- * User one executes the effect of the second proposal, that      * --
+            -- * is to disburse treasury funds to the 'General' payment address * --
+            -- * specified in the 'TallyStateDatum'. In this case that is       * --
+            -- * 'walletTwoAddress', the address of the user 'walletSix'.       * --
+            withKeyWallet walletOne do
+              logInfo'
+                "Running in wallet one - executing the treasury general effect"
+
+              let
+                treasuryGeneralParams :: TreasuryParams
+                treasuryGeneralParams = TreasuryParams
+                  { configSymbol
+                  , configTokenName
+                  , proposalTokenName: proposalOneTokenName
+                  , tallySymbol: proposalOneSymbol
+                  , treasurySymbol: treasuryFundSymbol
+                  }
+
+              treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+              void $ waitNSlots (Natural.fromInt' 3)

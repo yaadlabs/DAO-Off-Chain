@@ -20,6 +20,7 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
+  , show
   , unwrap
   , void
   , (#)
@@ -136,6 +137,10 @@ voteOnProposal params' = do
   -- get the constraints and lookups to spend this UTXO if found
   fungibleInfo <- spendFungibleUtxo fungibleSymbol userUtxos
 
+  logInfo' $ "userUtxos: " <> show userUtxos
+  logInfo' $ "voteNftInfo: " <> show voteNftInfo
+  logInfo' $ "fungibleInfo: " <> show fungibleInfo
+
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
     -- The 'voteOwner' field of the 'VoteDatum' must correspond to the
@@ -182,7 +187,7 @@ voteOnProposal params' = do
         , configInfo.lookups
         , tallyInfo.lookups
         , voteNftInfo.lookups
-        , fungibleInfo.lookups
+        -- , fungibleInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -193,7 +198,7 @@ voteOnProposal params' = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftInfo.value <> fungibleInfo.value)
+            (voteValue <> voteNftInfo.value) -- <> fungibleInfo.value)
         -- ^ We send the 'VoteDatum' along with the relevant vote
         -- tokens to a UTXO at the 'vote validator' script
         , Constraints.mustValidateIn onchainTimeRange
@@ -202,7 +207,7 @@ voteOnProposal params' = do
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints
-        , fungibleInfo.constraints
+        -- , fungibleInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
