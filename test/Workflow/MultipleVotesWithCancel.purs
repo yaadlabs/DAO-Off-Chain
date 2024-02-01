@@ -649,6 +649,57 @@ suite = do
                 voteOnProposalTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
+            -- ********************************************************************** --
+            -- ********************************************************************** --
+            -- * User three (walletThree) cancels their vote on the second proposal * --
+            withKeyWallet walletThree do
+              logInfo'
+                "Running in wallet three - cancelling their vote on the second proposal"
+
+              let
+                cancelVoteParams :: CancelVoteParams
+                cancelVoteParams = CancelVoteParams
+                  { configSymbol
+                  , configTokenName
+                  , proposalTokenName: proposalTwoTokenName
+                  }
+              cancelVoteTxHash <- cancelVote cancelVoteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                cancelVoteTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ************************************************************************** --
+            -- ************************************************************************** --
+            -- * User three (walletThree) votes on proposal two again after cancelling  * --
+            -- * their previous vote. This will only work if the 'cancelVote' contract  * --
+            -- * works correctly and returns the 'voteNft' to the user after they       * --
+            -- * cancelled their previous vote.                                         * --
+            withKeyWallet walletThree do
+              logInfo'
+                "Running in wallet three - voting on proposal two again after cancelling previous vote"
+
+              let
+                voteParams :: VoteOnProposalParams
+                voteParams = VoteOnProposalParams
+                  { configSymbol: configSymbol
+                  , configTokenName: configTokenName
+                  , tallySymbol: proposalOneSymbol
+                  -- Vote datum fields
+                  , proposalTokenName: proposalTwoTokenName
+                  , voteDirection: VoteDirection'For
+                  , returnAda: (BigInt.fromInt 0)
+                  }
+
+              VoteOnProposalResult
+                { txHash: voteOnProposalTxHash
+                , symbol: voteOnProposalSymbol
+                } <- voteOnProposal voteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                voteOnProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
             -- ********************************************************* --
             -- ********************************************************* --
             -- * User one (walletOne) counts the votes on proposal two * --
