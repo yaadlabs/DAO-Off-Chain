@@ -6,7 +6,6 @@ module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
   , spendVoteNftUtxo
-  , spendFungibleUtxo
   , cancelVoteUtxo
   ) where
 
@@ -276,12 +275,3 @@ spendVoteNftUtxo ::
 spendVoteNftUtxo voteNftSymbol utxoMap = do
   logInfo' "Entering spendVoteNftUtxo contract"
   findKeyUtxoBySymbol voteNftSymbol utxoMap
-
--- | Spend vote fungible (vote multiplier) UTXO
-spendFungibleUtxo ::
-  CurrencySymbol ->
-  Map TransactionInput TransactionOutputWithRefScript ->
-  Contract SpendPubKeyResult
-spendFungibleUtxo symbol utxoMap = do
-  logInfo' "Entering spendFungibleUtxo contract"
-  findKeyUtxoBySymbol symbol utxoMap

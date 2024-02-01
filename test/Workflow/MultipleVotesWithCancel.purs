@@ -16,6 +16,7 @@ import Contract.Prelude
   , Unit
   , bind
   , discard
+  , mconcat
   , pure
   , show
   , show
@@ -79,12 +80,15 @@ suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
     test
-      "Full workflow -
-        with multiple proposals,
-        multiple votes on the proposals,
-        a vote cancelled,
-        a vote cancelled but then cast again,
-        treasury effects executed"
+      ( mconcat
+          [ "Full workflow: "
+          , "with multiple proposals, "
+          , "multiple votes on the proposals, "
+          , "a vote cancelled, "
+          , "a vote cancelled but then cast again, "
+          , "treasury effects executed"
+          ]
+      )
       do
         let
           distribution ::
