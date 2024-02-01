@@ -69,7 +69,6 @@ newtype CreateConfigParams = CreateConfigParams
   , maxTripDisbursement :: BigInt
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
-  , tallyNft :: Hash28
   , voteTokenName :: TokenName
   , voteNftSymbol :: Hash28
   , voteFungibleCurrencySymbol :: Hash28

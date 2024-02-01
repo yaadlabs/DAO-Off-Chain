@@ -30,7 +30,6 @@ newtype CreateConfigParams = CreateConfigParams
   , maxTripDisbursement :: BigInt
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
-  , tallyNft :: CurrencySymbol
   , voteTokenName :: TokenName
   -- VoteNft (vote pass) symbol
   , voteNftSymbol :: CurrencySymbol

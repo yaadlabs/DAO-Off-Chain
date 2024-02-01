@@ -90,6 +90,7 @@ countVote params' = do
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
   tallyInfo :: TallyInfo <- spendTallyUtxo params.tallySymbol
+    params.proposalTokenName
     appliedTallyValidator
 
   let

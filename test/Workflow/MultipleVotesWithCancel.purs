@@ -88,11 +88,13 @@ suite = do
                 /\ Array BigInt
                 /\ Array BigInt
                 /\ Array BigInt
+                /\ Array BigInt
             )
           distribution =
             [ BigInt.fromInt 2_000_000_000
             , BigInt.fromInt 500_000_000
             ] /\ [ BigInt.fromInt 2_000_000_000 ]
+              /\ [ BigInt.fromInt 2_000_000_000 ]
               /\ [ BigInt.fromInt 2_000_000_000 ]
               /\ [ BigInt.fromInt 2_000_000_000 ]
               /\ [ BigInt.fromInt 2_000_000_000 ]
@@ -102,14 +104,25 @@ suite = do
                /\ walletThree
                /\ walletFour
                /\ walletFive
+               /\ walletSix
            ) -> do
 
             -- ******************************************************************************* --
             -- ******************************************************************************* --
-            -- * Get the wallet address for user two to use in the create proposal           * --
+            -- * Get the wallet address for user two to use in the first create proposal     * --
             -- * section below. This will be used as the payment address for the tally datum * --
             userTwoWalletAddress :: Address <- withKeyWallet walletTwo do
               logInfo' "Running in walletTwo - first time"
+              walletAddress :: Address <- liftedM "Could not get wallet address"
+                getWalletAddress
+              pure walletAddress
+
+            -- ******************************************************************************* --
+            -- ******************************************************************************* --
+            -- * Get the wallet address for user six to use in the second create proposal    * --
+            -- * section below. This will be used as the payment address for the tally datum * --
+            userSixWalletAddress :: Address <- withKeyWallet walletSix do
+              logInfo' "Running in walletSix - first time"
               walletAddress :: Address <- liftedM "Could not get wallet address"
                 getWalletAddress
               pure walletAddress
@@ -200,7 +213,6 @@ suite = do
                   , maxTripDisbursement: BigInt.fromInt 0
                   , agentDisbursementPercent: BigInt.fromInt 0
                   , proposalTallyEndOffset: BigInt.fromInt 0
-                  , tallyNft: adaSymbol
                   , voteTokenName: adaToken
                   , voteFungibleCurrencySymbol: fungibleSymbol
                   , voteFungibleTokenName: fungibleTokenName
@@ -222,11 +234,44 @@ suite = do
                 createConfigTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
+              -- ************************** --
+              -- Create the first proposal  --
               let
                 -- The 'TallyStateDatum' to be sent to the proposal UTXO
                 -- The proposal type for this proposal will be a 'General' one
+                -- The payment address is the address of 'walletTwo'
                 tallyStateDatum = sampleGeneralProposalTallyStateDatum
                   userTwoWalletAddress
+
+                -- The params needed for creating the first proposal
+                proposalParams :: CreateProposalParams
+                proposalParams = CreateProposalParams
+                  { configSymbol
+                  , indexSymbol
+                  , configTokenName
+                  , indexTokenName
+                  , tallyStateDatum
+                  }
+
+              -- Create the first proposal UTXO
+              ContractResult
+                { txHash: createProposalTxHash
+                , symbol: proposalSymbol
+                , tokenName: proposalTokenName
+                } <- createProposal proposalParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                createProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              -- ************************** --
+              -- Create the second proposal --
+              let
+                -- The 'TallyStateDatum' to be sent to the proposal UTXO
+                -- The proposal type for this proposal will be a 'General' one
+                -- The payment address is the address of 'walletSix'
+                tallyStateDatum = sampleGeneralProposalTallyStateDatum
+                  userSixWalletAddress
 
                 -- The params needed for creating the proposal
                 proposalParams :: CreateProposalParams
@@ -240,13 +285,13 @@ suite = do
 
               -- Create the proposal UTXO
               ContractResult
-                { txHash: createProposalTxHash
-                , symbol: proposalSymbol
-                , tokenName: proposalTokenName
+                { txHash: createProposalTxHashTwo
+                , symbol: proposalSymbolTwo
+                , tokenName: proposalTokenNameTwo
                 } <- createProposal proposalParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-                createProposalTxHash
+                createProposalTxHashTwo
               void $ waitNSlots (Natural.fromInt' 3)
 
               -- **************************************************************************** --
@@ -473,10 +518,6 @@ suite = do
               logInfo'
                 "Running in wallet five - cancelling their vote on the proposal"
 
-              userFivePkh :: PaymentPubKeyHash <-
-                liftContractM "Could not get pkh" $
-                  addressToPaymentPubKeyHash userFiveWalletAddress
-
               let
                 cancelVoteParams :: CancelVoteParams
                 cancelVoteParams = CancelVoteParams
@@ -523,7 +564,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 countVoteTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              -- void $ waitNSlots (Natural.fromInt' 3)
 
             -- ************************************************************ --
             -- ************************************************************ --
@@ -531,20 +572,20 @@ suite = do
             -- * disburse treasury funds to the 'General' payment address * --
             -- * specified in the 'TallyStateDatum'. In this case that is * --
             -- * 'walletTwoAddress', the address of the user 'walletTwo'. * --
-            withKeyWallet walletOne do
-              logInfo'
-                "Running in wallet one - executing the treasury general effect"
+            -- withKeyWallet walletOne do
+            --   logInfo'
+            --     "Running in wallet one - executing the treasury general effect"
 
-              let
-                treasuryGeneralParams :: TreasuryParams
-                treasuryGeneralParams = TreasuryParams
-                  { configSymbol: configSymbol
-                  , configTokenName: configTokenName
-                  , tallySymbol: proposalSymbol
-                  , treasurySymbol: treasuryFundSymbol
-                  }
+            --   let
+            --     treasuryGeneralParams :: TreasuryParams
+            --     treasuryGeneralParams = TreasuryParams
+            --       { configSymbol: configSymbol
+            --       , configTokenName: configTokenName
+            --       , tallySymbol: proposalSymbol
+            --       , treasurySymbol: treasuryFundSymbol
+            --       }
 
-              treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+            --   treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
-              void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+            --   void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+            --   void $ waitNSlots (Natural.fromInt' 3)

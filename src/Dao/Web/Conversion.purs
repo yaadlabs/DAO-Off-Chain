@@ -329,7 +329,6 @@ instance
   convertPsToJs (DaoApi.CreateConfigParams params) = do
 
     configTokenName <- convertPsToJs params.configTokenName
-    tallyNft <- convertPsToJs params.tallyNft
     voteTokenName <- convertPsToJs params.voteTokenName
     voteFungibleCurrencySymbol <- convertPsToJs
       params.voteFungibleCurrencySymbol
@@ -351,7 +350,6 @@ instance
       , maxTripDisbursement: params.maxTripDisbursement
       , agentDisbursementPercent: params.agentDisbursementPercent
       , proposalTallyEndOffset: params.proposalTallyEndOffset
-      , tallyNft
       , voteTokenName
       , voteNftSymbol
       , voteFungibleCurrencySymbol
@@ -366,7 +364,6 @@ instance
   convertJsToPs (WebApi.CreateConfigParams params) = do
 
     configTokenName <- convertJsToPs params.configTokenName
-    tallyNft <- convertJsToPs params.tallyNft
     voteTokenName <- convertJsToPs params.voteTokenName
     voteNftSymbol <- convertJsToPs params.voteNftSymbol
     voteFungibleCurrencySymbol <- convertJsToPs
@@ -388,7 +385,6 @@ instance
       , maxTripDisbursement: params.maxTripDisbursement
       , agentDisbursementPercent: params.agentDisbursementPercent
       , proposalTallyEndOffset: params.proposalTallyEndOffset
-      , tallyNft
       , voteTokenName
       , voteNftSymbol
       , voteFungibleCurrencySymbol
