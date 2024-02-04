@@ -7,13 +7,13 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import ScriptArguments.Types (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ValidatorParams)
 
-unappliedConfigValidator :: ConfigurationValidatorConfig -> Contract Validator
+unappliedConfigValidator :: ValidatorParams -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Optimised/ConfigValidator.json"
 
 unappliedConfigValidatorDebug ::
-  ConfigurationValidatorConfig -> Contract Validator
+  ValidatorParams -> Contract Validator
 unappliedConfigValidatorDebug = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Debug/ConfigValidator.json"

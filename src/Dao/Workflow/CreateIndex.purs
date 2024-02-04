@@ -42,8 +42,8 @@ import Data.Array (head)
 import Data.Map as Map
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
-import ScriptArguments.Types (IndexNftConfig(IndexNftConfig))
+import LambdaBuffers.ApplicationTypes.Index (IndexDatum(IndexDatum))
+import ScriptArguments.Types (IndexPolicyParams(IndexPolicyParams))
 
 -- | Contract for creating index datum and locking 
 -- it at UTXO at index validator marked by index NFT
@@ -95,11 +95,11 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
       indexValidatorHash :: ValidatorHash
       indexValidatorHash = validatorHash indexValidator
 
-      indexPolicyParams :: IndexNftConfig
-      indexPolicyParams = IndexNftConfig
-        { incInitialUtxo: txInput
-        , incTokenName: indexTokenName
-        , incIndexValidator: unwrap indexValidatorHash
+      indexPolicyParams :: IndexPolicyParams
+      indexPolicyParams = IndexPolicyParams
+        { ipInitialUtxo: txInput
+        , ipTokenName: indexTokenName
+        , ipIndexValidator: unwrap indexValidatorHash
         }
 
     appliedIndexPolicy :: MintingPolicy <- unappliedIndexPolicyDebug
@@ -116,8 +116,8 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
 
       -- The 'index' field of the datum keeps track of the number of proposals
       -- Hence, we need to set this to zero to initially
-      indexDatum' :: IndexNftDatum
-      indexDatum' = IndexNftDatum { index: fromInt 0 }
+      indexDatum' :: IndexDatum
+      indexDatum' = IndexDatum { index: fromInt 0 }
 
       indexDatum :: Datum
       indexDatum = Datum $ toData indexDatum'

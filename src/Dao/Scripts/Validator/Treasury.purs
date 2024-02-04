@@ -6,13 +6,13 @@ module Dao.Scripts.Validator.Treasury
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import ScriptArguments.Types (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ValidatorParams)
 
-unappliedTreasuryValidator :: ConfigurationValidatorConfig -> Contract Validator
+unappliedTreasuryValidator :: ValidatorParams -> Contract Validator
 unappliedTreasuryValidator = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Optimised/TreasuryValidator.json"
 
 unappliedTreasuryValidatorDebug ::
-  ConfigurationValidatorConfig -> Contract Validator
+  ValidatorParams -> Contract Validator
 unappliedTreasuryValidatorDebug = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Debug/TreasuryValidator.json"

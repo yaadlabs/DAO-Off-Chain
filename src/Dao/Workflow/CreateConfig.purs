@@ -62,9 +62,9 @@ import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   )
 import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  , NftConfig(NftConfig)
-  , TallyNftConfig
+  ( ConfigPolicyParams(ConfigPolicyParams)
+  , TallyPolicyParams
+  , ValidatorParams(ValidatorParams)
   )
 
 -- | Contract for creating dynamic config datum and locking
@@ -122,9 +122,9 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
     let
       params = params' # unwrap
 
-      configPolicyParams :: NftConfig
-      configPolicyParams = NftConfig
-        { ncInitialUtxo: txInput, ncTokenName: params.configTokenName }
+      configPolicyParams :: ConfigPolicyParams
+      configPolicyParams = ConfigPolicyParams
+        { cpInitialUtxo: txInput, cpTokenName: params.configTokenName }
 
     appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicyDebug
       configPolicyParams
@@ -133,14 +133,14 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
       configSymbol :: CurrencySymbol
       configSymbol = scriptCurrencySymbol appliedConfigPolicy
 
-      configValidatorParams :: ConfigurationValidatorConfig
+      configValidatorParams :: ValidatorParams
       configValidatorParams =
-        ConfigurationValidatorConfig
-          { cvcConfigNftCurrencySymbol: configSymbol
-          , cvcConfigNftTokenName: params.configTokenName
+        ValidatorParams
+          { vpConfigSymbol: configSymbol
+          , vpConfigTokenName: params.configTokenName
           }
 
-      tallyConfig :: TallyNftConfig
+      tallyConfig :: TallyPolicyParams
       tallyConfig = mkTallyConfig configSymbol
         params.indexSymbol
         params.configTokenName

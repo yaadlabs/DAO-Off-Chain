@@ -67,7 +67,7 @@ import LambdaBuffers.ApplicationTypes.Vote
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
 import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  ( ValidatorParams(ValidatorParams)
   )
 
 -- | Vote result
@@ -87,9 +87,9 @@ voteOnProposal params' = do
 
   -- Make the scripts
   let
-    validatorConfig = ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: params.configSymbol
-      , cvcConfigNftTokenName: params.configTokenName
+    validatorConfig = ValidatorParams
+      { vpConfigSymbol: params.configSymbol
+      , vpConfigTokenName: params.configTokenName
       }
 
   appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug

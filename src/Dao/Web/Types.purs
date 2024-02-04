@@ -198,7 +198,7 @@ newtype VoteDatum = VoteDatum
   }
 
 -- | Index datum
-newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
+newtype IndexDatum = IndexDatum { index :: BigInt }
 
 data VoteDirection = For | Against
 

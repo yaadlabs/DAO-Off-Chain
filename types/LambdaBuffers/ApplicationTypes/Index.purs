@@ -1,4 +1,4 @@
-module LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(..)) where
+module LambdaBuffers.ApplicationTypes.Index (IndexDatum(..)) where
 
 import Ctl.Internal.FromData as Ctl.Internal.FromData
 import Ctl.Internal.ToData as Ctl.Internal.ToData
@@ -10,14 +10,14 @@ import Data.Show.Generic as Data.Show.Generic
 import JS.BigInt (BigInt)
 import Prelude as Prelude
 
-newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
+newtype IndexDatum = IndexDatum { index :: BigInt }
 
-derive instance Data.Newtype.Newtype IndexNftDatum _
-derive instance Data.Generic.Rep.Generic IndexNftDatum _
-instance Data.Show.Show IndexNftDatum where
+derive instance Data.Newtype.Newtype IndexDatum _
+derive instance Data.Generic.Rep.Generic IndexDatum _
+instance Data.Show.Show IndexDatum where
   show x = Data.Show.Generic.genericShow x
 
-instance Prelude.Eq IndexNftDatum where
+instance Prelude.Eq IndexDatum where
   eq =
     ( \x0 ->
         ( \x1 -> Prelude.(==) ((Data.Newtype.unwrap x0).index)
@@ -25,11 +25,11 @@ instance Prelude.Eq IndexNftDatum where
         )
     )
 
-instance Ctl.Internal.ToData.ToData IndexNftDatum where
+instance Ctl.Internal.ToData.ToData IndexDatum where
   toData = (\x0 -> Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).index))
 
-instance Ctl.Internal.FromData.FromData IndexNftDatum where
+instance Ctl.Internal.FromData.FromData IndexDatum where
   fromData =
     ( \x0 -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x0))
-        ((\x1 -> Data.Maybe.Just (IndexNftDatum { index: x1 })))
+        ((\x1 -> Data.Maybe.Just (IndexDatum { index: x1 })))
     )

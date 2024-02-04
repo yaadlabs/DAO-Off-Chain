@@ -1,8 +1,8 @@
 module ScriptArguments.Types
-  ( NftConfig(..)
-  , ConfigurationValidatorConfig(..)
-  , IndexNftConfig(..)
-  , TallyNftConfig(..)
+  ( ConfigPolicyParams(..)
+  , ValidatorParams(..)
+  , IndexPolicyParams(..)
+  , TallyPolicyParams(..)
   ) where
 
 import Prelude
@@ -28,17 +28,17 @@ import Ctl.Internal.TypeLevel.Nat (Z)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 
-newtype NftConfig = NftConfig
-  { ncInitialUtxo :: TransactionInput
-  , ncTokenName :: TokenName
+newtype ConfigPolicyParams = ConfigPolicyParams
+  { cpInitialUtxo :: TransactionInput
+  , cpTokenName :: TokenName
   }
 
 instance
-  HasPlutusSchema NftConfig
-    ( "NftConfig"
+  HasPlutusSchema ConfigPolicyParams
+    ( "ConfigPolicyParams"
         :=
-          ( "ncInitialUtxo" := I TransactionInput
-              :+ "ncTokenName"
+          ( "cpInitialUtxo" := I TransactionInput
+              :+ "cpTokenName"
               := I TokenName
               :+ PNil
           )
@@ -46,31 +46,31 @@ instance
         :+ PNil
     )
 
-instance ToData NftConfig where
+instance ToData ConfigPolicyParams where
   toData = genericToData
 
-instance FromData NftConfig where
+instance FromData ConfigPolicyParams where
   fromData = genericFromData
 
-derive instance Generic NftConfig _
+derive instance Generic ConfigPolicyParams _
 
-derive instance Newtype NftConfig _
+derive instance Newtype ConfigPolicyParams _
 
-derive newtype instance Eq NftConfig
+derive newtype instance Eq ConfigPolicyParams
 
-derive newtype instance Show NftConfig
+derive newtype instance Show ConfigPolicyParams
 
-newtype ConfigurationValidatorConfig = ConfigurationValidatorConfig
-  { cvcConfigNftCurrencySymbol :: CurrencySymbol
-  , cvcConfigNftTokenName :: TokenName
+newtype ValidatorParams = ValidatorParams
+  { vpConfigSymbol :: CurrencySymbol
+  , vpConfigTokenName :: TokenName
   }
 
 instance
-  HasPlutusSchema ConfigurationValidatorConfig
-    ( "ConfigurationValidatorConfig"
+  HasPlutusSchema ValidatorParams
+    ( "ValidatorParams"
         :=
-          ( "cvcConfigNftCurrencySymbol" := I CurrencySymbol
-              :+ "cvcConfigNftTokenName"
+          ( "vpConfigSymbol" := I CurrencySymbol
+              :+ "vpConfigTokenName"
               := I TokenName
               :+ PNil
           )
@@ -78,34 +78,34 @@ instance
         :+ PNil
     )
 
-instance ToData ConfigurationValidatorConfig where
+instance ToData ValidatorParams where
   toData = genericToData
 
-instance FromData ConfigurationValidatorConfig where
+instance FromData ValidatorParams where
   fromData = genericFromData
 
-derive instance Generic ConfigurationValidatorConfig _
+derive instance Generic ValidatorParams _
 
-derive instance Newtype ConfigurationValidatorConfig _
+derive instance Newtype ValidatorParams _
 
-derive newtype instance Eq ConfigurationValidatorConfig
+derive newtype instance Eq ValidatorParams
 
-derive newtype instance Show ConfigurationValidatorConfig
+derive newtype instance Show ValidatorParams
 
-newtype IndexNftConfig = IndexNftConfig
-  { incInitialUtxo :: TransactionInput
-  , incTokenName :: TokenName
-  , incIndexValidator :: ScriptHash
+newtype IndexPolicyParams = IndexPolicyParams
+  { ipInitialUtxo :: TransactionInput
+  , ipTokenName :: TokenName
+  , ipIndexValidator :: ScriptHash
   }
 
 instance
-  HasPlutusSchema IndexNftConfig
-    ( "IndexNftConfig"
+  HasPlutusSchema IndexPolicyParams
+    ( "IndexPolicyParams"
         :=
-          ( "incInitialUtxo" := I TransactionInput
-              :+ "incTokenName"
+          ( "ipInitialUtxo" := I TransactionInput
+              :+ "ipTokenName"
               := I TokenName
-              :+ "incIndexValidator"
+              :+ "ipIndexValidator"
               := I ScriptHash
               :+ PNil
           )
@@ -113,37 +113,37 @@ instance
         :+ PNil
     )
 
-instance ToData IndexNftConfig where
+instance ToData IndexPolicyParams where
   toData = genericToData
 
-instance FromData IndexNftConfig where
+instance FromData IndexPolicyParams where
   fromData = genericFromData
 
-derive instance Generic IndexNftConfig _
+derive instance Generic IndexPolicyParams _
 
-derive instance Newtype IndexNftConfig _
+derive instance Newtype IndexPolicyParams _
 
-derive newtype instance Eq IndexNftConfig
+derive newtype instance Eq IndexPolicyParams
 
-derive newtype instance Show IndexNftConfig
+derive newtype instance Show IndexPolicyParams
 
-newtype TallyNftConfig = TallyNftConfig
-  { tncIndexNftPolicyId :: CurrencySymbol
-  , tncIndexNftTokenName :: TokenName
-  , tncConfigNftCurrencySymbol :: CurrencySymbol
-  , tncConfigNftTokenName :: TokenName
+newtype TallyPolicyParams = TallyPolicyParams
+  { tpIndexSymbol :: CurrencySymbol
+  , tpIndexTokenName :: TokenName
+  , tpConfigSymbol :: CurrencySymbol
+  , tpConfigTokenName :: TokenName
   }
 
 instance
-  HasPlutusSchema TallyNftConfig
-    ( "TallyNftConfig"
+  HasPlutusSchema TallyPolicyParams
+    ( "TallyPolicyParams"
         :=
-          ( "tncIndexNftPolicyId" := I CurrencySymbol
-              :+ "tncIndexNftTokenName"
+          ( "tpIndexSymbol" := I CurrencySymbol
+              :+ "tpIndexTokenName"
               := I TokenName
-              :+ "tncConfigNftCurrencySymbol"
+              :+ "tpConfigSymbol"
               := I CurrencySymbol
-              :+ "tncConfigNftTokenName"
+              :+ "tpConfigTokenName"
               := I TokenName
               :+ PNil
           )
@@ -151,16 +151,16 @@ instance
         :+ PNil
     )
 
-instance ToData TallyNftConfig where
+instance ToData TallyPolicyParams where
   toData = genericToData
 
-instance FromData TallyNftConfig where
+instance FromData TallyPolicyParams where
   fromData = genericFromData
 
-derive instance Generic TallyNftConfig _
+derive instance Generic TallyPolicyParams _
 
-derive instance Newtype TallyNftConfig _
+derive instance Newtype TallyPolicyParams _
 
-derive newtype instance Eq TallyNftConfig
+derive newtype instance Eq TallyPolicyParams
 
-derive newtype instance Show TallyNftConfig
+derive newtype instance Show TallyPolicyParams

@@ -6,13 +6,13 @@ module Dao.Scripts.Validator.Vote
 import Contract.Monad (Contract)
 import Contract.Scripts (Validator)
 import Dao.Scripts.Utils (mkUnappliedValidator)
-import ScriptArguments.Types (ConfigurationValidatorConfig)
+import ScriptArguments.Types (ValidatorParams)
 
-unappliedVoteValidator :: ConfigurationValidatorConfig -> Contract Validator
+unappliedVoteValidator :: ValidatorParams -> Contract Validator
 unappliedVoteValidator = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Optimised/VoteValidator.json"
 
 unappliedVoteValidatorDebug ::
-  ConfigurationValidatorConfig -> Contract Validator
+  ValidatorParams -> Contract Validator
 unappliedVoteValidatorDebug = mkUnappliedValidator
   "./src/Dao/Scripts/Json/Debug/VoteValidator.json"
