@@ -34,18 +34,19 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Component.Config.Query (ConfigInfo, getConfigInfo)
-import Dao.Component.Index.Query (IndexInfo, getIndexInfo)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
+import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
 import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
 import Scripts.IndexValidator (indexValidatorScriptDebug)
@@ -56,7 +57,7 @@ import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 createProposal ::
   CreateProposalParams ->
   TallyStateDatum ->
-  Contract (TransactionHash /\ CurrencySymbol)
+  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
 createProposal
   proposalParams
   tallyStateDatum = do
@@ -71,9 +72,11 @@ createProposal
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
 
-  configInfo :: ConfigInfo <- getConfigInfo proposalParams.configSymbol
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo proposalParams.configSymbol
     appliedConfigValidator
-  indexInfo :: IndexInfo <- getIndexInfo proposalParams.indexSymbol
+  indexInfo :: IndexInfo <- spendIndexUtxo proposalParams.indexSymbol
+    indexValidator
 
   let
     tallyConfig = mkTallyConfig proposalParams.configSymbol
@@ -83,12 +86,15 @@ createProposal
   appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
+    -- The index field of the IndexDatum must be incremented
+    -- by one for each new proposal created
     updatedIndexDatum :: IndexNftDatum
-    updatedIndexDatum = incrementIndexDatum indexInfo.indexDatum
+    updatedIndexDatum = incrementIndexDatum indexInfo.datum
 
+  -- The tally token name corresponds to the index field of the index datum
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
-      mkTallyTokenName indexInfo.indexDatum
+      mkTallyTokenName indexInfo.datum
 
   let
     tallySymbol :: CurrencySymbol
@@ -125,14 +131,14 @@ createProposal
             indexValidatorHash
             (Datum $ toData updatedIndexDatum)
             Constraints.DatumInline
-            indexInfo.indexValue
+            indexInfo.value
         , configInfo.constraints
         , indexInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ tallySymbol)
+  pure (txHash /\ tallySymbol /\ tallyTokenName)
   where
   incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
   incrementIndexDatum (IndexNftDatum { index: oldIndex }) =
@@ -144,18 +150,8 @@ createProposal
 
   mkValidatorConfig ::
     CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
-  mkValidatorConfig configSymbol configTokenName =
+  mkValidatorConfig symbol tokenName =
     ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: configSymbol
-      , cvcConfigNftTokenName: configTokenName
-      }
-
-  mkTallyConfig ::
-    CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
-  mkTallyConfig configSymbol indexSymbol configTokenName indexTokenName =
-    TallyNftConfig
-      { tncIndexNftPolicyId: indexSymbol
-      , tncConfigNftTokenName: configTokenName
-      , tncConfigNftCurrencySymbol: configSymbol
-      , tncIndexNftTokenName: indexTokenName
+      { cvcConfigNftCurrencySymbol: symbol
+      , cvcConfigNftTokenName: tokenName
       }

@@ -1,88 +1,44 @@
-module Dao.Component.Index.Query (IndexInfo, getIndexInfo) where
+module Dao.Component.Index.Query
+  ( IndexInfo
+  , referenceIndexUtxo
+  , spendIndexUtxo
+  ) where
 
-import Contract.Prelude
-
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , throwContractError
+import Contract.Monad (Contract)
+import Contract.Prelude (discard)
+import Contract.Scripts (Validator)
+import Contract.Value (CurrencySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
   )
-import Contract.PlutusData
-  ( Datum(Datum)
-  , OutputDatum(OutputDatum)
-  , fromData
-  , unitRedeemer
-  )
-import Contract.ScriptLookups as Lookups
-import Contract.Scripts (validatorHash)
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , TransactionUnspentOutput(TransactionUnspentOutput)
-  )
-import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
-import Contract.Value
-  ( CurrencySymbol
-  , Value
-  , symbols
-  )
-import Data.Array (filter, head)
-import Data.Map as Map
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum)
-import Scripts.IndexValidator (indexValidatorScript, indexValidatorScriptDebug)
+import Type.Proxy (Proxy(Proxy))
 
-type IndexInfo =
-  { lookups :: Lookups.ScriptLookups
-  , constraints :: Constraints.TxConstraints
-  , indexDatum :: IndexNftDatum
-  , indexValue :: Value
-  }
+type IndexInfo = UtxoInfo IndexNftDatum
 
-getIndexInfo ::
+referenceIndexUtxo ::
   CurrencySymbol ->
+  Validator ->
   Contract IndexInfo
-getIndexInfo indexSymbol = do
-  logInfo' "Entering getIndexInfo contract"
+referenceIndexUtxo indexSymbol indexValidator = do
+  logInfo' "Entering referenceIndexUtxo contract"
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Reference
+    indexSymbol
+    indexValidator
 
-  indexValidator <- indexValidatorScriptDebug
-
-  let
-    scriptAddr = scriptHashAddress (validatorHash indexValidator) Nothing
-
-  utxos <- utxosAt scriptAddr
-
-  let
-    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == indexSymbol) $ symbols (txOut.output # unwrap # _.amount)
-
-  (txIn /\ txOut@(TransactionOutputWithRefScript indexUtxo)) <-
-    liftContractM "Cannot find UTxO with NFT"
-      $ head
-      $ filter hasNft
-      $ Map.toUnfoldable
-      $ utxos
-
-  let
-    constraints' :: Constraints.TxConstraints
-    constraints' = Constraints.mustSpendScriptOutput txIn unitRedeemer
-
-    lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $ Map.singleton txIn txOut
-
-    indexValue :: Value
-    indexValue = indexUtxo.output # unwrap # _.amount
-
-  case indexUtxo.output # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (indexDatum :: IndexNftDatum) -> do
-        pure
-          { indexDatum
-          , indexValue
-          , lookups: lookups'
-          , constraints: constraints'
-          }
-      Nothing -> throwContractError "Cannot parse index datum"
-    dat -> throwContractError $ "Missing inline datum, got: " <> show dat
+spendIndexUtxo ::
+  CurrencySymbol ->
+  Validator ->
+  Contract IndexInfo
+spendIndexUtxo indexSymbol indexValidator = do
+  logInfo' "Entering spendIndexUtxo contract"
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy IndexNftDatum)
+    Spend
+    indexSymbol
+    indexValidator

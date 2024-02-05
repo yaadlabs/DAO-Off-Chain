@@ -44,14 +44,11 @@ import Dao.Utils.Query (findUtxoByValue)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt as BigInt
-import LambdaBuffers.ApplicationTypes.Arguments
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
--- import ScriptArguments.Types
---   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
---   )
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 import Scripts.ConfigValidator (unappliedConfigValidator)
 import Scripts.TallyValidator (unappliedTallyValidator)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)

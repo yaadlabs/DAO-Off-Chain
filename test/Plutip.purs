@@ -8,7 +8,8 @@ import Contract.Prelude
 
 import Contract.Test.Mote (interpretWithConfig)
 import Contract.Test.Plutip
-  ( defaultPlutipConfig
+  ( PlutipConfig
+  , defaultPlutipConfig
   , testPlutipContracts
   )
 import Contract.Test.Utils (exitCode, interruptOnSignal)
@@ -20,7 +21,7 @@ import Effect.Aff
   , launchAff
   )
 import Test.Spec.Runner (defaultConfig)
-import Test.Workflow.CreateProposal as CreateProposal
+import Test.Workflow.VoteOnProposal as VoteOnProposal
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
@@ -28,4 +29,4 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts defaultPlutipConfig do
-        CreateProposal.suite
+        VoteOnProposal.suite

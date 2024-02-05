@@ -28,4 +28,7 @@ type ConfigParams =
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
+  -- Index needed for making tallyNft
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
   }

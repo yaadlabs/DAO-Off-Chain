@@ -1,84 +1,44 @@
-module Dao.Component.Config.Query (ConfigInfo, getConfigInfo) where
+module Dao.Component.Config.Query
+  ( ConfigInfo
+  , referenceConfigUtxo
+  , spendConfigUtxo
+  ) where
 
-import Contract.Prelude
-
-import Contract.Address (scriptHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , throwContractError
+import Contract.Monad (Contract)
+import Contract.Prelude (discard)
+import Contract.Scripts (Validator)
+import Contract.Value (CurrencySymbol)
+import Dao.Utils.Query
+  ( QueryType(Reference, Spend)
+  , UtxoInfo
+  , findScriptUtxoBySymbol
   )
-import Contract.PlutusData
-  ( Datum(Datum)
-  , OutputDatum(OutputDatum)
-  , fromData
-  )
-import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, validatorHash)
-import Contract.Transaction
-  ( TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
-import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
-import Contract.Value
-  ( CurrencySymbol
-  , Value
-  , symbols
-  )
-import Data.Array (filter, head)
-import Data.Map as Map
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
+import Type.Proxy (Proxy(Proxy))
 
-type ConfigInfo =
-  { lookups :: Lookups.ScriptLookups
-  , constraints :: Constraints.TxConstraints
-  , configDatum :: DynamicConfigDatum
-  , configValue :: Value
-  }
+type ConfigInfo = UtxoInfo DynamicConfigDatum
 
-getConfigInfo ::
+referenceConfigUtxo ::
   CurrencySymbol ->
   Validator ->
   Contract ConfigInfo
-getConfigInfo configSymbol configValidator = do
-  logInfo' "Entering getConfigInfo contract"
+referenceConfigUtxo configSymbol configValidator = do
+  logInfo' "Entering referenceConfigUtxo contract"
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy DynamicConfigDatum)
+    Reference
+    configSymbol
+    configValidator
 
-  let
-    scriptAddr = scriptHashAddress (validatorHash configValidator) Nothing
-
-  utxos <- utxosAt scriptAddr
-
-  let
-    hasNft (_ /\ TransactionOutputWithRefScript txOut) =
-      any (_ == configSymbol) $ symbols (txOut.output # unwrap # _.amount)
-
-  (txIn /\ TransactionOutputWithRefScript configUtxo) <-
-    liftContractM "Cannot find UTxO with NFT"
-      $ head
-      $ filter hasNft
-      $ Map.toUnfoldable
-      $ utxos
-
-  let
-    constraints' :: Constraints.TxConstraints
-    constraints' = Constraints.mustReferenceOutput txIn
-
-    lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $
-      Map.singleton txIn (TransactionOutputWithRefScript configUtxo)
-
-    configValue :: Value
-    configValue = configUtxo.output # unwrap # _.amount
-
-  case configUtxo.output # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (configDatum :: DynamicConfigDatum) -> do
-        pure
-          { configDatum
-          , configValue
-          , lookups: lookups'
-          , constraints: constraints'
-          }
-      Nothing -> throwContractError "Cannot parse config datum"
-    dat -> throwContractError $ "Missing inline datum, got: " <> show dat
+spendConfigUtxo ::
+  CurrencySymbol ->
+  Validator ->
+  Contract ConfigInfo
+spendConfigUtxo configSymbol configValidator = do
+  logInfo' "Entering spendConfigUtxo contract"
+  findScriptUtxoBySymbol
+    (Proxy :: Proxy DynamicConfigDatum)
+    Spend
+    configSymbol
+    configValidator
