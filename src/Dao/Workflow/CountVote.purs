@@ -7,28 +7,33 @@ module Dao.Workflow.CountVote (countVote) where
 import Contract.Address (scriptHashAddress)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract)
 import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData
-  ( Datum
-  , Redeemer(Redeemer)
+  ( Datum(Datum)
   , toData
-  , unitRedeemer
   )
 import Contract.Prelude
   ( type (/\)
   , bind
   , discard
+  , foldMap
+  , foldr
   , mconcat
-  , one
+  , otherwise
   , pure
+  , unwrap
   , void
+  , (#)
   , ($)
   , (*)
+  , (+)
   , (/\)
+  , (<>)
+  , (==)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, ValidatorHash, validatorHash)
+import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
@@ -37,83 +42,75 @@ import Contract.Transaction
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  )
-import Contract.Value (singleton) as Value
-import Dao.Utils.Datum (getInlineDatumFromTxOutWithRefScript)
-import Dao.Utils.Query (findUtxoByValue)
+import Contract.Utxos (utxosAt)
+import Contract.Value (scriptCurrencySymbol)
+import Dao.Component.Config.Params (mkValidatorConfig)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
+import Dao.Component.Vote.Params (CountVoteParams)
+import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
-import Data.Map as Map
+import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
-import JS.BigInt (fromInt)
-import LambdaBuffers.ApplicationTypes.Vote
-  ( VoteActionRedeemer(VoteActionRedeemer'Count)
-  )
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.VoteValidator (unappliedVoteValidator)
+import JS.BigInt (BigInt, fromInt)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
+import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.VotePolicy (unappliedVotePolicyDebug)
+import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
-type VoteInfo = { voteSymbol :: CurrencySymbol, voteTokenName :: TokenName }
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
-
+-- | Contract for counting the votes
 countVote ::
-  ConfigurationValidatorConfig ->
-  VoteInfo ->
-  TallyInfo ->
+  CountVoteParams ->
   Contract TransactionHash
-countVote validatorConfig voteInfo tallyInfo = do
+countVote params = do
   logInfo' "Entering countVote transaction"
 
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  -- Make the scripts
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
+    appliedConfigValidator
+  tallyInfo :: TallyInfo <- spendTallyUtxo params.tallySymbol
+    appliedTallyValidator
 
   let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
+    scriptAddr = scriptHashAddress (validatorHash appliedVoteValidator) Nothing
+  voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
+    scriptAddr
 
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
+  let voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
-    voteValidatorAddress = scriptHashAddress
-      (validatorHash appliedVoteValidator)
-      Nothing
+  -- Collect the constraints and lookups for each vote UTXO
+  -- And whether the vote was for or against
+  voteDirectionsConstraintsAndLookups ::
+    Array
+      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+          Constraints.TxConstraints
+      ) <-
+    mkAllVoteConstraintsAndLookups
+      params.voteNftSymbol
+      voteSymbol
+      params.fungibleSymbol
+      params.voteNftTokenName
+      params.voteTokenName
+      params.fungibleTokenName
+      params.fungiblePercent
+      appliedVotePolicy
+      voteUtxos
 
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
-  voteValidatorUtxoMap <- utxosAt voteValidatorAddress
-
-  (configUtxoTxInput /\ _) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-
-  (tallyUtxoTxInput /\ tallyUtxoTxOutRefScript) <-
-    liftedM "Could not find tally UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
-
-  (voteUtxoTxInput /\ voteUtxoTxOutRefScript) <-
-    liftedM "Could not find vote UTXO" $ getVoteUtxo voteInfo
-      voteValidatorUtxoMap
-
-  tallyStateDatum :: Datum <-
-    liftContractM "No Inline tally datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript tallyUtxoTxOutRefScript
-
-  voteDatum :: Datum <-
-    liftContractM "No Inline vote datum at OutputDatum" $
-      getInlineDatumFromTxOutWithRefScript voteUtxoTxOutRefScript
-
+  -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
@@ -121,46 +118,55 @@ countVote validatorConfig voteInfo tallyInfo = do
   void $ waitNSlots (Natural.fromInt' 10)
 
   let
-    voteNft :: Value
-    voteNft = Value.singleton voteInfo.voteSymbol voteInfo.voteTokenName one
+    -- Get the total votes for and against
+    (votesFor /\ votesAgainst) = tallyVotes voteDirectionsConstraintsAndLookups
 
-    tallyNft :: Value
-    tallyNft = Value.singleton tallyInfo.tallySymbol tallyInfo.tallyTokenName
-      one
+    -- Update the tally datum with the new vote count
+    tallyDatumWithUpdatedVoteCount :: TallyStateDatum
+    tallyDatumWithUpdatedVoteCount =
+      let
+        oldDatum = tallyInfo.datum # unwrap
+      in
+        TallyStateDatum
+          { proposal: oldDatum.proposal
+          , proposalEndTime: oldDatum.proposalEndTime
+          , for: oldDatum.for + votesFor
+          , against: oldDatum.against + votesAgainst
+          }
 
-    voteValidatorHash :: ValidatorHash
-    voteValidatorHash = validatorHash appliedVoteValidator
-
+  let
     tallyValidatorHash :: ValidatorHash
     tallyValidatorHash = validatorHash appliedTallyValidator
 
-    countRedeemer :: Redeemer
-    countRedeemer = Redeemer $ toData VoteActionRedeemer'Count
+    -- Collect the vote lookups
+    voteLookups :: Lookups.ScriptLookups
+    voteLookups = foldMap (\(_ /\ lookups' /\ _) -> lookups')
+      voteDirectionsConstraintsAndLookups
+
+    -- Collect the vote constraints
+    voteConstraints :: Constraints.TxConstraints
+    voteConstraints = foldMap (\(_ /\ _ /\ constraints') -> constraints')
+      voteDirectionsConstraintsAndLookups
 
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
-      [ Lookups.unspentOutputs $ Map.singleton tallyUtxoTxInput
-          tallyUtxoTxOutRefScript
-      , Lookups.unspentOutputs $ Map.singleton voteUtxoTxInput
-          voteUtxoTxOutRefScript
+      [ voteLookups
+      , tallyInfo.lookups
+      , configInfo.lookups
+      , Lookups.validator appliedVoteValidator
       ]
 
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
         [ Constraints.mustPayToScript
-            voteValidatorHash
-            voteDatum
-            Constraints.DatumInline
-            voteNft
-        , Constraints.mustPayToScript
             tallyValidatorHash
-            tallyStateDatum
+            (Datum $ toData $ tallyDatumWithUpdatedVoteCount)
             Constraints.DatumInline
-            tallyNft
-        , Constraints.mustReferenceOutput configUtxoTxInput
-        , Constraints.mustSpendScriptOutput tallyUtxoTxInput unitRedeemer
-        , Constraints.mustSpendScriptOutput voteUtxoTxInput countRedeemer
+            tallyInfo.value
+        , voteConstraints
+        , configInfo.constraints
+        , tallyInfo.constraints
         , Constraints.mustValidateIn onchainTimeRange
         ]
 
@@ -168,29 +174,14 @@ countVote validatorConfig voteInfo tallyInfo = do
 
   pure txHash
   where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
-
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
-
-  getVoteUtxo ::
-    VoteInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getVoteUtxo ({ voteSymbol, voteTokenName }) =
-    findUtxoByValue
-      (Value.singleton voteSymbol voteTokenName one)
+  tallyVotes ::
+    Array
+      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+          Constraints.TxConstraints
+      ) ->
+    (BigInt /\ BigInt)
+  tallyVotes = foldr op (fromInt 0 /\ fromInt 0)
+    where
+    op ((voteDirection /\ voteAmount) /\ _ /\ _) (for /\ against)
+      | voteDirection == VoteDirection'For = ((for + voteAmount) /\ against)
+      | otherwise = (for /\ (against + voteAmount))

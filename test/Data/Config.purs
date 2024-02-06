@@ -19,9 +19,7 @@ sampleConfigParams =
   , agentDisbursementPercent: BigInt.fromInt 0
   , proposalTallyEndOffset: BigInt.fromInt 0
   , tallyNft: adaSymbol
-  , voteCurrencySymbol: adaSymbol
   , voteTokenName: adaToken
-  , voteNft: adaSymbol
   , voteFungibleCurrencySymbol: adaSymbol
   , voteFungibleTokenName: adaToken
   , fungibleVotePercent: BigInt.fromInt 0

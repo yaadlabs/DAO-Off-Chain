@@ -34,6 +34,7 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
@@ -147,11 +148,3 @@ createProposal
   mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
   mkTallyTokenName indexDatum =
     mkTokenName $ show $ indexDatum # unwrap # _.index
-
-  mkValidatorConfig ::
-    CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
-  mkValidatorConfig symbol tokenName =
-    ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: symbol
-      , cvcConfigNftTokenName: tokenName
-      }

@@ -1,14 +1,25 @@
 {-|
-Module: Test.Workflow.VoteOnProposal
-Description: Test the vote on proposal workflow
+Module: Test.Workflow.CountVote
+Description: Test the count vote workflow
 -}
-module Test.Workflow.VoteOnProposal (suite) where
+module Test.Workflow.CountVote (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Chain (waitNSlots)
+import Contract.Log (logInfo')
 import Contract.Monad (liftedM)
-import Contract.Numeric.Natural (fromInt') as Natural
-import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
+import Contract.Prelude
+  ( Unit
+  , bind
+  , discard
+  , pure
+  , show
+  , show
+  , unit
+  , void
+  , ($)
+  , (/\)
+  , (<>)
+  )
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
   ( InitialUTxOs
@@ -18,8 +29,9 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletCollateral, ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
+import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
@@ -35,12 +47,12 @@ import Test.Data.Tally (sampleTallyStateDatum)
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
-    test "Vote on proposal test" do
+    test "Count votes on proposal test" do
       let
         distribution :: InitialUTxOs
         distribution =
           [ BigInt.fromInt 2_000_000_000
-          , BigInt.fromInt 2_000_000_000
+          , BigInt.fromInt 500_000_000
           ]
       withWallets distribution \wallet -> do
         withKeyWallet wallet do
@@ -50,18 +62,15 @@ suite = do
 
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
             createVotePass userPkh
-
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible userPkh (BigInt.fromInt 2)
+            createFungible userPkh (BigInt.fromInt 400)
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             sampleConfigParams :: ConfigParams
@@ -80,19 +89,18 @@ suite = do
               , proposalTallyEndOffset: BigInt.fromInt 0
               , tallyNft: adaSymbol
               , voteTokenName: adaToken
-              , voteFungibleCurrencySymbol: votePassSymbol -- adaSymbol
-              , voteFungibleTokenName: adaToken
-              , fungibleVotePercent: BigInt.fromInt 0
+              , voteFungibleCurrencySymbol: fungibleSymbol
+              , voteFungibleTokenName: fungibleTokenName
+              , fungibleVotePercent: BigInt.fromInt 10
 
               -- Index needed for making tallyNft
-              , indexSymbol
-              , indexTokenName
+              , indexSymbol: indexSymbol
+              , indexTokenName: indexTokenName
               }
 
           (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           sampleTallyStateDatum' <- sampleTallyStateDatum
 
@@ -107,11 +115,10 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams =
-              { configSymbol
+              { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
               -- Vote NFT (voting pass) symbol and token name
@@ -120,16 +127,36 @@ suite = do
               -- Fungible
               , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
-              , proposalTokenName
+              , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ _voteOnProposalSymbol) <- voteOnProposal
+          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+
+          let
+            countVoteParams =
+              { voteNftSymbol: votePassSymbol
+              , voteTokenName: adaToken
+              , voteNftTokenName: votePassTokenName
+              , configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , tallySymbol: proposalSymbol
+              , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
+              , fungiblePercent: BigInt.fromInt 10
+              }
+
+          collateral <- getWalletCollateral
+          logInfo' $ "collateral: " <> show collateral
+
+          countVoteTxHash <- countVote countVoteParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+            countVoteTxHash
 
           pure unit

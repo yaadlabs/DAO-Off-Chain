@@ -24,6 +24,7 @@ import Contract.PlutusData
   ( class FromData
   , Datum(Datum)
   , OutputDatum(OutputDatum)
+  , Redeemer
   , fromData
   , unitRedeemer
   )
@@ -78,28 +79,29 @@ data QueryType = Spend | Reference
 
 derive instance Eq QueryType
 
--- | Reference or spend a UTXO marked by an NFT with the given CurrencySymbol
+-- | Reference or spend a UTXO at script marked by an NFT with the given CurrencySymbol
 findScriptUtxoBySymbol ::
   forall (datum' :: Type).
   FromData datum' =>
   Proxy datum' ->
   QueryType ->
+  Redeemer ->
   CurrencySymbol ->
   Validator ->
   Contract (UtxoInfo datum')
-findScriptUtxoBySymbol _ spendOrReference symbol validatorScript = do
+findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
   logInfo' "Entering findScriptUtxoBySymbol contract"
 
   let
     scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
-
   utxos <- utxosAt scriptAddr
 
   let
     hasNft (_ /\ TransactionOutputWithRefScript txOut) =
       any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
-  (txIn /\ TransactionOutputWithRefScript txOut) <-
+  (txIn /\ TransactionOutputWithRefScript txOut) ::
+    (TransactionInput /\ TransactionOutputWithRefScript) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter hasNft
@@ -110,12 +112,15 @@ findScriptUtxoBySymbol _ spendOrReference symbol validatorScript = do
     constraints' :: Constraints.TxConstraints
     constraints' =
       case spendOrReference of
-        Spend -> Constraints.mustSpendScriptOutput txIn unitRedeemer
+        Spend -> Constraints.mustSpendScriptOutput txIn redeemer
         Reference -> Constraints.mustReferenceOutput txIn
 
     lookups' :: Lookups.ScriptLookups
-    lookups' = Lookups.unspentOutputs $
-      Map.singleton txIn (TransactionOutputWithRefScript txOut)
+    lookups' = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn
+          (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
+      ]
 
     value :: Value
     value = txOut.output # unwrap # _.amount
@@ -132,12 +137,14 @@ findScriptUtxoBySymbol _ spendOrReference symbol validatorScript = do
       Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
+-- | Result type for 'findKeyUtxoBySymbol' function
 type SpendPubKeyResult =
   { lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
   , value :: Value
   }
 
+-- | Spend UTXO marked by an NFT with the given CurrencySymbol
 findKeyUtxoBySymbol ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->

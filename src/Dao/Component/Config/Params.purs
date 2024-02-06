@@ -2,10 +2,13 @@
 Module: Dao.Component.Config.Params
 Description: Helpers for create config workflow
 -}
-module Dao.Component.Config.Params (ConfigParams) where
+module Dao.Component.Config.Params (ConfigParams, mkValidatorConfig) where
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
+import ScriptArguments.Types
+  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  )
 
 -- | Parameters passed when initially creating dynamic config
 type ConfigParams =
@@ -22,9 +25,7 @@ type ConfigParams =
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: CurrencySymbol
-  , voteCurrencySymbol :: CurrencySymbol
   , voteTokenName :: TokenName
-  , voteNft :: CurrencySymbol
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
@@ -32,3 +33,11 @@ type ConfigParams =
   , indexSymbol :: CurrencySymbol
   , indexTokenName :: TokenName
   }
+
+mkValidatorConfig ::
+  CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
+mkValidatorConfig symbol tokenName =
+  ConfigurationValidatorConfig
+    { cvcConfigNftCurrencySymbol: symbol
+    , cvcConfigNftTokenName: tokenName
+    }

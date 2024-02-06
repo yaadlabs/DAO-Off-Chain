@@ -1,13 +1,11 @@
 {-|
-Module: Test.Workflow.VoteOnProposal
-Description: Test the vote on proposal workflow
+Module: Test.Workflow.CancelVote
+Description: Test the cancel vote workflow
 -}
-module Test.Workflow.VoteOnProposal (suite) where
+module Test.Workflow.CancelVote (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Chain (waitNSlots)
 import Contract.Monad (liftedM)
-import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude (Unit, bind, discard, pure, unit, void, ($), (/\))
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
@@ -20,6 +18,7 @@ import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Params (ConfigParams)
+import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
@@ -35,7 +34,7 @@ import Test.Data.Tally (sampleTallyStateDatum)
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
-    test "Vote on proposal test" do
+    test "Cancel vote on proposal test" do
       let
         distribution :: InitialUTxOs
         distribution =
@@ -50,9 +49,7 @@ suite = do
 
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
             createVotePass userPkh
-
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
             createFungible userPkh (BigInt.fromInt 2)
@@ -61,7 +58,6 @@ suite = do
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             sampleConfigParams :: ConfigParams
@@ -80,19 +76,17 @@ suite = do
               , proposalTallyEndOffset: BigInt.fromInt 0
               , tallyNft: adaSymbol
               , voteTokenName: adaToken
-              , voteFungibleCurrencySymbol: votePassSymbol -- adaSymbol
+              , voteFungibleCurrencySymbol: adaSymbol
               , voteFungibleTokenName: adaToken
               , fungibleVotePercent: BigInt.fromInt 0
-
               -- Index needed for making tallyNft
-              , indexSymbol
-              , indexTokenName
+              , indexSymbol: indexSymbol
+              , indexTokenName: indexTokenName
               }
 
           (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           sampleTallyStateDatum' <- sampleTallyStateDatum
 
@@ -107,11 +101,10 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams =
-              { configSymbol
+              { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
               -- Vote NFT (voting pass) symbol and token name
@@ -120,16 +113,29 @@ suite = do
               -- Fungible
               , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
-              , proposalTokenName
+              , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ _voteOnProposalSymbol) <- voteOnProposal
+          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 2)
+
+          let
+            cancelVoteParams =
+              { configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , voteTokenName: adaToken
+              , voteNftSymbol: votePassSymbol
+              , voteNftTokenName: votePassTokenName
+              , fungibleSymbol: fungibleSymbol
+              , fungibleTokenName: fungibleTokenName
+              }
+          cancelVoteTxHash <- cancelVote cancelVoteParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) cancelVoteTxHash
 
           pure unit

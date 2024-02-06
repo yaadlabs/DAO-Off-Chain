@@ -62,6 +62,7 @@ import Scripts.TallyPolicy (unappliedTallyPolicyDebug)
 import Scripts.TallyValidator (unappliedTallyValidatorDebug)
 import Scripts.TreasuryValidator (unappliedTreasuryValidator)
 import Scripts.VoteNft (voteNftPolicy)
+import Scripts.VotePolicy (unappliedVotePolicyDebug)
 import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for creating dynamic config datum and locking
@@ -143,6 +144,8 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
       configValidatorParams
     appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
       configValidatorParams
+    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug
+      configValidatorParams
     voteNftPolicy' :: MintingPolicy <- voteNftPolicy
     appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
@@ -161,6 +164,9 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
 
       voteNftSymbol :: CurrencySymbol
       voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
+
+      voteSymbol :: CurrencySymbol
+      voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
       tallyNftSymbol :: CurrencySymbol
       tallyNftSymbol = scriptCurrencySymbol appliedTallyPolicy
@@ -191,7 +197,7 @@ buildDynamicConfig configParams (txInput /\ txInputWithScript) =
 
         -- Symbols and token names
         , tallyNft: tallyNftSymbol
-        , voteCurrencySymbol: configParams.voteCurrencySymbol
+        , voteCurrencySymbol: voteSymbol
         , voteTokenName: configParams.voteTokenName
         , voteNft: voteNftSymbol
         , voteFungibleCurrencySymbol: configParams.voteFungibleCurrencySymbol
