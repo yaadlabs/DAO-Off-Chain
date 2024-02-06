@@ -5,21 +5,17 @@ Description: Test the treasury general workflow
 module Test.Workflow.TreasuryGeneral (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Log (logInfo')
+import Contract.Chain (waitNSlots)
 import Contract.Monad (liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
   , bind
   , discard
-  , pure
-  , show
-  , show
-  , unit
   , void
   , ($)
   , (/\)
-  , (<>)
   )
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
@@ -74,6 +70,7 @@ suite = do
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
             createVotePass userPkh
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
             createFungible userPkh (BigInt.fromInt 400)
@@ -82,6 +79,7 @@ suite = do
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             sampleConfigParams :: ConfigParams
@@ -105,13 +103,14 @@ suite = do
               , fungibleVotePercent: BigInt.fromInt 10
 
               -- Index needed for making tallyNft
-              , indexSymbol: indexSymbol
-              , indexTokenName: indexTokenName
+              , indexSymbol
+              , indexTokenName
               }
 
           (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             treasuryFundParams =
@@ -139,10 +138,11 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams =
-              { configSymbol: configSymbol
+              { configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
               -- Vote NFT (voting pass) symbol and token name
@@ -151,16 +151,17 @@ suite = do
               -- Fungible
               , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
-              , proposalTokenName: proposalTokenName
+              , proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+          (voteOnProposalTxHash /\ _voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             countVoteParams =
@@ -191,5 +192,3 @@ suite = do
           treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
-
--- pure unit
