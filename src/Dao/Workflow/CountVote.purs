@@ -167,7 +167,7 @@ countVote params = do
         , voteConstraints
         , configInfo.constraints
         , tallyInfo.constraints
-        -- , Constraints.mustValidateIn onchainTimeRange
+        , Constraints.mustValidateIn onchainTimeRange
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
