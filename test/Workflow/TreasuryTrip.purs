@@ -13,8 +13,6 @@ import Contract.Prelude
   , bind
   , discard
   , pure
-  , show
-  , show
   , void
   , ($)
   , (/\)
