@@ -28,7 +28,6 @@ import Test.Workflow.CancelVote as CancelVote
 import Test.Workflow.CountVote as CountVote
 import Test.Workflow.TreasuryGeneral as TreasuryGeneral
 import Test.Workflow.TreasuryTrip as TreasuryTrip
-import Test.Workflow.UpgradeConfig as UpgradeConfig
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
@@ -40,7 +39,6 @@ main = interruptOnSignal SIGINT =<< launchAff do
         CountVote.suite
         TreasuryGeneral.suite
         TreasuryTrip.suite
-        UpgradeConfig.suite
 
 plutipConfig :: PlutipConfig
 plutipConfig =
