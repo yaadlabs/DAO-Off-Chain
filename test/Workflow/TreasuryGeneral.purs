@@ -1,24 +1,21 @@
 {-|
-Module: Test.Workflow.CountVote
-Description: Test the count vote workflow
+Module: Test.Workflow.TreasuryGeneral
+Description: Test the treasury general workflow
 -}
-module Test.Workflow.CountVote (suite) where
+module Test.Workflow.TreasuryGeneral (suite) where
 
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Log (logInfo')
+import Contract.Chain (waitNSlots)
 import Contract.Monad (liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
   , bind
   , discard
-  , pure
-  , show
-  , show
   , void
   , ($)
   , (/\)
-  , (<>)
   )
 import Contract.Test.Mote (TestPlanM)
 import Contract.Test.Plutip
@@ -29,26 +26,32 @@ import Contract.Test.Plutip
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (adaSymbol, adaToken)
-import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Wallet
+  ( getWalletAddress
+  , ownPaymentPubKeyHash
+  )
 import Dao.Component.Config.Params (ConfigParams)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
+import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
+import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal (voteOnProposal)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
+import Test.Data.Address (dummyAddress)
 import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
-    test "Count votes on proposal test" do
+    test "Treasury general test" do
       let
         distribution :: (Array BigInt /\ Array BigInt)
         distribution =
@@ -60,12 +63,14 @@ suite = do
           liftedM "Could not get wallet address" getWalletAddress
 
         withKeyWallet walletOne do
+
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
 
           (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
             createVotePass userPkh
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
             createFungible userPkh (BigInt.fromInt 400)
@@ -74,6 +79,7 @@ suite = do
           (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
             createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             sampleConfigParams :: ConfigParams
@@ -85,8 +91,8 @@ suite = do
               , generalRelativeMajorityPercent: BigInt.fromInt 0
               , tripMajorityPercent: BigInt.fromInt 0
               , tripRelativeMajorityPercent: BigInt.fromInt 0
-              , totalVotes: BigInt.fromInt 0
-              , maxGeneralDisbursement: BigInt.fromInt 0
+              , totalVotes: BigInt.fromInt 1
+              , maxGeneralDisbursement: BigInt.fromInt 200_000_000
               , maxTripDisbursement: BigInt.fromInt 0
               , agentDisbursementPercent: BigInt.fromInt 0
               , proposalTallyEndOffset: BigInt.fromInt 0
@@ -97,13 +103,26 @@ suite = do
               , fungibleVotePercent: BigInt.fromInt 10
 
               -- Index needed for making tallyNft
-              , indexSymbol: indexSymbol
-              , indexTokenName: indexTokenName
+              , indexSymbol
+              , indexTokenName
               }
 
           (createConfigTxHash /\ configSymbol /\ configTokenName) <-
             createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
+
+          let
+            treasuryFundParams =
+              { adaAmount: BigInt.fromInt 200_000_000
+              , configSymbol: configSymbol
+              , configTokenName: configTokenName
+              }
+
+          (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
+            treasuryFundParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
 
           let
             sampleTallyStateDatum' = sampleGeneralProposalTallyStateDatum
@@ -119,10 +138,11 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             voteParams =
-              { configSymbol: configSymbol
+              { configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
               -- Vote NFT (voting pass) symbol and token name
@@ -131,16 +151,17 @@ suite = do
               -- Fungible
               , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
-              , proposalTokenName: proposalTokenName
+              , proposalTokenName
               , voteDirection: VoteDirection'For
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
+          (voteOnProposalTxHash /\ _voteOnProposalSymbol) <- voteOnProposal
             voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 2)
 
           let
             countVoteParams =
@@ -159,3 +180,15 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             countVoteTxHash
+
+          let
+            treasuryGeneralParams =
+              { configSymbol: configSymbol
+              , configTokenName: configTokenName
+              , tallySymbol: proposalSymbol
+              , treasurySymbol: treasuryFundSymbol
+              }
+
+          treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash

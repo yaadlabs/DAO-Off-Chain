@@ -1,11 +1,16 @@
 {-|
 Module: Dao.Component.Config.Params
-Description: Helpers for create config workflow
+Description: Config helpers
 -}
-module Dao.Component.Config.Params (ConfigParams, mkValidatorConfig) where
+module Dao.Component.Config.Params
+  ( ConfigParams
+  , UpgradeConfigParams
+  , mkValidatorConfig
+  ) where
 
 import Contract.Value (CurrencySymbol, TokenName)
 import JS.BigInt (BigInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
@@ -34,8 +39,18 @@ type ConfigParams =
   , indexTokenName :: TokenName
   }
 
+-- | Parameters passed for the upgrade config proposal contract
+type UpgradeConfigParams =
+  { newDynamicConfigDatum :: DynamicConfigDatum
+  , configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , tallySymbol :: CurrencySymbol
+  }
+
 mkValidatorConfig ::
-  CurrencySymbol -> TokenName -> ConfigurationValidatorConfig
+  CurrencySymbol ->
+  TokenName ->
+  ConfigurationValidatorConfig
 mkValidatorConfig symbol tokenName =
   ConfigurationValidatorConfig
     { cvcConfigNftCurrencySymbol: symbol

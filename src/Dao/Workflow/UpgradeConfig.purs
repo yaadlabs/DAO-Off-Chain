@@ -1,138 +1,159 @@
 {-|
 Module: Dao.Workflow.UpgradeConfig
-Description: Contract for upgrading a the dynamic config based on an upgrade proposal
+Description: Contract for upgrading the dynamic config based on an upgrade proposal
 -}
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
-import Contract.Address (scriptHashAddress)
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
-import Contract.PlutusData (Datum(Datum), toData, unitRedeemer)
+import Contract.Monad (Contract)
+import Contract.Numeric.Natural (fromInt') as Natural
+import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , one
   , pure
+  , unwrap
+  , void
+  , (#)
   , ($)
-  , (/\)
+  , (*)
+  , (+)
+  , (/)
+  , (>=)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
+import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
+  ( Value
+  , adaToken
+  , scriptCurrencySymbol
+  , singleton
   )
-import Contract.Value (singleton) as Value
-import Dao.Utils.Query (findUtxoByValue)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
+import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
+import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Utils.Error (guardContract)
+import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
+import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.UpgradePolicy (upgradePolicy)
 
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
-
+-- | Contract for upgrading the dynamic config based on an upgrade proposal
 upgradeConfig ::
-  ConfigurationValidatorConfig ->
-  TallyInfo ->
-  DynamicConfigDatum ->
+  UpgradeConfigParams ->
   Contract TransactionHash
-upgradeConfig validatorConfig tallyInfo newDynamicConfigDatum = do
-  logInfo' "Entering upgradeConfig transaction"
+upgradeConfig params =
+  do
+    logInfo' "Entering upgradeConfig transaction"
 
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
-    validatorConfig
+    -- Make the scripts
+    let
+      validatorConfig = mkValidatorConfig params.configSymbol
+        params.configTokenName
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+      validatorConfig
+    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+      validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
+    -- Query the UTXOs
+    configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
+      appliedConfigValidator
+    tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
+      appliedTallyValidator
 
-  let
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
+    -- Make on-chain time range
+    timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
+    onchainTimeRange <- mkOnchainTimeRange timeRange
 
-  (configUtxoTxInput /\ configUtxoTxOutRefScript) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
-  (tallyUtxoTxInput /\ _) <-
-    liftedM "Could not find tally UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
+    void $ waitNSlots (Natural.fromInt' 10)
 
-  let
-    newConfigDatum :: Datum
-    newConfigDatum = Datum $ toData newDynamicConfigDatum
+    let
+      newConfigDatum :: Datum
+      newConfigDatum = Datum $ toData params.newDynamicConfigDatum
 
-    configNft :: Value
-    configNft =
-      let
-        ( ConfigurationValidatorConfig
-            { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-        ) = validatorConfig
-      in
-        (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
+      configValidatorHash :: ValidatorHash
+      configValidatorHash = validatorHash appliedConfigValidator
 
-    configValidatorHash :: ValidatorHash
-    configValidatorHash = validatorHash appliedConfigValidator
+      oldDynamicConfig :: DynamicConfigDatum
+      oldDynamicConfig = configInfo.datum
 
-    -- TODO: Need to include an upgrade policy in the lookups
-    lookups :: Lookups.ScriptLookups
-    lookups =
-      mconcat
-        [ Lookups.unspentOutputs $ Map.singleton configUtxoTxInput
-            configUtxoTxOutRefScript
-        ]
+      tallyDatum :: TallyStateDatum
+      tallyDatum = tallyInfo.datum
 
-    -- TODO: Need to include mustMintValue via an upgrade policy here too
-    constraints :: Constraints.TxConstraints
-    constraints =
-      mconcat
-        [ Constraints.mustPayToScript
-            configValidatorHash
-            (Datum $ toData newConfigDatum)
-            Constraints.DatumInline
-            configNft
-        , Constraints.mustSpendScriptOutput configUtxoTxInput unitRedeemer
-        , Constraints.mustReferenceOutput tallyUtxoTxInput
-        ]
+      votesFor :: BigInt
+      votesFor = tallyDatum # unwrap # _.for
 
-  txHash <- submitTxFromConstraints lookups constraints
+      votesAgainst :: BigInt
+      votesAgainst = tallyDatum # unwrap # _.against
 
-  pure txHash
-  where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
+      totalVotes :: BigInt
+      totalVotes = votesFor + votesAgainst
 
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
+      configTotalVotes :: BigInt
+      configTotalVotes = oldDynamicConfig # unwrap # _.totalVotes
+
+      relativeMajority :: BigInt
+      relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
+
+      majorityPercent :: BigInt
+      majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
+
+      configUpgradeRelativeMajorityPercent :: BigInt
+      configUpgradeRelativeMajorityPercent = oldDynamicConfig # unwrap #
+        _.upgradeRelativeMajorityPercent
+
+      configUpgradeMajorityPercent :: BigInt
+      configUpgradeMajorityPercent = oldDynamicConfig # unwrap #
+        _.upgradeMajorityPercent
+
+    -- Check for sufficient votes
+    guardContract "Relative majority is too low" $ relativeMajority >=
+      configUpgradeRelativeMajorityPercent
+    guardContract "Majority percent is too low" $ majorityPercent >=
+      configUpgradeMajorityPercent
+
+    upgradePolicy' <- upgradePolicy
+
+    let
+      -- We use an always succeeds policy as a placeholder for this requirement
+      upgradeToken :: Value
+      upgradeToken = singleton (scriptCurrencySymbol upgradePolicy') adaToken
+        one
+
+      lookups :: Lookups.ScriptLookups
+      lookups =
+        mconcat
+          [ configInfo.lookups
+          , tallyInfo.lookups
+          , Lookups.mintingPolicy upgradePolicy'
+          ]
+
+      constraints :: Constraints.TxConstraints
+      constraints =
+        mconcat
+          [ Constraints.mustPayToScript
+              configValidatorHash
+              (Datum $ toData newConfigDatum)
+              Constraints.DatumInline
+              configInfo.value
+          , Constraints.mustMintValue upgradeToken
+          , Constraints.mustValidateIn onchainTimeRange
+          , configInfo.constraints
+          , tallyInfo.constraints
+          ]
+
+    txHash <- submitTxFromConstraints lookups constraints
+
+    pure txHash

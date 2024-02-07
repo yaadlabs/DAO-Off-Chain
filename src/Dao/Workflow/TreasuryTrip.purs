@@ -4,135 +4,187 @@ Description: Contract for disbursing treasury funds based on a trip proposal
 -}
 module Dao.Workflow.TreasuryTrip (treasuryTrip) where
 
-import Contract.Address (Address, scriptHashAddress)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
-import Contract.PlutusData
-  ( Datum(Datum)
-  , Redeemer(Redeemer)
-  , toData
-  , unitDatum
-  , unitRedeemer
-  )
+import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData (unitDatum)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
+  , min
   , pure
+  , unwrap
+  , (#)
   , ($)
-  , (/\)
+  , (*)
+  , (+)
+  , (-)
+  , (/)
+  , (>=)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
   , Value
+  , adaSymbol
+  , adaToken
+  , singleton
   )
-import Contract.Value (singleton) as Value
-import Dao.Utils.Query (findUtxoByValue)
-import Data.Map as Map
-import Data.Maybe (Maybe(Nothing))
-import JS.BigInt as BigInt
+import Dao.Component.Config.Params (mkValidatorConfig)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
+import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Component.Treasury.Params (TreasuryParams)
+import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
+import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Error (guardContract)
+import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
+import Data.Maybe (Maybe(Just, Nothing))
+import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import Scripts.ConfigValidator (unappliedConfigValidator)
-import Scripts.TallyValidator (unappliedTallyValidator)
-import Scripts.TreasuryValidator (unappliedTreasuryValidator)
+import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
+import Scripts.TallyValidator (unappliedTallyValidatorDebug)
+import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
-type TallyInfo = { tallySymbol :: CurrencySymbol, tallyTokenName :: TokenName }
-type TreasuryInfo =
-  { treasurySymbol :: CurrencySymbol
-  , treasuryTokenName :: TokenName
-  , travelAgentAddress :: Address
-  , travellerAddress :: Address
-  }
-
-treasuryTrip ::
-  ConfigurationValidatorConfig ->
-  TallyInfo ->
-  TreasuryInfo ->
-  DynamicConfigDatum ->
-  Contract TransactionHash
-treasuryTrip validatorConfig tallyInfo treasuryInfo newDynamicConfigDatum = do
+-- | Contract for disbursing treasury funds based on a trip proposal
+treasuryTrip :: TreasuryParams -> Contract TransactionHash
+treasuryTrip params = do
   logInfo' "Entering treasuryTrip transaction"
 
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  -- Make the scripts
+  let
+    validatorConfig = mkValidatorConfig params.configSymbol
+      params.configTokenName
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    validatorConfig
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
-  let
-    configValidatorAddress = scriptHashAddress
-      (validatorHash appliedConfigValidator)
-      Nothing
-  configValidatorUtxoMap <- utxosAt configValidatorAddress
+  -- Query the UTXOs
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
+    appliedConfigValidator
+  tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
+    appliedTallyValidator
+  treasuryInfo :: TreasuryInfo <-
+    spendTreasuryUtxo
+      params.treasurySymbol
+      appliedTreasuryValidator
 
   let
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
-  tallyValidatorUtxoMap <- utxosAt tallyValidatorAddress
+    dynamicConfig :: DynamicConfigDatum
+    dynamicConfig = configInfo.datum
+
+    tallyDatum :: TallyStateDatum
+    tallyDatum = tallyInfo.datum
+
+  -- Get the treasury payment info from the 'TallyStateDatum'
+  travelAgentAddress :: Address <- liftContractM "Not a trip proposal" $
+    getTravelAgentAddress tallyDatum
+  travellerAddress :: Address <- liftContractM "Not a trip proposal" $
+    getTravellerAddress tallyDatum
+  totalTravelCost :: BigInt <- liftContractM "Not a trip proposal" $
+    getTravelCost tallyDatum
+
+  travelAgentPaymentKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key" $
+      addressToPaymentPubKeyHash travelAgentAddress
+  travellerPaymentKey :: PaymentPubKeyHash <-
+    liftContractM "Could not convert address to key" $
+      addressToPaymentPubKeyHash travellerAddress
 
   let
-    treasuryValidatorAddress = scriptHashAddress
-      (validatorHash appliedTreasuryValidator)
-      Nothing
-  treasuryValidatorUtxoMap <- utxosAt treasuryValidatorAddress
+    votesFor :: BigInt
+    votesFor = tallyDatum # unwrap # _.for
 
-  (configUtxoTxInput /\ configUtxoTxOutRefScript) <-
-    liftedM "Could not find config UTXO" $ getConfigUtxo validatorConfig
-      configValidatorUtxoMap
+    votesAgainst :: BigInt
+    votesAgainst = tallyDatum # unwrap # _.against
 
-  (treasuryUtxoTxInput /\ treasuryUtxoTxOutRefScript) <-
-    liftedM "Could not find treasury UTXO" $ getTreasuryUtxo treasuryInfo
-      treasuryValidatorUtxoMap
+    totalVotes :: BigInt
+    totalVotes = votesFor + votesAgainst
 
-  (tallyUtxoTxInput /\ _) <-
-    liftedM "Could not find tally UTXO" $ getTallyUtxo tallyInfo
-      tallyValidatorUtxoMap
+    configTotalVotes :: BigInt
+    configTotalVotes = dynamicConfig # unwrap # _.totalVotes
+
+    relativeMajority :: BigInt
+    relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
+
+    majorityPercent :: BigInt
+    majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
+
+    configTripRelativeMajorityPercent :: BigInt
+    configTripRelativeMajorityPercent = dynamicConfig # unwrap #
+      _.tripRelativeMajorityPercent
+
+    configTripMajorityPercent :: BigInt
+    configTripMajorityPercent = dynamicConfig # unwrap # _.tripMajorityPercent
+
+    configMaxTripDisbursement :: BigInt
+    configMaxTripDisbursement = dynamicConfig # unwrap # _.maxTripDisbursement
+
+    configAgentDisbursementPercent :: BigInt
+    configAgentDisbursementPercent = dynamicConfig # unwrap #
+      _.agentDisbursementPercent
+
+    disbursementAmount :: BigInt
+    disbursementAmount = min configMaxTripDisbursement totalTravelCost
+
+    disbursementAmountLovelaces :: Value
+    disbursementAmountLovelaces = singleton adaSymbol adaToken
+      disbursementAmount
+
+    treasuryInputAmount :: Value
+    treasuryInputAmount = treasuryInfo.value
+
+    amountToSendBackToTreasuryLovelaces :: Value
+    amountToSendBackToTreasuryLovelaces = normaliseValue
+      (valueSubtraction treasuryInputAmount disbursementAmountLovelaces)
+
+    amountToSendToTravelAgent :: BigInt
+    amountToSendToTravelAgent =
+      (totalTravelCost * configAgentDisbursementPercent) / (fromInt 1000)
+
+    amountToSendToTraveller :: BigInt
+    amountToSendToTraveller = totalTravelCost - amountToSendToTravelAgent
+
+    amountToSendToTravelAgentLovelaces :: Value
+    amountToSendToTravelAgentLovelaces = singleton adaSymbol adaToken
+      amountToSendToTravelAgent
+
+    amountToSendToTravellerLovelaces :: Value
+    amountToSendToTravellerLovelaces = singleton adaSymbol adaToken
+      amountToSendToTraveller
+
+  -- Check that the treasury input amount covers the payment amount
+  guardContract "Not enough treasury funds to cover payment" $ allPositive
+    amountToSendBackToTreasuryLovelaces
+
+  -- Check for sufficient votes
+  guardContract "Relative majority is too low" $ relativeMajority >=
+    configTripRelativeMajorityPercent
+  guardContract "Majority percent is too low" $ majorityPercent >=
+    configTripMajorityPercent
 
   let
-    -- TODO: Just a placeholder
-    totalCost :: BigInt.BigInt
-    totalCost = BigInt.fromInt 5
-
-    newConfigDatum :: Datum
-    newConfigDatum = Datum $ toData newDynamicConfigDatum
-
-    treasuryNft :: Value
-    treasuryNft = Value.singleton (treasuryInfo.treasurySymbol)
-      (treasuryInfo.treasuryTokenName)
-      one
-
     treasuryValidatorHash :: ValidatorHash
     treasuryValidatorHash = validatorHash appliedTreasuryValidator
-
-    treasuryRedeemer :: Redeemer
-    treasuryRedeemer = Redeemer $ toData $ ProposalType'Trip
-      (treasuryInfo.travelAgentAddress)
-      (treasuryInfo.travellerAddress)
-      totalCost
 
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
-        [ Lookups.unspentOutputs $ Map.singleton treasuryUtxoTxInput
-            treasuryUtxoTxOutRefScript
+        [ configInfo.lookups
+        , tallyInfo.lookups
+        , treasuryInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -142,39 +194,45 @@ treasuryTrip validatorConfig tallyInfo treasuryInfo newDynamicConfigDatum = do
             treasuryValidatorHash
             unitDatum
             Constraints.DatumInline
-            treasuryNft
-        , Constraints.mustSpendScriptOutput treasuryUtxoTxInput treasuryRedeemer
-        , Constraints.mustReferenceOutput tallyUtxoTxInput
-        , Constraints.mustReferenceOutput configUtxoTxInput
+            amountToSendBackToTreasuryLovelaces
+        , Constraints.mustPayToPubKey
+            travellerPaymentKey
+            amountToSendToTravellerLovelaces
+        , Constraints.mustPayToPubKey
+            travelAgentPaymentKey
+            amountToSendToTravelAgentLovelaces
+        , treasuryInfo.constraints
+        , configInfo.constraints
+        , tallyInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
   pure txHash
   where
-  getConfigUtxo ::
-    ConfigurationValidatorConfig ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getConfigUtxo
-    ( ConfigurationValidatorConfig
-        { cvcConfigNftCurrencySymbol, cvcConfigNftTokenName }
-    ) =
-    findUtxoByValue
-      (Value.singleton cvcConfigNftCurrencySymbol cvcConfigNftTokenName one)
+  getTravelAgentAddress :: TallyStateDatum -> Maybe Address
+  getTravelAgentAddress tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip address _ _) -> Just address
+        _ -> Nothing
 
-  getTallyUtxo ::
-    TallyInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTallyUtxo ({ tallySymbol, tallyTokenName }) =
-    findUtxoByValue
-      (Value.singleton tallySymbol tallyTokenName one)
+  getTravellerAddress :: TallyStateDatum -> Maybe Address
+  getTravellerAddress tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip _ address _) -> Just address
+        _ -> Nothing
 
-  getTreasuryUtxo ::
-    TreasuryInfo ->
-    UtxoMap ->
-    Contract (Maybe (TransactionInput /\ TransactionOutputWithRefScript))
-  getTreasuryUtxo ({ treasurySymbol, treasuryTokenName }) =
-    findUtxoByValue
-      (Value.singleton treasurySymbol treasuryTokenName one)
+  getTravelCost :: TallyStateDatum -> Maybe BigInt
+  getTravelCost tallyDatum =
+    let
+      proposalType = tallyDatum # unwrap # _.proposal
+    in
+      case proposalType of
+        (ProposalType'Trip _ _ amount) -> Just amount
+        _ -> Nothing
