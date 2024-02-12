@@ -151,7 +151,6 @@ countVote params' = do
       params.proposalTokenName
       voteTokenName
       fungiblePercent
-      appliedVotePolicy
       voteUtxos
 
   -- Make on-chain time range
@@ -200,6 +199,7 @@ countVote params' = do
       , tallyInfo.lookups
       , configInfo.lookups
       , Lookups.validator appliedVoteValidator
+      , Lookups.mintingPolicy appliedVotePolicy
       ]
 
     constraints :: Constraints.TxConstraints

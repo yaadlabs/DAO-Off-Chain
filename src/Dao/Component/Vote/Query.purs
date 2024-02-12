@@ -83,7 +83,6 @@ mkAllVoteConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
-  MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract
     ( Array
@@ -98,7 +97,6 @@ mkAllVoteConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
-  votePolicyScript
   utxos =
   traverse
     ( mkVoteUtxoConstraintsAndLookups
@@ -108,7 +106,6 @@ mkAllVoteConstraintsAndLookups
         proposalTokenName
         voteTokenName
         fungiblePercent
-        votePolicyScript
     )
     (Map.toUnfoldableUnordered utxos)
 
@@ -122,7 +119,6 @@ mkVoteUtxoConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
-  MintingPolicy ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   Contract
     ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
@@ -135,7 +131,6 @@ mkVoteUtxoConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
-  votePolicyScript
   (txIn /\ txOut) =
   do
     logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
@@ -204,7 +199,6 @@ mkVoteUtxoConstraintsAndLookups
       lookups' = mconcat
         [ Lookups.unspentOutputs $
             Map.singleton txIn txOut
-        , Lookups.mintingPolicy votePolicyScript
         ]
 
       constraints' :: Constraints.TxConstraints
