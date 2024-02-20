@@ -6,6 +6,7 @@ You can edit this file as you like.
 , dependencies =
   [ "aeson"
   , "aff"
+  , "aff-promise"
   , "arraybuffer"
   , "arraybuffer-types"
   , "arrays"
@@ -24,6 +25,7 @@ You can edit this file as you like.
   , "js-bigints"
   , "lambda-buffers"
   , "maybe"
+  , "monad-logger"
   , "mote"
   , "newtype"
   , "node-buffer"
@@ -36,6 +38,7 @@ You can edit this file as you like.
   , "quickcheck-utf8"
   , "spec"
   , "strings"
+  , "transformers"
   , "tuples"
   , "uint"
   , "unfoldable"
@@ -49,6 +52,5 @@ You can edit this file as you like.
   , ".spago/lambda-buffers/617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a/runtimes/purescript/lbr-plutus/**/*.purs"
   , "types/LambdaBuffers/**/*.purs"
   , "types/ScriptArguments/**/*.purs"
-  , "scripts/**/*.purs"
   ]
 }

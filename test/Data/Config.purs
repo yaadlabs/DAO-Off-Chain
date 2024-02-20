@@ -4,12 +4,11 @@ import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, unwrap, (#), ($))
 import Contract.Scripts (ScriptHash, validatorHash)
 import Contract.Value (adaSymbol, adaToken)
-import Dao.Component.Config.Params (ConfigParams)
+import Dao.Scripts.Validator.AlwaysSucceeds (alwaysSucceedsValidatorScript)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   )
-import Scripts.AlwaysSucceeds (alwaysSucceedsValidatorScript)
 
 -- | Used for the 'new config' when running the 'upgradeConfig' workflow test
 dummyNewConfig :: Contract DynamicConfigDatum

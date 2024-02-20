@@ -43,6 +43,9 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, spendVoteUtxo)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Value (countOfTokenInValue)
 import Data.Newtype (unwrap)
@@ -51,16 +54,15 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.VotePolicy (unappliedVotePolicyDebug)
-import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for cancelling a vote
 cancelVote ::
   CancelVoteParams ->
   Contract TransactionHash
-cancelVote params = do
+cancelVote params' = do
   logInfo' "Entering cancelVote transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

@@ -2,7 +2,10 @@
 Module: Dao.Workflow.VoteOnProposal
 Description: Contract for voting on a proposal
 -}
-module Dao.Workflow.VoteOnProposal (voteOnProposal) where
+module Dao.Workflow.VoteOnProposal
+  ( VoteOnProposalResult(..)
+  , voteOnProposal
+  ) where
 
 import Contract.Address (Address)
 import Contract.Chain (waitNSlots)
@@ -17,7 +20,6 @@ import Contract.Prelude
   , mconcat
   , one
   , pure
-  , show
   , unwrap
   , void
   , (#)
@@ -46,6 +48,10 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
@@ -57,23 +63,27 @@ import LambdaBuffers.ApplicationTypes.Vote
 import ScriptArguments.Types
   ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
   )
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidatorDebug)
-import Scripts.VotePolicy (unappliedVotePolicyDebug)
-import Scripts.VoteValidator (unappliedVoteValidatorDebug)
+
+-- | Vote result
+newtype VoteOnProposalResult = VoteOnProposalResult
+  { txHash :: TransactionHash
+  , symbol :: CurrencySymbol
+  }
 
 -- | Contract for voting on a specific proposal
 voteOnProposal ::
   VoteOnProposalParams ->
-  Contract (TransactionHash /\ CurrencySymbol)
-voteOnProposal voteParams = do
+  Contract VoteOnProposalResult
+voteOnProposal params' = do
   logInfo' "Entering voteOnProposal transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let
     validatorConfig = ConfigurationValidatorConfig
-      { cvcConfigNftCurrencySymbol: voteParams.configSymbol
-      , cvcConfigNftTokenName: voteParams.configTokenName
+      { cvcConfigNftCurrencySymbol: params.configSymbol
+      , cvcConfigNftTokenName: params.configTokenName
       }
 
   appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
@@ -85,9 +95,9 @@ voteOnProposal voteParams = do
     validatorConfig
 
   -- Query the UTXOs
-  configInfo :: ConfigInfo <- referenceConfigUtxo voteParams.configSymbol
+  configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
     appliedConfigValidator
-  tallyInfo :: TallyInfo <- referenceTallyUtxo voteParams.tallySymbol
+  tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
     appliedTallyValidator
 
   -- Make the on-chain time range
@@ -101,13 +111,14 @@ voteOnProposal voteParams = do
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 
+  voteNftToken <- spendVoteNftUtxo params.voteNftSymbol userUtxos
   -- Look for the 'voteNft' UTXO,
   -- get the constraints and lookups to spend this UTXO if found
-  voteNftInfo <- spendVoteNftUtxo voteParams.voteNftSymbol userUtxos
+  voteNftInfo <- spendVoteNftUtxo params.voteNftSymbol userUtxos
 
   -- Look for the 'voteFungibleCurrencySymbol' UTXO,
   -- get the constraints and lookups to spend this UTXO if found
-  fungibleInfo <- spendFungibleUtxo voteParams.fungibleSymbol userUtxos
+  fungibleInfo <- spendFungibleUtxo params.fungibleSymbol userUtxos
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -116,9 +127,9 @@ voteOnProposal voteParams = do
 
     voteDatum :: VoteDatum
     voteDatum = VoteDatum
-      { proposalTokenName: voteParams.proposalTokenName
-      , direction: voteParams.voteDirection
-      , returnAda: voteParams.returnAda
+      { proposalTokenName: params.proposalTokenName
+      , direction: params.voteDirection
+      , returnAda: params.returnAda
       , voteOwner: ownerAddress
       }
 
@@ -126,7 +137,7 @@ voteOnProposal voteParams = do
     voteSymbol = scriptCurrencySymbol appliedVotePolicy
 
     voteValue :: Value
-    voteValue = Value.singleton voteSymbol voteParams.voteTokenName one
+    voteValue = Value.singleton voteSymbol params.voteTokenName one
 
     votePolicyRedeemer :: Redeemer
     votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint
@@ -162,4 +173,4 @@ voteOnProposal voteParams = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ voteSymbol)
+  pure $ VoteOnProposalResult { txHash, symbol: voteSymbol }

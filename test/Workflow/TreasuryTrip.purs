@@ -32,7 +32,19 @@ import Contract.Wallet
   , getWalletCollateral
   , ownPaymentPubKeyHash
   )
-import Dao.Component.Config.Params (ConfigParams)
+import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
+import Dao.Component.Fungible.Params
+  ( CreateFungibleParams(CreateFungibleParams)
+  )
+import Dao.Component.Proposal.Params
+  ( CreateProposalParams(CreateProposalParams)
+  )
+import Dao.Component.Treasury.Params (TreasuryParams(TreasuryParams))
+import Dao.Component.Vote.Params
+  ( CountVoteParams(CountVoteParams)
+  , VoteOnProposalParams(VoteOnProposalParams)
+  )
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
@@ -41,7 +53,10 @@ import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.TreasuryTrip (treasuryTrip)
-import Dao.Workflow.VoteOnProposal (voteOnProposal)
+import Dao.Workflow.VoteOnProposal
+  ( VoteOnProposalResult(VoteOnProposalResult)
+  , voteOnProposal
+  )
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
@@ -74,21 +89,35 @@ suite = do
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
 
-          (votePassTxHash /\ votePassSymbol /\ votePassTokenName) <-
-            createVotePass userPkh
+          ContractResult
+            { txHash: votePassTxHash
+            , symbol: votePassSymbol
+            , tokenName: votePassTokenName
+            } <- createVotePass userPkh
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
 
-          (fungibleTxHash /\ fungibleSymbol /\ fungibleTokenName) <-
-            createFungible userPkh (BigInt.fromInt 400)
+          let
+            fungibleParams :: CreateFungibleParams
+            fungibleParams = CreateFungibleParams
+              { userPkh, amount: BigInt.fromInt 400 }
+
+          ContractResult
+            { txHash: fungibleTxHash
+            , symbol: fungibleSymbol
+            , tokenName: fungibleTokenName
+            } <- createFungible fungibleParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) fungibleTxHash
 
-          (createIndexTxHash /\ indexSymbol /\ indexTokenName) <-
-            createIndex adaToken
+          ContractResult
+            { txHash: createIndexTxHash
+            , symbol: indexSymbol
+            , tokenName: indexTokenName
+            } <- createIndex adaToken
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
           let
-            sampleConfigParams :: ConfigParams
-            sampleConfigParams =
+            sampleConfigParams :: CreateConfigParams
+            sampleConfigParams = CreateConfigParams
               { configTokenName: adaToken
               , upgradeMajorityPercent: BigInt.fromInt 0
               , upgradeRelativeMajorityPercent: BigInt.fromInt 0
@@ -112,8 +141,11 @@ suite = do
               , indexTokenName: indexTokenName
               }
 
-          (createConfigTxHash /\ configSymbol /\ configTokenName) <-
-            createConfig sampleConfigParams
+          ContractResult
+            { txHash: createConfigTxHash
+            , symbol: configSymbol
+            , tokenName: configTokenName
+            } <- createConfig sampleConfigParams
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
 
           let
@@ -129,23 +161,31 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
 
           let
-            sampleTallyStateDatum' = sampleTripProposalTallyStateDatum
+            tallyStateDatum = sampleTripProposalTallyStateDatum
               walletTwoAddress
               walletThreeAddress
 
-            proposalParams =
-              { configSymbol, indexSymbol, configTokenName, indexTokenName }
+            proposalParams :: CreateProposalParams
+            proposalParams = CreateProposalParams
+              { configSymbol
+              , indexSymbol
+              , configTokenName
+              , indexTokenName
+              , tallyStateDatum
+              }
 
-          (createProposalTxHash /\ proposalSymbol /\ proposalTokenName) <-
-            createProposal
-              proposalParams
-              sampleTallyStateDatum'
+          ContractResult
+            { txHash: createProposalTxHash
+            , symbol: proposalSymbol
+            , tokenName: proposalTokenName
+            } <- createProposal proposalParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
 
           let
-            voteParams =
+            voteParams :: VoteOnProposalParams
+            voteParams = VoteOnProposalParams
               { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
@@ -160,14 +200,17 @@ suite = do
               , returnAda: (BigInt.fromInt 0)
               }
 
-          (voteOnProposalTxHash /\ voteOnProposalSymbol) <- voteOnProposal
-            voteParams
+          VoteOnProposalResult
+            { txHash: voteOnProposalTxHash
+            , symbol: voteOnProposalSymbol
+            } <- voteOnProposal voteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
 
           let
-            countVoteParams =
+            countVoteParams :: CountVoteParams
+            countVoteParams = CountVoteParams
               { voteNftSymbol: votePassSymbol
               , voteTokenName: adaToken
               , voteNftTokenName: votePassTokenName
@@ -185,7 +228,8 @@ suite = do
             countVoteTxHash
 
           let
-            treasuryTripParams =
+            treasuryTripParams :: TreasuryParams
+            treasuryTripParams = TreasuryParams
               { configSymbol: configSymbol
               , configTokenName: configTokenName
               , tallySymbol: proposalSymbol

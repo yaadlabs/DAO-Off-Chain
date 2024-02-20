@@ -13,6 +13,8 @@ import Contract.Prelude
   , discard
   , mconcat
   , pure
+  , unwrap
+  , (#)
   , ($)
   , (/\)
   , (<)
@@ -32,28 +34,31 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
+import Dao.Component.Fungible.Params (CreateFungibleParams)
+import Dao.Scripts.Policy.Fungible (unappliedFungiblePolicyDebug)
+import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)
 import JS.BigInt (BigInt, fromInt)
-import Scripts.FungiblePolicy (unappliedFungiblePolicyDebug)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
 createFungible ::
-  PaymentPubKeyHash ->
-  BigInt ->
-  Contract (TransactionHash /\ CurrencySymbol /\ TokenName)
-createFungible userPkh tokenAmount = do
+  CreateFungibleParams ->
+  Contract ContractResult
+createFungible params' = do
   logInfo' "Entering createVotePass transaction"
+
+  let params = params' # unwrap
 
   -- Script sets these arbitrary bounds on number of tokens allowed
   guardContract "Token amount must be greater than 0"
-    (tokenAmount > (fromInt 0))
+    (params.amount > (fromInt 0))
   guardContract "Token amount must be less than 500"
-    (tokenAmount < (fromInt 500))
+    (params.amount < (fromInt 500))
 
   appliedFungiblePolicy :: MintingPolicy <- unappliedFungiblePolicyDebug
-    tokenAmount
+    params.amount
 
   fungibleTokenName :: TokenName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
@@ -64,7 +69,8 @@ createFungible userPkh tokenAmount = do
     fungibleSymbol = scriptCurrencySymbol appliedFungiblePolicy
 
     fungibleValue :: Value
-    fungibleValue = Value.singleton fungibleSymbol fungibleTokenName tokenAmount
+    fungibleValue = Value.singleton fungibleSymbol fungibleTokenName
+      params.amount
 
     lookups :: Lookups.ScriptLookups
     lookups = mconcat [ Lookups.mintingPolicy appliedFungiblePolicy ]
@@ -72,9 +78,10 @@ createFungible userPkh tokenAmount = do
     constraints :: Constraints.TxConstraints
     constraints = mconcat
       [ Constraints.mustMintValue fungibleValue
-      , Constraints.mustPayToPubKey userPkh fungibleValue
+      , Constraints.mustPayToPubKey params.userPkh fungibleValue
       ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure (txHash /\ fungibleSymbol /\ fungibleTokenName)
+  pure $ ContractResult
+    { txHash, symbol: fungibleSymbol, tokenName: fungibleTokenName }

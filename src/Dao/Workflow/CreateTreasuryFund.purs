@@ -36,13 +36,13 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Treasury.Params (TreasuryFundParams)
+import Dao.Scripts.Policy.Treasury (unappliedTreasuryPolicyDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
 import JS.BigInt (fromInt)
-import Scripts.TreasuryPolicy (unappliedTreasuryPolicyDebug)
-import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight

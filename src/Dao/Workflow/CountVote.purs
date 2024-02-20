@@ -49,23 +49,25 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidatorDebug)
-import Scripts.VotePolicy (unappliedVotePolicyDebug)
-import Scripts.VoteValidator (unappliedVoteValidatorDebug)
 
 -- | Contract for counting the votes
 countVote ::
   CountVoteParams ->
   Contract TransactionHash
-countVote params = do
+countVote params' = do
   logInfo' "Entering countVote transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

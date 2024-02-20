@@ -40,6 +40,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
@@ -50,16 +53,15 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidatorDebug)
-import Scripts.TreasuryValidator (unappliedTreasuryValidatorDebug)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
   TreasuryParams ->
   Contract TransactionHash
-treasuryGeneral params = do
+treasuryGeneral params' = do
   logInfo' "Entering treasuryGeneral transaction"
+
+  let params = params' # unwrap
 
   -- Make the scripts
   let

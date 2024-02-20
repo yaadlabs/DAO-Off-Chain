@@ -1,20 +1,18 @@
-module Scripts.VotePolicy
+module Dao.Scripts.Policy.Vote
   ( unappliedVotePolicy
   , unappliedVotePolicyDebug
   ) where
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
-  )
-import Scripts.Utils (mkUnappliedPolicy)
+import Dao.Scripts.Utils (mkUnappliedPolicy)
+import ScriptArguments.Types (ConfigurationValidatorConfig)
 
 unappliedVotePolicy :: ConfigurationValidatorConfig -> Contract MintingPolicy
 unappliedVotePolicy = mkUnappliedPolicy
-  "./scripts/Json/Optimised/VotePolicy.json"
+  "./src/Dao/Scripts/Json/Optimised/VotePolicy.json"
 
 unappliedVotePolicyDebug ::
   ConfigurationValidatorConfig -> Contract MintingPolicy
 unappliedVotePolicyDebug = mkUnappliedPolicy
-  "./scripts/Json/Debug/VotePolicy.json"
+  "./src/Dao/Scripts/Json/Debug/VotePolicy.json"

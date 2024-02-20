@@ -3,12 +3,13 @@ Module: Dao.Component.Config.Params
 Description: Config helpers
 -}
 module Dao.Component.Config.Params
-  ( ConfigParams
-  , UpgradeConfigParams
+  ( CreateConfigParams(..)
+  , UpgradeConfigParams(..)
   , mkValidatorConfig
   ) where
 
 import Contract.Value (CurrencySymbol, TokenName)
+import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import ScriptArguments.Types
@@ -16,7 +17,7 @@ import ScriptArguments.Types
   )
 
 -- | Parameters passed when initially creating dynamic config
-type ConfigParams =
+newtype CreateConfigParams = CreateConfigParams
   { configTokenName :: TokenName
   , upgradeMajorityPercent :: BigInt
   , upgradeRelativeMajorityPercent :: BigInt
@@ -39,13 +40,17 @@ type ConfigParams =
   , indexTokenName :: TokenName
   }
 
+derive instance Newtype CreateConfigParams _
+
 -- | Parameters passed for the upgrade config proposal contract
-type UpgradeConfigParams =
+newtype UpgradeConfigParams = UpgradeConfigParams
   { newDynamicConfigDatum :: DynamicConfigDatum
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
   }
+
+derive instance Newtype UpgradeConfigParams _
 
 mkValidatorConfig ::
   CurrencySymbol ->

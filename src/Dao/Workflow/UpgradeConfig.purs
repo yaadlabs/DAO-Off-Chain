@@ -41,22 +41,25 @@ import Contract.Value
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Scripts.ConfigValidator (unappliedConfigValidatorDebug)
-import Scripts.TallyValidator (unappliedTallyValidatorDebug)
-import Scripts.UpgradePolicy (upgradePolicy)
 
 -- | Contract for upgrading the dynamic config based on an upgrade proposal
 upgradeConfig ::
   UpgradeConfigParams ->
   Contract TransactionHash
-upgradeConfig params =
+upgradeConfig params' =
   do
     logInfo' "Entering upgradeConfig transaction"
+
+    let params = params' # unwrap
 
     -- Make the scripts
     let
