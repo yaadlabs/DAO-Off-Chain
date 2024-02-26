@@ -5,11 +5,11 @@ import {
   ScriptHash,
   TransactionHash,
   TransactionInput,
-} from "@emurgo/cardano-serialization-lib-browser";
+} from "@mlabs-haskell/cardano-serialization-lib-gc";
 
 export const purescript: Promise<
   { [k: string]: any } & Foreign.PureScriptTypes
-> = import("./dist/library.js");
+> = import("./output/Dao.Web.Api");
 
 export namespace Foreign {
 
@@ -30,7 +30,7 @@ export namespace Foreign {
     addressCredential: Credential;
     addressStakingCredential: Maybe<StakingCredential>;
   }
-
+BigNum
   export declare class StakingCredential {}
   export declare class StakingHash extends StakingCredential {
     value0: Credential;
