@@ -32,6 +32,9 @@ newtype CreateConfigParams = CreateConfigParams
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: CurrencySymbol
   , voteTokenName :: TokenName
+  -- VoteNft (vote pass) symbol
+  , voteNftSymbol :: CurrencySymbol
+  -- Fungible (vote multiplier) symbol
   , voteFungibleCurrencySymbol :: CurrencySymbol
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt

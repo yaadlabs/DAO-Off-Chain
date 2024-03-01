@@ -8,8 +8,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , one
@@ -18,14 +17,15 @@ import Contract.Prelude
   , (#)
   , ($)
   , (+)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
   )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
@@ -42,12 +42,12 @@ import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
 
 -- | Contract for creating a proposal
@@ -59,11 +59,10 @@ createProposal params' = do
 
   let params = params' # unwrap
 
+  -- Make the scripts
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
-    validatorConfig
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   indexValidator :: Validator <- indexValidatorScriptDebug
@@ -74,6 +73,7 @@ createProposal params' = do
   indexInfo :: IndexInfo <- spendIndexUtxo params.indexSymbol
     indexValidator
 
+  -- Make the tally policy script
   let
     tallyConfig = mkTallyConfig params.configSymbol
       params.indexSymbol
@@ -88,22 +88,31 @@ createProposal params' = do
     updatedIndexDatum = incrementIndexDatum indexInfo.datum
 
   -- The tally token name corresponds to the index field of the index datum
+  -- Hence we use that to make the token here
   tallyTokenName :: TokenName <-
     liftContractM "Could not make tally token name" $
       mkTallyTokenName indexInfo.datum
 
   let
+    -- The main config referenced at the config UTXO
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
+
+    -- We need to send the tally datum to the tally validator
+    tallyValidatorHash :: ValidatorHash
+    tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
+
     tallySymbol :: CurrencySymbol
     tallySymbol = scriptCurrencySymbol appliedTallyPolicy
 
-    indexValidatorHash :: ValidatorHash
-    indexValidatorHash = validatorHash indexValidator
-
-    tallyValidatorHash :: ValidatorHash
-    tallyValidatorHash = validatorHash appliedTallyValidator
-
+    -- The token that will mark the UTXO at the tally validator
+    -- containing the new tally datum passed by the user
     tallyNft :: Value
     tallyNft = Value.singleton tallySymbol tallyTokenName one
+
+    -- We need to send the updated index datum to the index validator
+    indexValidatorHash :: ValidatorHash
+    indexValidatorHash = validatorHash indexValidator
 
     lookups :: Lookups.ScriptLookups
     lookups =
@@ -123,11 +132,15 @@ createProposal params' = do
             (Datum $ toData $ params.tallyStateDatum)
             Constraints.DatumInline
             tallyNft
+        -- ^ We pay the newly created tally datum (passed as an argument by the user)
+        -- to a UTXO at the tally validator, marked by the 'tallyNft'
         , Constraints.mustPayToScript
             indexValidatorHash
             (Datum $ toData updatedIndexDatum)
             Constraints.DatumInline
             indexInfo.value
+        -- ^ We pay the updated index datum (with its index incremented)
+        -- back to the index validator
         , configInfo.constraints
         , indexInfo.constraints
         ]
@@ -137,10 +150,13 @@ createProposal params' = do
   pure $ ContractResult
     { txHash, symbol: tallySymbol, tokenName: tallyTokenName }
   where
+  -- The index must be incremented by one for each new proposal
   incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
   incrementIndexDatum (IndexNftDatum { index: oldIndex }) =
     IndexNftDatum { index: oldIndex + (fromInt 1) }
 
+  -- The tally token name corresponds to the
+  -- 'index' field of the index datum
   mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
   mkTallyTokenName indexDatum =
     mkTokenName $ show $ indexDatum # unwrap # _.index

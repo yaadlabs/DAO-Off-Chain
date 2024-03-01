@@ -71,6 +71,7 @@ newtype CreateConfigParams = CreateConfigParams
   , proposalTallyEndOffset :: BigInt
   , tallyNft :: Hash28
   , voteTokenName :: TokenName
+  , voteNftSymbol :: Hash28
   , voteFungibleCurrencySymbol :: Hash28
   , voteFungibleTokenName :: TokenName
   , fungibleVotePercent :: BigInt
@@ -106,13 +107,8 @@ newtype TreasuryParams = TreasuryParams
 -- | Create proposal contract paramaters
 newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: Hash28
-  , tallySymbol :: Hash28
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
-  -- Vote NFT symbol (vote pass)
-  , voteNftSymbol :: Hash28
-  -- Fungible token symbol (vote multiplier token)
-  , fungibleSymbol :: Hash28
+  , tallySymbol :: Hash28
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -121,26 +117,16 @@ newtype VoteOnProposalParams = VoteOnProposalParams
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { voteNftSymbol :: Hash28
-  , voteTokenName :: TokenName
-  , voteNftTokenName :: TokenName
-  , configSymbol :: Hash28
+  { configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
-  , fungibleSymbol :: Hash28
-  , fungibleTokenName :: TokenName
-  , fungiblePercent :: BigInt
+  , voteTokenName :: TokenName
   }
 
 -- | Cancel vote contract paramaters
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
-  , voteNftSymbol :: Hash28
-  , voteNftTokenName :: TokenName
-  , fungibleSymbol :: Hash28
-  , fungibleTokenName :: TokenName
   }
 
 -- | Create fungible contract paramaters

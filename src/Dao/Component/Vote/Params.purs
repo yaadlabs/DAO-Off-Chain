@@ -1,6 +1,6 @@
 {-|
 Module: Dao.Component.Vote.Params
-Description: Helpers for vote on proposal workflow
+Description: Helpers for voting related contracts
 -}
 module Dao.Component.Vote.Params
   ( VoteOnProposalParams(..)
@@ -8,6 +8,7 @@ module Dao.Component.Vote.Params
   , CancelVoteParams(..)
   ) where
 
+import Contract.Address (Address)
 import Contract.Scripts (MintingPolicy)
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.Newtype (class Newtype)
@@ -17,13 +18,8 @@ import LambdaBuffers.ApplicationTypes.Vote (VoteDirection)
 -- | Create proposal contract paramaters
 newtype VoteOnProposalParams = VoteOnProposalParams
   { configSymbol :: CurrencySymbol
-  , tallySymbol :: CurrencySymbol
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
-  -- Vote NFT symbol (vote pass)
-  , voteNftSymbol :: CurrencySymbol
-  -- Fungible token symbol (vote multiplier token)
-  , fungibleSymbol :: CurrencySymbol
+  , tallySymbol :: CurrencySymbol
   -- Vote datum fields
   , proposalTokenName :: TokenName
   , voteDirection :: VoteDirection
@@ -34,15 +30,10 @@ derive instance Newtype VoteOnProposalParams _
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { voteNftSymbol :: CurrencySymbol
-  , voteTokenName :: TokenName
-  , voteNftTokenName :: TokenName
-  , configSymbol :: CurrencySymbol
+  { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
-  , fungibleSymbol :: CurrencySymbol
-  , fungibleTokenName :: TokenName
-  , fungiblePercent :: BigInt
+  , voteTokenName :: TokenName
   }
 
 derive instance Newtype CountVoteParams _
@@ -51,11 +42,6 @@ derive instance Newtype CountVoteParams _
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
-  , voteTokenName :: TokenName
-  , voteNftSymbol :: CurrencySymbol
-  , voteNftTokenName :: TokenName
-  , fungibleSymbol :: CurrencySymbol
-  , fungibleTokenName :: TokenName
   }
 
 derive instance Newtype CancelVoteParams _

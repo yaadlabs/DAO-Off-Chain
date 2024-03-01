@@ -18,6 +18,7 @@ import Type.Proxy (Proxy(Proxy))
 
 type TreasuryInfo = UtxoInfo Datum
 
+-- | Spend the treasury UTXO
 spendTreasuryUtxo ::
   CurrencySymbol ->
   Validator ->

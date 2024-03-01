@@ -4,9 +4,11 @@ Description: Test the upgrade config workflow
 -}
 module Test.Workflow.UpgradeConfig (suite) where
 
-import Contract.Address (PaymentPubKeyHash)
+import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (liftedM)
+import Contract.Monad (liftContractM, liftedM)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
@@ -15,6 +17,7 @@ import Contract.Prelude
   , pure
   , show
   , show
+  , unit
   , void
   , ($)
   , (/\)
@@ -28,7 +31,12 @@ import Contract.Test.Plutip
   , withWallets
   )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (adaSymbol, adaToken, scriptCurrencySymbol)
+import Contract.Value
+  ( TokenName
+  , adaSymbol
+  , adaToken
+  , scriptCurrencySymbol
+  )
 import Contract.Wallet
   ( getWalletAddress
   , getWalletCollateral
@@ -48,8 +56,11 @@ import Dao.Component.Vote.Params
   ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
+import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
@@ -83,11 +94,12 @@ suite = do
           ]
 
       withWallets distribution \walletOne -> do
-
         withKeyWallet walletOne do
 
           userPkh :: PaymentPubKeyHash <- liftedM "Could not get pkh"
             ownPaymentPubKeyHash
+          userWalletAddress :: Address <- liftedM "Could not get wallet address"
+            getWalletAddress
 
           ContractResult
             { txHash: votePassTxHash
@@ -95,7 +107,9 @@ suite = do
             , tokenName: votePassTokenName
             } <-
             createVotePass userPkh
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             fungibleParams :: CreateFungibleParams
@@ -114,9 +128,31 @@ suite = do
             , symbol: indexSymbol
             , tokenName: indexTokenName
             } <- createIndex adaToken
-          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
 
+          void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
+
+          -- The policy for the 'voteNft' token (vote pass)
+          votePassPolicy <- voteNftPolicy
+
+          -- The policy for the 'fungible' token (vote multiplier)
+          fungiblePolicy' <- fungiblePolicy
+
+          -- The fungible token name is hardcoded to this for now
+          fungibleTokenName :: TokenName <-
+            liftContractM "Could not make voteNft token name" $ mkTokenName
+              "vote_fungible"
           let
+            -- The symbol for the 'voteNft' 
+            -- This is the vote 'pass' that a user must possess
+            -- in order to vote on a proposal
+            votePassSymbol = scriptCurrencySymbol votePassPolicy
+
+            -- The symbol for the 'fungibleSymbol'
+            -- This acts as a vote multiplier for the user
+            -- Without it the user's vote counts strictly for one (for or against)
+            fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+
             sampleConfigParams :: CreateConfigParams
             sampleConfigParams = CreateConfigParams
               { configTokenName: adaToken
@@ -136,7 +172,7 @@ suite = do
               , voteFungibleCurrencySymbol: fungibleSymbol
               , voteFungibleTokenName: fungibleTokenName
               , fungibleVotePercent: BigInt.fromInt 10
-
+              , voteNftSymbol: votePassSymbol
               -- Index needed for making tallyNft
               , indexSymbol: indexSymbol
               , indexTokenName: indexTokenName
@@ -147,7 +183,9 @@ suite = do
             , symbol: configSymbol
             , tokenName: configTokenName
             } <- createConfig sampleConfigParams
+
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             treasuryFundParams =
@@ -179,6 +217,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             voteParams :: VoteOnProposalParams
@@ -186,11 +225,6 @@ suite = do
               { configSymbol: configSymbol
               , tallySymbol: proposalSymbol
               , configTokenName: configTokenName
-              -- Vote NFT (voting pass) symbol and token name
-              , voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken
-              -- Fungible
-              , fungibleSymbol: fungibleSymbol
               -- Vote datum fields
               , proposalTokenName: proposalTokenName
               , voteDirection: VoteDirection'For
@@ -204,25 +238,22 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           let
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
-              { voteNftSymbol: votePassSymbol
-              , voteTokenName: adaToken
-              , voteNftTokenName: votePassTokenName
+              { voteTokenName: adaToken
               , configSymbol: configSymbol
               , configTokenName: configTokenName
               , tallySymbol: proposalSymbol
-              , fungibleSymbol: fungibleSymbol
-              , fungibleTokenName: fungibleTokenName
-              , fungiblePercent: BigInt.fromInt 10
               }
 
           countVoteTxHash <- countVote countVoteParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             countVoteTxHash
+          void $ waitNSlots (Natural.fromInt' 3)
 
           dummyConfig <- dummyNewConfig
           let
@@ -237,3 +268,4 @@ suite = do
           treasuryTxHash <- upgradeConfig upgradeConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+          void $ waitNSlots (Natural.fromInt' 3)

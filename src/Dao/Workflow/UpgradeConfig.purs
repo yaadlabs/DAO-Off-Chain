@@ -70,7 +70,10 @@ upgradeConfig params' =
     appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
       validatorConfig
 
-    -- Query the UTXOs
+    -- We are updating the config datum so we need to spend the UTXO at
+    -- the config validator holding the old datum, we will then create
+    -- a new UTXO at the config validator holding the new config datum
+    -- and also marked by the config NFT
     configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
     tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
@@ -83,40 +86,53 @@ upgradeConfig params' =
     void $ waitNSlots (Natural.fromInt' 10)
 
     let
+      -- The new config passed by the user to replace the old one
       newConfigDatum :: Datum
       newConfigDatum = Datum $ toData params.newDynamicConfigDatum
 
-      configValidatorHash :: ValidatorHash
-      configValidatorHash = validatorHash appliedConfigValidator
-
+      -- The config that was held at the UTXO we are spending
       oldDynamicConfig :: DynamicConfigDatum
       oldDynamicConfig = configInfo.datum
 
+      -- We need this to pay to the validator
+      configValidatorHash :: ValidatorHash
+      configValidatorHash = validatorHash appliedConfigValidator
+
+      -- The tally datum holds the proposal related values
+      -- We use these in our calculations
       tallyDatum :: TallyStateDatum
       tallyDatum = tallyInfo.datum
 
+      -- Number of votes cast in favour of the proposal
       votesFor :: BigInt
       votesFor = tallyDatum # unwrap # _.for
 
+      -- Number of votes cast in opposition to the proposal
       votesAgainst :: BigInt
       votesAgainst = tallyDatum # unwrap # _.against
 
       totalVotes :: BigInt
       totalVotes = votesFor + votesAgainst
 
+      -- Must not be zero
       configTotalVotes :: BigInt
       configTotalVotes = oldDynamicConfig # unwrap # _.totalVotes
 
+      -- Must exceed its corresponding config threshold
       relativeMajority :: BigInt
       relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
 
+      -- Must exceed its corresponding config threshold
       majorityPercent :: BigInt
       majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
 
+      -- Vote threshold set at the config which must be exceeded
+      -- in order for the effect to be executed
       configUpgradeRelativeMajorityPercent :: BigInt
       configUpgradeRelativeMajorityPercent = oldDynamicConfig # unwrap #
         _.upgradeRelativeMajorityPercent
 
+      -- Vote threshold set at the config which must be exceeded
       configUpgradeMajorityPercent :: BigInt
       configUpgradeMajorityPercent = oldDynamicConfig # unwrap #
         _.upgradeMajorityPercent
@@ -127,6 +143,9 @@ upgradeConfig params' =
     guardContract "Majority percent is too low" $ majorityPercent >=
       configUpgradeMajorityPercent
 
+    -- The on-chain script requires an additional policy to which
+    -- some of the validation of this tranasction will be offset to
+    -- For now we use an always-succeeds policy as a placeholder
     upgradePolicy' <- upgradePolicy
 
     let
@@ -151,8 +170,13 @@ upgradeConfig params' =
               (Datum $ toData newConfigDatum)
               Constraints.DatumInline
               configInfo.value
+          -- We pay the new config passed by the user to a
+          -- UTXO at the config validator marked by the config NFT
+          -- This replaces the previous UTXO holding the datum which we just spent
           , Constraints.mustMintValue upgradeToken
           , Constraints.mustValidateIn onchainTimeRange
+          -- ^ The script requires a time-range in order to ensure
+          -- that the tallying period has passed
           , configInfo.constraints
           , tallyInfo.constraints
           ]

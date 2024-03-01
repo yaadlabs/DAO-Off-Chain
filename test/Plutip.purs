@@ -24,9 +24,7 @@ import Effect.Aff
   , launchAff
   )
 import Test.Spec.Runner (defaultConfig)
-import Test.Workflow.CancelVote as CancelVote
-import Test.Workflow.CountVote as CountVote
-import Test.Workflow.TreasuryGeneral as TreasuryGeneral
+import Test.Workflow.MultipleVotesWithCancel as MultipleVotesWithCancel
 import Test.Workflow.TreasuryTrip as TreasuryTrip
 
 main :: Effect Unit
@@ -35,10 +33,7 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts plutipConfig do
-        CancelVote.suite
-        CountVote.suite
-        TreasuryGeneral.suite
-        TreasuryTrip.suite
+        MultipleVotesWithCancel.suite
 
 plutipConfig :: PlutipConfig
 plutipConfig =

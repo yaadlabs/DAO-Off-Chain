@@ -1,17 +1,12 @@
 module Dao.Scripts.Policy.Fungible
-  ( unappliedFungiblePolicy
-  , unappliedFungiblePolicyDebug
+  ( fungiblePolicy
   ) where
 
 import Contract.Monad (Contract)
-import Contract.Scripts (MintingPolicy)
-import Dao.Scripts.Utils (mkUnappliedPolicy)
-import JS.BigInt (BigInt)
+import Contract.Prelude (pure, ($))
+import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Dao.Scripts.Utils (mkScript)
 
-unappliedFungiblePolicy :: BigInt -> Contract MintingPolicy
-unappliedFungiblePolicy = mkUnappliedPolicy
-  ".src/Dao/Scripts/Json/Optimised/FungiblePolicy.json"
-
-unappliedFungiblePolicyDebug :: BigInt -> Contract MintingPolicy
-unappliedFungiblePolicyDebug = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Debug/FungiblePolicy.json"
+fungiblePolicy :: Contract MintingPolicy
+fungiblePolicy = pure $ PlutusMintingPolicy $ mkScript
+  "./src/Dao/Scripts/Json/Optimised/FungiblePolicy.json"
