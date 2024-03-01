@@ -50,6 +50,7 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
@@ -137,8 +138,7 @@ mkVoteUtxoConstraintsAndLookups
 
     -- Extract the 'VoteDatum' fields
     voteDatum :: VoteDatum <- liftContractM "Failed to extract datum" $
-      extractOutputDatum
-        txOut
+      extractOutputDatum (Proxy :: Proxy VoteDatum) txOut
 
     let
       -- Extract the 'proposalTokenName' from the 'VoteDatum'
@@ -217,14 +217,6 @@ mkVoteUtxoConstraintsAndLookups
   countOfToken symbol txOut = countOfTokenInValue symbol value
     where
     value = txOut # unwrap # _.output # unwrap # _.amount
-
-  extractOutputDatum :: TransactionOutputWithRefScript -> Maybe VoteDatum
-  extractOutputDatum (TransactionOutputWithRefScript txOut) =
-    case txOut.output # unwrap # _.datum of
-      OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-        Just (datum :: VoteDatum) -> Just datum
-        _ -> Nothing
-      _ -> Nothing
 
   extractToken ::
     CurrencySymbol ->
