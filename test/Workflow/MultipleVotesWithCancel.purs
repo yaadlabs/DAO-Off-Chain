@@ -416,9 +416,9 @@ suite = do
                     /\ proposalTwoTokenName
                 )
 
-            -- ************************************************************ --
-            -- ************************************************************ --
-            -- * User one creates a proposal on which the others can vote * --
+            -- *************************************** --
+            -- *************************************** --
+            -- * User one creates the treasury fund  * --
             treasuryFundSymbol <- withKeyWallet walletOne do
 
               logInfo' "Running in wallet one - creating treasury fund"

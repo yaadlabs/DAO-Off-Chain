@@ -1,4 +1,9 @@
-module Dao.Workflow.QueryProposal (getAllProposals) where
+module Dao.Workflow.QueryProposal
+  ( getAllProposals
+  , getAllGeneralProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  ) where
 
 import Contract.Prelude
 
@@ -21,9 +26,17 @@ import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Data.Array (filter, mapMaybe)
 import Data.Map as Map
+import LambdaBuffers.ApplicationTypes.Proposal
+  ( ProposalType
+      ( ProposalType'General
+      , ProposalType'Trip
+      , ProposalType'Upgrade
+      )
+  )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 
+-- | Retrieve all proposals
 getAllProposals ::
   QueryProposalParams ->
   Contract (Array TallyStateDatum)
@@ -71,3 +84,48 @@ getAllProposals params' = do
   getProposalInfo = mapMaybe op
     where
     op (_ /\ txOut) = extractOutputDatum (Proxy :: Proxy TallyStateDatum) txOut
+
+-- | Retrieve all proposals of type 'General'
+getAllGeneralProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllGeneralProposals params = do
+  logInfo' "Entering getAllGeneralProposals contract"
+  allProposals <- getAllProposals params
+  pure $ filter isGeneralProposal allProposals
+  where
+  isGeneralProposal :: TallyStateDatum -> Boolean
+  isGeneralProposal tallyDatum =
+    case (tallyDatum # unwrap # _.proposal) of
+      ProposalType'General _ _ -> true
+      _ -> false
+
+-- | Retrieve all proposals of type 'General'
+getAllTripProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllTripProposals params = do
+  logInfo' "Entering getAllTripProposals contract"
+  allProposals <- getAllProposals params
+  pure $ filter isTripProposal allProposals
+  where
+  isTripProposal :: TallyStateDatum -> Boolean
+  isTripProposal tallyDatum =
+    case (tallyDatum # unwrap # _.proposal) of
+      ProposalType'Trip _ _ _ -> true
+      _ -> false
+
+-- | Retrieve all proposals of type 'Upgrade'
+getAllUpgradeProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllUpgradeProposals params = do
+  logInfo' "Entering getAllUpgradeProposals contract"
+  allProposals <- getAllProposals params
+  pure $ filter isUpgradeProposal allProposals
+  where
+  isUpgradeProposal :: TallyStateDatum -> Boolean
+  isUpgradeProposal tallyDatum =
+    case (tallyDatum # unwrap # _.proposal) of
+      ProposalType'Upgrade _ -> true
+      _ -> false

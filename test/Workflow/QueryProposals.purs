@@ -63,8 +63,11 @@ import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
-import Dao.Workflow.QueryProposal (getAllProposals)
-import Dao.Workflow.QueryProposal (getAllProposals)
+import Dao.Workflow.QueryProposal
+  ( getAllGeneralProposals
+  , getAllProposals
+  , getAllTripProposals
+  )
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal
   ( VoteOnProposalResult(VoteOnProposalResult)
@@ -74,9 +77,14 @@ import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
-import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteDirection(VoteDirection'For, VoteDirection'Against)
+  )
 import Mote (group, test)
-import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
+import Test.Data.Tally
+  ( sampleGeneralProposalTallyStateDatum
+  , sampleTripProposalTallyStateDatum
+  )
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
@@ -278,10 +286,12 @@ suite = do
               -- Create the second proposal --
               let
                 -- The 'TallyStateDatum' to be sent to the proposal UTXO
-                -- The proposal type for this proposal will be a 'General' one
-                -- The payment address is the address of 'walletSix'
-                tallyStateDatum = sampleGeneralProposalTallyStateDatum
+                -- The proposal type for this proposal will be a 'Trip' one
+                -- The travel agent and traveller addresses are
+                -- 'walletSix' and 'walletTwo' respectively
+                tallyStateDatum = sampleTripProposalTallyStateDatum
                   userSixWalletAddress
+                  userTwoWalletAddress
 
                 -- The params needed for creating the proposal
                 proposalParams :: CreateProposalParams
@@ -293,7 +303,7 @@ suite = do
                   , tallyStateDatum
                   }
 
-              -- Create the proposal UTXO
+              -- Create the second proposal UTXO
               ContractResult
                 { txHash: createProposalTxHashTwo
                 , symbol: proposalTwoSymbol
@@ -418,9 +428,9 @@ suite = do
                     /\ indexTokenName
                 )
 
-            -- ************************************************************ --
-            -- ************************************************************ --
-            -- * User one creates a proposal on which the others can vote * --
+            -- *************************************** --
+            -- *************************************** --
+            -- * User one creates the treasury fund  * --
             treasuryFundSymbol <- withKeyWallet walletOne do
 
               logInfo' "Running in wallet one - creating treasury fund"
@@ -680,6 +690,34 @@ suite = do
                 cancelVoteTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
+            -- **************************************************** * --
+            -- ****************************************************** --
+            -- * User five (walletFive) votes against proposal two * --
+            withKeyWallet walletFive do
+              logInfo'
+                "Running in wallet five - voting against proposal two created by walletOne"
+
+              let
+                voteParams :: VoteOnProposalParams
+                voteParams = VoteOnProposalParams
+                  { configSymbol: configSymbol
+                  , configTokenName: configTokenName
+                  , tallySymbol: proposalOneSymbol
+                  -- Vote datum fields
+                  , proposalTokenName: proposalTwoTokenName
+                  , voteDirection: VoteDirection'Against
+                  , returnAda: (BigInt.fromInt 0)
+                  }
+
+              VoteOnProposalResult
+                { txHash: voteOnProposalTxHash
+                , symbol: voteOnProposalSymbol
+                } <- voteOnProposal voteParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                voteOnProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
             -- ************************************************************************** --
             -- ************************************************************************** --
             -- * User three (walletThree) votes on proposal two again after cancelling  * --
@@ -734,24 +772,31 @@ suite = do
                 countVoteTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
-            -- *********************************************************************** --
-            -- *********************************************************************** --
-            -- * User one retrieves all the proposal (returns the proposal datums )  *--
+            -- ****************************************************************** --
+            -- ****************************************************************** --
+            -- * User one queries the proposals (returns the proposal datums )  * --
             withKeyWallet walletOne do
               logInfo'
                 "Running in wallet one - get all the proposals (proposal query)"
 
               let
-                queryVoteParams :: QueryProposalParams
-                queryVoteParams = QueryProposalParams
+                queryProposalParams :: QueryProposalParams
+                queryProposalParams = QueryProposalParams
                   { configSymbol
                   , indexSymbol
                   , configTokenName
                   , indexTokenName
                   }
 
-              allProposals <- getAllProposals queryVoteParams
-
+              allProposals <- getAllProposals queryProposalParams
               void $ waitNSlots (Natural.fromInt' 3)
 
-              logInfo' $ "All Proposals: " <> show allProposals
+              allGeneralProposals <- getAllGeneralProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allTripProposals <- getAllTripProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              logInfo' $ "All proposals: " <> show allProposals
+              logInfo' $ "All general proposals: " <> show allGeneralProposals
+              logInfo' $ "All trip proposals: " <> show allTripProposals
