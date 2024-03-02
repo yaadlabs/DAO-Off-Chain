@@ -95,14 +95,7 @@ getAllGeneralProposals ::
   Contract (Array TallyStateDatum)
 getAllGeneralProposals params = do
   logInfo' "Entering getAllGeneralProposals contract"
-  allProposals <- getAllProposals params
-  pure $ filter isGeneralProposal allProposals
-  where
-  isGeneralProposal :: TallyStateDatum -> Boolean
-  isGeneralProposal tallyDatum =
-    case tallyDatum # unwrap # _.proposal of
-      ProposalType'General _ _ -> true
-      _ -> false
+  getProposalsByType params General
 
 -- | Retrieve all proposals of type 'General'
 getAllTripProposals ::
@@ -110,14 +103,7 @@ getAllTripProposals ::
   Contract (Array TallyStateDatum)
 getAllTripProposals params = do
   logInfo' "Entering getAllTripProposals contract"
-  allProposals <- getAllProposals params
-  pure $ filter isTripProposal allProposals
-  where
-  isTripProposal :: TallyStateDatum -> Boolean
-  isTripProposal tallyDatum =
-    case tallyDatum # unwrap # _.proposal of
-      ProposalType'Trip _ _ _ -> true
-      _ -> false
+  getProposalsByType params Trip
 
 -- | Retrieve all proposals of type 'Upgrade'
 getAllUpgradeProposals ::
@@ -125,14 +111,26 @@ getAllUpgradeProposals ::
   Contract (Array TallyStateDatum)
 getAllUpgradeProposals params = do
   logInfo' "Entering getAllUpgradeProposals contract"
+  getProposalsByType params Upgrade
+
+data ProposalType' = General | Upgrade | Trip
+
+derive instance Eq ProposalType'
+
+getProposalsByType ::
+  QueryProposalParams ->
+  ProposalType' ->
+  Contract (Array TallyStateDatum)
+getProposalsByType params proposalType = do
   allProposals <- getAllProposals params
-  pure $ filter isUpgradeProposal allProposals
+  pure $ filter (\p -> isType proposalType (p # unwrap # _.proposal))
+    allProposals
   where
-  isUpgradeProposal :: TallyStateDatum -> Boolean
-  isUpgradeProposal tallyDatum =
-    case tallyDatum # unwrap # _.proposal of
-      ProposalType'Upgrade _ -> true
-      _ -> false
+  isType :: ProposalType' -> ProposalType -> Boolean
+  isType General (ProposalType'General _ _) = true
+  isType Trip (ProposalType'Trip _ _ _) = true
+  isType Upgrade (ProposalType'Upgrade _) = true
+  isType _ _ = false
 
 -- | Retrieve all active proposals
 getAllActiveProposals ::
@@ -140,19 +138,24 @@ getAllActiveProposals ::
   Contract (Array TallyStateDatum)
 getAllActiveProposals params = do
   logInfo' "Entering getAllActiveProposals contract"
-  allProposals <- getAllProposals params
-  currentTime <- getCurrentTime
-  pure $ filter (isActiveProposal currentTime) allProposals
+  getProposalsByTime params isActiveProposal
 
 -- | Retrieve all expired proposals
 getAllExpiredProposals ::
   QueryProposalParams ->
   Contract (Array TallyStateDatum)
 getAllExpiredProposals params = do
-  logInfo' "Entering getAllActiveProposals contract"
+  logInfo' "Entering getAllExpiredProposals contract"
+  getProposalsByTime params (not <<< isActiveProposal)
+
+getProposalsByTime ::
+  QueryProposalParams ->
+  (POSIXTime -> TallyStateDatum -> Boolean) ->
+  Contract (Array TallyStateDatum)
+getProposalsByTime params condition = do
   allProposals <- getAllProposals params
   currentTime <- getCurrentTime
-  pure $ filter (not $ isActiveProposal currentTime) allProposals
+  pure $ filter (condition currentTime) allProposals
 
 isActiveProposal :: POSIXTime -> TallyStateDatum -> Boolean
 isActiveProposal currentTime tallyDatum =
