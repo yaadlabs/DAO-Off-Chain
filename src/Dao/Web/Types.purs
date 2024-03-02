@@ -120,6 +120,7 @@ newtype CountVoteParams = CountVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   , voteTokenName :: TokenName
   }
 
@@ -127,6 +128,7 @@ newtype CountVoteParams = CountVoteParams
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: Hash28
   , configTokenName :: TokenName
+  , proposalTokenName :: TokenName
   }
 
 -- | Create fungible contract paramaters
@@ -184,6 +186,14 @@ newtype TallyStateDatum = TallyStateDatum
   , proposalEndTime :: POSIXTime
   , for :: BigInt
   , against :: BigInt
+  }
+
+-- | Vote datum
+newtype VoteDatum = VoteDatum
+  { proposalTokenName :: TokenName
+  , direction :: VoteDirection
+  , voteOwner :: Address
+  , returnAda :: BigInt
   }
 
 -- | Index datum

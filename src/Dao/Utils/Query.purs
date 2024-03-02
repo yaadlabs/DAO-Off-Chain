@@ -9,7 +9,7 @@ module Dao.Utils.Query
   , getAllWalletUtxos
   , findScriptUtxoBySymbol
   , findKeyUtxoBySymbol
-  , findScriptUtxoBySymbolAndPkhInDatum
+  , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   ) where
 
 import Contract.Address (PaymentPubKeyHash, scriptHashAddress)
@@ -54,6 +54,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value
   ( CurrencySymbol
+  , TokenName
   , Value
   , symbols
   )
@@ -147,16 +148,21 @@ extractDatum _ txOut =
 -- | This is to ensure that the user is cancelling their own vote and not
 -- | another user's vote, in which case the 'cancelVote' transaction would
 -- | fail with a 'missing signatures' error.
-findScriptUtxoBySymbolAndPkhInDatum ::
+-- | It also checks that the 'proposalTokenName' field of the 'VoteDatum'
+-- | at this UTXO matches the 'proposalTokenName' passed as an argument.
+-- | This is to ensure the user's vote is not on a different proposal.
+findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum ::
   Redeemer ->
   CurrencySymbol ->
   PaymentPubKeyHash ->
+  TokenName ->
   Validator ->
   Contract (UtxoInfo VoteDatum)
-findScriptUtxoBySymbolAndPkhInDatum
+findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   redeemer
   symbol
   userPkh
+  proposalTokenName
   validatorScript = do
   logInfo' "Entering findScriptUtxoBySymbolAndPkhInDatum contract"
 
@@ -168,7 +174,12 @@ findScriptUtxoBySymbolAndPkhInDatum
     (TransactionInput /\ TransactionOutputWithRefScript) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasTokenWithSymbol symbol && hasPkhInVoteDatum userPkh)
+      $ filter
+          ( hasTokenWithSymbol symbol
+              && hasPkhInVoteDatum userPkh
+              &&
+                hasProposalTokenNameInVoteDatum proposalTokenName
+          )
       $ Map.toUnfoldable
       $ utxos
 
@@ -205,6 +216,22 @@ hasPkhInVoteDatum userPkh (_ /\ TransactionOutputWithRefScript txOut) =
           of
           Just datumPkh -> datumPkh == userPkh
           _ -> false
+      _ -> false
+    _ -> false
+
+-- | Check that the 'proposalTokenName' passed as an argument is equivalent
+-- | to the 'proposalTokenName' field of the 'VoteDatum'
+hasProposalTokenNameInVoteDatum ::
+  TokenName ->
+  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  Boolean
+hasProposalTokenNameInVoteDatum
+  proposalTokenName
+  (_ /\ TransactionOutputWithRefScript txOut) =
+  case txOut.output # unwrap # _.datum of
+    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
+      Just (datum :: VoteDatum) -> (datum # unwrap # _.proposalTokenName) ==
+        proposalTokenName
       _ -> false
     _ -> false
 

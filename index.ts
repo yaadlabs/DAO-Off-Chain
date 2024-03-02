@@ -6,13 +6,15 @@ import {
   TransactionHash,
   TransactionInput,
 } from "@emurgo/cardano-serialization-lib-browser";
-import { BigInteger } from "big-integer";
 
 export const purescript: Promise<
   { [k: string]: any } & Foreign.PureScriptTypes
-> = import("./library.js");
+> = import("./dist/library.js");
 
 export namespace Foreign {
+
+  /* CTL and general PS types */
+
   export declare class WalletSpec {}
   export declare class ConnectToNami extends WalletSpec {}
   
@@ -27,6 +29,25 @@ export namespace Foreign {
   export declare class Address {
     addressCredential: Credential;
     addressStakingCredential: Maybe<StakingCredential>;
+  }
+
+  export declare class StakingCredential {}
+  export declare class StakingHash extends StakingCredential {
+    value0: Credential;
+  }
+  export declare class StakingPtr extends StakingCredential {
+    slot: Slot;
+    txIx: TransactionIndex;
+    certIx: CertificateIndex;
+  }
+  export interface Slot {
+    value0: BigNum;
+  }
+  export interface TransactionIndex {
+    value0: BigNum;
+  }
+  export interface CertificateIndex {
+    value0: BigNum;
   }
 
   export interface ByteArray {
@@ -49,6 +70,9 @@ export namespace Foreign {
     value0: ValidatorHash;
   }
 
+  export interface PaymentPubKeyHash {
+    value0: PubKeyHash;
+  }
   export interface PubKeyHash {
     value0: Ed25519KeyHash;
   }
@@ -94,16 +118,8 @@ export namespace Foreign {
   export type AssocMap<K, V> = Array<Tuple<K, V>>;
 
   export type PureScriptTypes = {
-    StakeDestroyResult: typeof StakeDestroyResult;
-    StakeNotDestroyed: typeof StakeNotDestroyed;
-    SubmittedStakeDestroyTx: typeof SubmittedStakeDestroyTx;
     WalletSpec: typeof WalletSpec;
     ConnectToNami: typeof ConnectToNami;
-    ConnectToGero: typeof ConnectToGero;
-    ConnectToFlint: typeof ConnectToFlint;
-    ConnectToEternl: typeof ConnectToEternl;
-    ConnectToLode: typeof ConnectToLode;
-    ConnectToNuFi: typeof ConnectToNuFi;
     Maybe: typeof Maybe;
     Nothing: typeof Nothing;
     Just: typeof Just;
@@ -125,42 +141,41 @@ export namespace Foreign {
     suppressLogs: boolean;
   }
 
-  // Dao contract params
-  export interface CreateConfigParams {
-    configTokenName: TokenName;
-    upgradeMajorityPercent: BigInteger;
-    upgradeRelativeMajorityPercent: BigInteger;
-    generalMajorityPercent: BigInteger;
-    generalRelativeMajorityPercent: BigInteger;
-    tripMajorityPercent: BigInteger;
-    tripRelativeMajorityPercent: BigInteger;
-    totalVotes: BigInteger;
-    maxGeneralDisbursement: BigInteger;
-    maxTripDisbursement: BigInteger;
-    agentDisbursementPercent: BigInteger;
-    proposalTallyEndOffset: BigInteger;
-    tallyNft: CurrencySymbol;
-    voteCurrencySymbol: CurrencySymbol;
-    voteTokenName: TokenName;
-    voteNft: Hash28;
-    voteFungibleCurrencySymbol: CurrencySymbol;
-    voteFungibleTokenName: TokenName;
-    fungibleVotePercent: BigInteger;
+  export interface ContractEnv {};
+
+  export interface ServerConfig {
+    port: number;
+    host: string;
+    secure: boolean;
+    path: Maybe<string>;
   }
 
-  export interface TreasuryGeneralParams {
-    paymentAddress: Address;
-    generalPaymentAmount: BigInteger;
-    configSymbol: CurrencySymbol;
-    tallySymbol: CurrencySymbol;
-    treasurySymbol: CurrencySymbol;
-    configTokenName: TokenName;
-  }
+  /* Dao contract params and result types */
 
-  export interface TreasuryTripParams {
-    travelAgentAddress: Address;
-    travellerAddress: Address;
-    totalTravelCost: BigInteger;
+  export interface CreateConfigParams
+    { configTokenName : TokenName
+    , upgradeMajorityPercent : BigInteger
+    , upgradeRelativeMajorityPercent : BigInteger
+    , generalMajorityPercent : BigInteger
+    , generalRelativeMajorityPercent : BigInteger
+    , tripMajorityPercent : BigInteger
+    , tripRelativeMajorityPercent : BigInteger
+    , totalVotes : BigInteger
+    , maxGeneralDisbursement : BigInteger
+    , maxTripDisbursement : BigInteger
+    , agentDisbursementPercent : BigInteger
+    , proposalTallyEndOffset : BigInteger
+    , tallyNft : CurrencySymbol
+    , voteTokenName : TokenName
+    , voteNftSymbol : CurrencySymbol
+    , voteFungibleCurrencySymbol : CurrencySymbol
+    , voteFungibleTokenName : TokenName
+    , fungibleVotePercent : BigInteger
+    , indexSymbol : CurrencySymbol
+    , indexTokenName : TokenName
+    }
+
+  export interface TreasuryParams {
     configSymbol: CurrencySymbol;
     configTokenName: TokenName;
     tallySymbol: CurrencySymbol;
@@ -173,6 +188,11 @@ export namespace Foreign {
     tokenName: TokenName;
   }
 
+  export interface VoteOnProposalResult {
+    txHash: TransactionHash;
+    symbol: CurrencySymbol;
+  }
+
   export interface CreateProposalParams {
     configSymbol: CurrencySymbol;
     indexSymbol: CurrencySymbol;
@@ -181,46 +201,25 @@ export namespace Foreign {
     tallyStateDatum: TallyStateDatum;
   }
 
-  export interface TallyStateDatum {
-    proposal: ProposalType;
-    proposalEndTime: POSIXTime;
-    for: BigInteger;
-    against: BigInteger;
-  }
-
-  export declare class ProposalType {}
-  export declare class Upgrade extends ProposalType {
-    value0: CurrencySymbol;
-  }
-  export declare class General extends ProposalType {
-    value0: Address;
-    value1: BigInteger;
-  }
-  export declare class Trip extends ProposalType {
-    value0: Address;
-    value1: Address;
-    value2: BigInteger;
+  export interface CancelVoteParams {
+    configSymbol: CurrencySymbol;
+    configTokenName: TokenName;
+    proposalTokenName: TokenName;
   }
 
   export interface CountVoteParams {
-    voteSymbol: CurrencySymbol;
-    voteNftSymbol: CurrencySymbol;
-    voteTokenName: TokenName;
-    voteNftTokenName: TokenName;
     configSymbol: CurrencySymbol;
     configTokenName: TokenName;
     tallySymbol: CurrencySymbol;
+    proposalTokenName: TokenName;
+    voteTokenName: TokenName;
   }
 
   export interface VoteOnProposalParams {
     configSymbol: CurrencySymbol;
-    tallySymbol: CurrencySymbol;
     configTokenName: TokenName;
+    tallySymbol: CurrencySymbol;
     voteTokenName: TokenName;
-    voteNftSymbol: CurrencySymbol;
-    proposalTokenName: TokenName;
-    voteDirection: VoteDirection;
-    returnAda: BigInteger;
   }
 
   export interface UpgradeConfigParams {
@@ -230,9 +229,7 @@ export namespace Foreign {
     tallySymbol: CurrencySymbol;
   }
 
-  export declare class VoteDirection {};
-  export declare class For extends VoteDirection {};
-  export declare class Against extends VoteDirection {};
+  /* App-specific types (Datums etc.) */
 
   export interface DynamicConfigDatum {
     tallyValidator: ScriptHash
@@ -259,14 +256,41 @@ export namespace Foreign {
     fungibleVotePercent: BigInteger;
   }
 
-  export interface ContractEnv;
-
-  export interface ServerConfig {
-    port: number;
-    host: string;
-    secure: boolean;
-    path: Maybe<string>;
+  export interface TallyStateDatum {
+    proposal: ProposalType;
+    proposalEndTime: POSIXTime;
+    for: BigInteger;
+    against: BigInteger;
   }
+
+  export declare class ProposalType {}
+  export declare class Upgrade extends ProposalType {
+    value0: CurrencySymbol;
+  }
+  export declare class General extends ProposalType {
+    value0: Address;
+    value1: BigInteger;
+  }
+  export declare class Trip extends ProposalType {
+    value0: Address;
+    value1: Address;
+    value2: BigInteger;
+  }
+
+  export interface VoteDatum {
+    proposalTokenName: TokenName;
+    direction: VoteDirection;
+    voteOwner: Address;
+    returnAda: BigInteger;
+  }
+
+  export declare class VoteDirection {};
+  export declare class For extends VoteDirection {};
+  export declare class Against extends VoteDirection {};
+  export interface IndexNftDatum {
+    index: BigInteger;
+  }
+
 }
 
 type WalletSpec = "ConnectToNami";
@@ -278,26 +302,27 @@ type NetworkId = "TestnetId";
 export const createConfig = async (
   env: Foreign.ContractEnv,
   params: Foreign.CreateConfigParams
-): Promise<ContractResult> => (await purescript).createConfig(env, params);
+): Promise<Foreign.ContractResult> => (await purescript).createConfig(env, params);
 
 export const createIndex = async (
   env: Foreign.ContractEnv,
   params: Foreign.TokenName
-): Promise<ContractResult> => (await purescript).createIndex(env, params);
-
-export const createVotePass = async (
-  env: Foreign.ContractEnv,
-): Promise<ContractResult> => (await purescript).createIndex(env, params);
+): Promise<Foreign.ContractResult> => (await purescript).createIndex(env, params);
 
 export const createProposal = async (
   env: Foreign.ContractEnv,
   params: Foreign.CreateProposalParams
-): Promise<ContractResult> => (await purescript).createProposal(env, params);
+): Promise<Foreign.ContractResult> => (await purescript).createProposal(env, params);
+
+export const createVotePass = async (
+  env: Foreign.ContractEnv,
+  pkh: Foreign.PaymentPubKeyHash
+): Promise<Foreign.ContractResult> => (await purescript).createIndex(env, pkh);
 
 export const voteOnProposal = async (
   env: Foreign.ContractEnv,
   params: Foreign.VoteOnProposalParams
-): Promise<VoteOnProposalResult> => (await purescript).voteOnProposal(env, params);
+): Promise<Foreign.VoteOnProposalResult> => (await purescript).voteOnProposal(env, params);
 
 export const countVote = async (
   env: Foreign.ContractEnv,
@@ -311,12 +336,12 @@ export const cancelVote = async (
 
 export const treasuryGeneral = async (
   env: Foreign.ContractEnv,
-  params: Foreign.TreasuryGeneralParams
+  params: Foreign.TreasuryParams
 ): Promise<TransactionHash> => (await purescript).treasuryGeneral(env, params);
 
 export const treasuryTrip = async (
   env: Foreign.ContractEnv,
-  params: Foreign.TreasuryTripParams
+  params: Foreign.TreasuryParams
 ): Promise<TransactionHash> => (await purescript).treasuryTrip(env, params);
 
 export const upgradeConfig = async (

@@ -147,6 +147,7 @@ countVote params' = do
       voteNftSymbol
       voteSymbol
       fungibleSymbol
+      params.proposalTokenName
       voteTokenName
       fungiblePercent
       appliedVotePolicy

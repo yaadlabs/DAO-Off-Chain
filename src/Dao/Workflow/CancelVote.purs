@@ -111,8 +111,10 @@ cancelVote params' = do
     ownPaymentPubKeyHash
 
   -- Spend the specific vote UTXO owned by this user
+  -- Also ensure that the vote was for the specific proposal passed as an argument
   voteInfo :: VoteInfo <- cancelVoteUtxo VoteActionRedeemer'Cancel voteSymbol
     userPkh
+    params.proposalTokenName
     appliedVoteValidator
 
   -- Extract the vote owner from the vote datum

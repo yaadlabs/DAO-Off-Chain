@@ -442,12 +442,14 @@ instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
+    proposalTokenName <- convertPsToJs params.proposalTokenName
     voteTokenName <- convertPsToJs params.voteTokenName
 
     pure $ WebApi.CountVoteParams
       { configSymbol
       , configTokenName
       , tallySymbol
+      , proposalTokenName
       , voteTokenName
       }
 
@@ -456,14 +458,16 @@ instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
 
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
-    voteTokenName <- convertJsToPs params.voteTokenName
     tallySymbol <- convertJsToPs params.tallySymbol
+    proposalTokenName <- convertJsToPs params.proposalTokenName
+    voteTokenName <- convertJsToPs params.voteTokenName
 
     pure $ DaoApi.CountVoteParams
       { configSymbol
       , configTokenName
-      , voteTokenName
       , tallySymbol
+      , proposalTokenName
+      , voteTokenName
       }
 
 -- * CancelVoteParams
@@ -473,10 +477,12 @@ instance ConvertPsToJs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertPsToJs params.configSymbol
     configTokenName <- convertPsToJs params.configTokenName
+    proposalTokenName <- convertPsToJs params.proposalTokenName
 
     pure $ WebApi.CancelVoteParams
       { configSymbol
       , configTokenName
+      , proposalTokenName
       }
 
 instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
@@ -484,10 +490,12 @@ instance ConvertJsToPs WebApi.CancelVoteParams DaoApi.CancelVoteParams where
 
     configSymbol <- convertJsToPs params.configSymbol
     configTokenName <- convertJsToPs params.configTokenName
+    proposalTokenName <- convertJsToPs params.proposalTokenName
 
     pure $ DaoApi.CancelVoteParams
       { configSymbol
       , configTokenName
+      , proposalTokenName
       }
 
 -- * VoteOnProposalParams

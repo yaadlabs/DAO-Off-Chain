@@ -248,9 +248,10 @@ suite = do
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
               { voteTokenName: adaToken
-              , configSymbol: configSymbol
-              , configTokenName: configTokenName
+              , configSymbol
+              , configTokenName
               , tallySymbol: proposalSymbol
+              , proposalTokenName
               }
 
           countVoteTxHash <- countVote countVoteParams

@@ -33,6 +33,7 @@ newtype CountVoteParams = CountVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , proposalTokenName :: TokenName
   , voteTokenName :: TokenName
   }
 
@@ -42,6 +43,7 @@ derive instance Newtype CountVoteParams _
 newtype CancelVoteParams = CancelVoteParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
+  , proposalTokenName :: TokenName
   }
 
 derive instance Newtype CancelVoteParams _

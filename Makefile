@@ -19,7 +19,7 @@ browser-runtime := 1 # Use "1" for true and "" for false
 # The main Purescript module
 ps-entrypoint := Dao.Web.Api
 # Bundle command
-ps-bundle = spago bundle-module -m ${ps-entrypoint} --to library.js
+ps-bundle = webpack -c webpack.config.ps.cjs --mode=production
 
 preview-node-ipc = $(shell docker volume inspect store_node-preview-ipc | jq -r '.[0].Mountpoint')
 preprod-node-ipc = $(shell docker volume inspect store_node-preprod-ipc | jq -r '.[0].Mountpoint')

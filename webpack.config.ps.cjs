@@ -30,12 +30,12 @@ module.exports = {
     },
   },
 
-  // The TS entry point
-  entry: "./index.ts",
+  // The PS entry point
+  entry: "./src/Dao/Web/Api.purs",
 
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "index.js",
+    filename: "library.js",
     library: {
       type: "module",
     },
@@ -44,33 +44,24 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(png|jpg|gif)$/i,
+        test: /\.purs$/,
         use: [
           {
-            loader: "url-loader",
+            loader: 'purs-loader',
             options: {
-              limit: 8192,
-            },
-          },
-        ],
+              src: [
+                path.join('src', '**', '*.purs'),
+                path.join('types', '**', '*.purs'),
+              ],
+              bundle: false,
+              psc: 'psa',
+              pscIde: false,
+              spago: true
+            }
+          }
+        ]
       },
-      {
-        test: /\.tsx?$/,
-        use: [
-          {
-            loader: "ts-loader",
-            options: {
-              compilerOptions: {
-                paths: {
-                  "*": [process.env.NODE_PATH + "/*"],
-                },
-              },
-            },
-          },
-        ],
-        exclude: /node_modules/,
-      },
-    ],
+    ]
   },
 
   resolveLoader: {
@@ -79,7 +70,7 @@ module.exports = {
 
   resolve: {
     modules: [process.env.NODE_PATH],
-    extensions: [".tsx", ".ts", ".js", ".wasm"],
+    extensions: [".tsx", ".ts", ".js"],
     fallback: {
       buffer: require.resolve("buffer/"),
       http: false,
