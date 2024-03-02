@@ -4,8 +4,10 @@ Description: Contract for upgrading the dynamic config based on an upgrade propo
 -}
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
   ( bind
@@ -14,6 +16,7 @@ import Contract.Prelude
   , one
   , pure
   , unwrap
+  , void
   , (#)
   , ($)
   , (*)
@@ -80,6 +83,8 @@ upgradeConfig params' =
     -- Make on-chain time range
     timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
     onchainTimeRange <- mkOnchainTimeRange timeRange
+
+    void $ waitNSlots (Natural.fromInt' 10)
 
     let
       -- The new config passed by the user to replace the old one

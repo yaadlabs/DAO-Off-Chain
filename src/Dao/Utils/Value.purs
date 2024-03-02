@@ -19,13 +19,11 @@ import Contract.Prelude
   , sub
   , sum
   , zero
-  , zero
   , ($)
   , (/=)
   , (/\)
   , (<$>)
   , (<<<)
-  , (<=<)
   , (<=<)
   , (>=)
   )
