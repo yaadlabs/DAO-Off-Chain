@@ -64,7 +64,9 @@ import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.QueryProposal
-  ( getAllGeneralProposals
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
   , getAllProposals
   , getAllTripProposals
   )
@@ -797,6 +799,14 @@ suite = do
               allTripProposals <- getAllTripProposals queryProposalParams
               void $ waitNSlots (Natural.fromInt' 3)
 
+              allActiveProposals <- getAllActiveProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allExpiredProposals <- getAllExpiredProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
               logInfo' $ "All proposals: " <> show allProposals
               logInfo' $ "All general proposals: " <> show allGeneralProposals
               logInfo' $ "All trip proposals: " <> show allTripProposals
+              logInfo' $ "All active proposals: " <> show allActiveProposals
+              logInfo' $ "All expired proposals: " <> show allExpiredProposals

@@ -3,6 +3,8 @@ module Dao.Workflow.QueryProposal
   , getAllGeneralProposals
   , getAllTripProposals
   , getAllUpgradeProposals
+  , getAllActiveProposals
+  , getAllExpiredProposals
   ) where
 
 import Contract.Prelude
@@ -11,6 +13,7 @@ import Contract.Address (Address, scriptHashAddress)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Time (POSIXTime)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
@@ -24,6 +27,7 @@ import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
+import Dao.Utils.Time (getCurrentTime)
 import Data.Array (filter, mapMaybe)
 import Data.Map as Map
 import LambdaBuffers.ApplicationTypes.Proposal
@@ -96,7 +100,7 @@ getAllGeneralProposals params = do
   where
   isGeneralProposal :: TallyStateDatum -> Boolean
   isGeneralProposal tallyDatum =
-    case (tallyDatum # unwrap # _.proposal) of
+    case tallyDatum # unwrap # _.proposal of
       ProposalType'General _ _ -> true
       _ -> false
 
@@ -111,7 +115,7 @@ getAllTripProposals params = do
   where
   isTripProposal :: TallyStateDatum -> Boolean
   isTripProposal tallyDatum =
-    case (tallyDatum # unwrap # _.proposal) of
+    case tallyDatum # unwrap # _.proposal of
       ProposalType'Trip _ _ _ -> true
       _ -> false
 
@@ -126,6 +130,30 @@ getAllUpgradeProposals params = do
   where
   isUpgradeProposal :: TallyStateDatum -> Boolean
   isUpgradeProposal tallyDatum =
-    case (tallyDatum # unwrap # _.proposal) of
+    case tallyDatum # unwrap # _.proposal of
       ProposalType'Upgrade _ -> true
       _ -> false
+
+-- | Retrieve all active proposals
+getAllActiveProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllActiveProposals params = do
+  logInfo' "Entering getAllActiveProposals contract"
+  allProposals <- getAllProposals params
+  currentTime <- getCurrentTime
+  pure $ filter (isActiveProposal currentTime) allProposals
+
+-- | Retrieve all expired proposals
+getAllExpiredProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllExpiredProposals params = do
+  logInfo' "Entering getAllActiveProposals contract"
+  allProposals <- getAllProposals params
+  currentTime <- getCurrentTime
+  pure $ filter (not $ isActiveProposal currentTime) allProposals
+
+isActiveProposal :: POSIXTime -> TallyStateDatum -> Boolean
+isActiveProposal currentTime tallyDatum =
+  (tallyDatum # unwrap # _.proposalEndTime) > currentTime
