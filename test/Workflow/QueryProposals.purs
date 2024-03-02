@@ -68,6 +68,7 @@ import Dao.Workflow.QueryProposal
   , getAllExpiredProposals
   , getAllGeneralProposals
   , getAllProposals
+  , getAllSuccessfulProposals
   , getAllTripProposals
   )
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
@@ -805,8 +806,14 @@ suite = do
               allExpiredProposals <- getAllExpiredProposals queryProposalParams
               void $ waitNSlots (Natural.fromInt' 3)
 
+              allSuccessfulProposals <- getAllSuccessfulProposals
+                queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
               logInfo' $ "All proposals: " <> show allProposals
               logInfo' $ "All general proposals: " <> show allGeneralProposals
               logInfo' $ "All trip proposals: " <> show allTripProposals
               logInfo' $ "All active proposals: " <> show allActiveProposals
               logInfo' $ "All expired proposals: " <> show allExpiredProposals
+              logInfo' $ "All successful proposals: " <> show
+                allSuccessfulProposals

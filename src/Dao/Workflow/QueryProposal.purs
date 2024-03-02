@@ -1,3 +1,7 @@
+{-|
+Module: Dao.Workflow.QueryProposal
+Description: Contracts for querying proposals
+-}
 module Dao.Workflow.QueryProposal
   ( getAllProposals
   , getAllGeneralProposals
@@ -5,6 +9,7 @@ module Dao.Workflow.QueryProposal
   , getAllUpgradeProposals
   , getAllActiveProposals
   , getAllExpiredProposals
+  , getAllSuccessfulProposals
   ) where
 
 import Contract.Prelude
@@ -21,15 +26,19 @@ import Contract.Transaction
 import Contract.Utxos (utxosAt)
 import Contract.Value (CurrencySymbol, scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
+import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Proposal.Params (QueryProposalParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Dao.Utils.Time (getCurrentTime)
 import Data.Array (filter, mapMaybe)
 import Data.Map as Map
+import JS.BigInt (BigInt, fromInt)
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType
       ( ProposalType'General
@@ -141,6 +150,8 @@ getAllActiveProposals params = do
   getProposalsByTime params isActiveProposal
 
 -- | Retrieve all expired proposals
+-- | Voting not possible after the
+-- | 'proposalEndTime' has passed
 getAllExpiredProposals ::
   QueryProposalParams ->
   Contract (Array TallyStateDatum)
@@ -160,3 +171,119 @@ getProposalsByTime params condition = do
 isActiveProposal :: POSIXTime -> TallyStateDatum -> Boolean
 isActiveProposal currentTime tallyDatum =
   (tallyDatum # unwrap # _.proposalEndTime) > currentTime
+
+-- | Get all successful proposals
+getAllSuccessfulProposals ::
+  QueryProposalParams ->
+  Contract (Array TallyStateDatum)
+getAllSuccessfulProposals params = do
+  logInfo' "Entering getAllSuccessfulProposals contract"
+
+  -- Get the config UTXO
+  let
+    params' = params # unwrap
+    validatorConfig = mkValidatorConfig params'.configSymbol
+      params'.configTokenName
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+    validatorConfig
+  configInfo :: ConfigInfo <- referenceConfigUtxo params'.configSymbol
+    appliedConfigValidator
+
+  -- The main config referenced at the config UTXO
+  let
+    configDatum :: DynamicConfigDatum
+    configDatum = configInfo.datum
+
+  allExpiredProposals <- getAllExpiredProposals params
+  pure $ filter (isSuccessfulProposal configDatum) allExpiredProposals
+
+isSuccessfulProposal :: DynamicConfigDatum -> TallyStateDatum -> Boolean
+isSuccessfulProposal configDatum tallyDatum =
+  case tallyDatum # unwrap # _.proposal of
+    ProposalType'General _ _ -> isSuccessfulGeneralProposal configDatum
+      tallyDatum
+    ProposalType'Trip _ _ _ -> isSuccessfulTripProposal configDatum tallyDatum
+    ProposalType'Upgrade _ -> isSuccessfulUpgradeProposal configDatum
+      tallyDatum
+
+isSuccessfulGeneralProposal ::
+  DynamicConfigDatum ->
+  TallyStateDatum ->
+  Boolean
+isSuccessfulGeneralProposal configDatum tallyDatum =
+  let
+    (relativeMajority /\ majorityPercent) = getMajorities configDatum tallyDatum
+
+    configGeneralRelativeMajorityPercent :: BigInt
+    configGeneralRelativeMajorityPercent = configDatum # unwrap #
+      _.generalRelativeMajorityPercent
+
+    configGeneralMajorityPercent :: BigInt
+    configGeneralMajorityPercent = configDatum # unwrap #
+      _.generalMajorityPercent
+  in
+    -- Check for sufficient votes by ensuring the config thresholds are exceeded
+    relativeMajority >= configGeneralRelativeMajorityPercent && majorityPercent
+      >= configGeneralMajorityPercent
+
+isSuccessfulTripProposal ::
+  DynamicConfigDatum ->
+  TallyStateDatum ->
+  Boolean
+isSuccessfulTripProposal configDatum tallyDatum =
+  let
+    (relativeMajority /\ majorityPercent) = getMajorities configDatum tallyDatum
+
+    configTripRelativeMajorityPercent :: BigInt
+    configTripRelativeMajorityPercent = configDatum # unwrap #
+      _.tripRelativeMajorityPercent
+
+    configTripMajorityPercent :: BigInt
+    configTripMajorityPercent = configDatum # unwrap # _.tripMajorityPercent
+  in
+    -- Check for sufficient votes
+    relativeMajority >= configTripRelativeMajorityPercent && majorityPercent >=
+      configTripMajorityPercent
+
+isSuccessfulUpgradeProposal ::
+  DynamicConfigDatum ->
+  TallyStateDatum ->
+  Boolean
+isSuccessfulUpgradeProposal configDatum tallyDatum =
+  let
+    (relativeMajority /\ majorityPercent) = getMajorities configDatum tallyDatum
+
+    configUpgradeRelativeMajorityPercent :: BigInt
+    configUpgradeRelativeMajorityPercent = configDatum # unwrap #
+      _.upgradeRelativeMajorityPercent
+
+    configUpgradeMajorityPercent :: BigInt
+    configUpgradeMajorityPercent = configDatum # unwrap #
+      _.upgradeMajorityPercent
+  in
+    -- Check for sufficient votes
+    relativeMajority >= configUpgradeRelativeMajorityPercent && majorityPercent
+      >= configUpgradeMajorityPercent
+
+getMajorities :: DynamicConfigDatum -> TallyStateDatum -> (BigInt /\ BigInt)
+getMajorities configDatum tallyDatum =
+  let
+    votesFor :: BigInt
+    votesFor = tallyDatum # unwrap # _.for
+
+    votesAgainst :: BigInt
+    votesAgainst = tallyDatum # unwrap # _.against
+
+    totalVotes :: BigInt
+    totalVotes = votesFor + votesAgainst
+
+    configTotalVotes :: BigInt
+    configTotalVotes = configDatum # unwrap # _.totalVotes
+
+    relativeMajority :: BigInt
+    relativeMajority = (totalVotes * (fromInt 1000)) / configTotalVotes
+
+    majorityPercent :: BigInt
+    majorityPercent = (votesFor * (fromInt 1000)) / totalVotes
+  in
+    (relativeMajority /\ majorityPercent)
