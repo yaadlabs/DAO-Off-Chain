@@ -359,11 +359,6 @@ export const upgradeConfig = async (
 export const getAllProposals = async (
   env: Foreign.ContractEnv,
   params: Foreign.QueryProposalParams
-): Promise<Array TallyStateDatum> => (await purescript).upgradeConfig(env, params);
-
-export const getAllProposals = async (
-  env: Foreign.ContractEnv,
-  params: Foreign.QueryProposalParams
 ): Promise<Array TallyStateDatum> => (await purescript).getAllProposals(env, params);
 
 export const getAllGeneralProposals = async (
