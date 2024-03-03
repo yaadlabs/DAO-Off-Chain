@@ -724,37 +724,6 @@ suite = do
                 voteOnProposalTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
-            -- ************************************************************************** --
-            -- ************************************************************************** --
-            -- * User three (walletThree) votes on proposal two again after cancelling  * --
-            -- * their previous vote. This will only work if the 'cancelVote' contract  * --
-            -- * works correctly and returns the 'voteNft' to the user after they       * --
-            -- * cancelled their previous vote.                                         * --
-            withKeyWallet walletThree do
-              logInfo'
-                "Running in wallet three - voting on proposal two again after cancelling previous vote"
-
-              let
-                voteParams :: VoteOnProposalParams
-                voteParams = VoteOnProposalParams
-                  { configSymbol: configSymbol
-                  , configTokenName: configTokenName
-                  , tallySymbol: proposalSymbol
-                  -- Vote datum fields
-                  , proposalTokenName: proposalTwoTokenName
-                  , voteDirection: VoteDirection'For
-                  , returnAda: (BigInt.fromInt 0)
-                  }
-
-              VoteOnProposalResult
-                { txHash: voteOnProposalTxHash
-                , symbol: voteOnProposalSymbol
-                } <- voteOnProposal voteParams
-
-              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-                voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
-
             -- ********************************************************* --
             -- ********************************************************* --
             -- * User one (walletOne) counts the votes on proposal two * --

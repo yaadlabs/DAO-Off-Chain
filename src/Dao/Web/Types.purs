@@ -96,6 +96,14 @@ newtype CreateProposalParams = CreateProposalParams
   , tallyStateDatum :: TallyStateDatum
   }
 
+-- | Query proposal contract paramaters
+newtype QueryProposalParams = QueryProposalParams
+  { configSymbol :: Hash28
+  , indexSymbol :: Hash28
+  , configTokenName :: TokenName
+  , indexTokenName :: TokenName
+  }
+
 -- | Parameters for treasury general contract
 newtype TreasuryParams = TreasuryParams
   { configSymbol :: Hash28

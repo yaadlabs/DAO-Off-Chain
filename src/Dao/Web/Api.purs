@@ -10,6 +10,13 @@ module Dao.Web.Api
   , treasuryTrip
   , createVotePass
   , createFungible
+  , getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
   ) where
 
 import Contract.Monad (ContractEnv)
@@ -23,6 +30,8 @@ import Dao.Web.Types
   , CreateFungibleParams
   , CreateProposalParams
   , PaymentPubKeyHash
+  , QueryProposalParams
+  , TallyStateDatum
   , TokenName
   , TransactionHash
   , TreasuryParams
@@ -37,6 +46,15 @@ import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
+import Dao.Workflow.QueryProposal
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -97,3 +115,39 @@ treasuryTrip ::
   ContractEnv ->
   EffectFn1 TreasuryParams (Promise TransactionHash)
 treasuryTrip env = contractCallOneArg env Dao.treasuryTrip
+
+getAllProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllProposals env = contractCallOneArg env Dao.getAllProposals
+
+getAllGeneralProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllGeneralProposals env = contractCallOneArg env Dao.getAllGeneralProposals
+
+getAllTripProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllTripProposals env = contractCallOneArg env Dao.getAllTripProposals
+
+getAllUpgradeProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllUpgradeProposals env = contractCallOneArg env Dao.getAllUpgradeProposals
+
+getAllActiveProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllActiveProposals env = contractCallOneArg env Dao.getAllActiveProposals
+
+getAllExpiredProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllExpiredProposals env = contractCallOneArg env Dao.getAllExpiredProposals
+
+getAllSuccessfulProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+getAllSuccessfulProposals env = contractCallOneArg env
+  Dao.getAllSuccessfulProposals
