@@ -1,14 +1,18 @@
 module Dao.Component.Tally.Params (mkTallyConfig) where
 
 import Contract.Value (CurrencySymbol, TokenName)
-import ScriptArguments.Types (TallyNftConfig(TallyNftConfig))
+import ScriptArguments.Types (TallyPolicyParams(TallyPolicyParams))
 
 mkTallyConfig ::
-  CurrencySymbol -> CurrencySymbol -> TokenName -> TokenName -> TallyNftConfig
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
+  TokenName ->
+  TallyPolicyParams
 mkTallyConfig configSymbol indexSymbol configTokenName indexTokenName =
-  TallyNftConfig
-    { tncIndexNftPolicyId: indexSymbol
-    , tncConfigNftTokenName: configTokenName
-    , tncConfigNftCurrencySymbol: configSymbol
-    , tncIndexNftTokenName: indexTokenName
+  TallyPolicyParams
+    { tpIndexSymbol: indexSymbol
+    , tpConfigTokenName: configTokenName
+    , tpConfigSymbol: configSymbol
+    , tpIndexTokenName: indexTokenName
     }

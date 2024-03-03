@@ -48,7 +48,7 @@ import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum(IndexNftDatum))
+import LambdaBuffers.ApplicationTypes.Index (IndexDatum(IndexDatum))
 
 -- | Contract for creating a proposal
 createProposal ::
@@ -84,7 +84,7 @@ createProposal params' = do
   let
     -- The index field of the IndexDatum must be incremented
     -- by one for each new proposal created
-    updatedIndexDatum :: IndexNftDatum
+    updatedIndexDatum :: IndexDatum
     updatedIndexDatum = incrementIndexDatum indexInfo.datum
 
   -- The tally token name corresponds to the index field of the index datum
@@ -151,12 +151,12 @@ createProposal params' = do
     { txHash, symbol: tallySymbol, tokenName: tallyTokenName }
   where
   -- The index must be incremented by one for each new proposal
-  incrementIndexDatum :: IndexNftDatum -> IndexNftDatum
-  incrementIndexDatum (IndexNftDatum { index: oldIndex }) =
-    IndexNftDatum { index: oldIndex + (fromInt 1) }
+  incrementIndexDatum :: IndexDatum -> IndexDatum
+  incrementIndexDatum (IndexDatum { index: oldIndex }) =
+    IndexDatum { index: oldIndex + (fromInt 1) }
 
   -- The tally token name corresponds to the
   -- 'index' field of the index datum
-  mkTallyTokenName :: IndexNftDatum -> Maybe TokenName
+  mkTallyTokenName :: IndexDatum -> Maybe TokenName
   mkTallyTokenName indexDatum =
     mkTokenName $ show $ indexDatum # unwrap # _.index

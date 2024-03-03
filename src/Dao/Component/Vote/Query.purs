@@ -5,10 +5,7 @@ Description: Helpers for voting related contracts
 module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
-  , referenceVoteUtxo
-  , spendVoteUtxo
   , spendVoteNftUtxo
-  , spendFungibleUtxo
   , cancelVoteUtxo
   ) where
 
@@ -58,11 +55,12 @@ import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , SpendPubKeyResult
   , UtxoInfo
-  , findKeyUtxoBySymbol
   , findScriptUtxoBySymbol
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
+  , hasTokenWithSymbol
   )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
+import Data.Array (filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -85,7 +83,6 @@ mkAllVoteConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
-  MintingPolicy ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract
     ( Array
@@ -100,7 +97,6 @@ mkAllVoteConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
-  votePolicyScript
   utxos =
   traverse
     ( mkVoteUtxoConstraintsAndLookups
@@ -110,7 +106,6 @@ mkAllVoteConstraintsAndLookups
         proposalTokenName
         voteTokenName
         fungiblePercent
-        votePolicyScript
     )
     (Map.toUnfoldableUnordered utxos)
 
@@ -124,7 +119,6 @@ mkVoteUtxoConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
-  MintingPolicy ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   Contract
     ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
@@ -137,7 +131,6 @@ mkVoteUtxoConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
-  votePolicyScript
   (txIn /\ txOut) =
   do
     logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
@@ -206,7 +199,6 @@ mkVoteUtxoConstraintsAndLookups
       lookups' = mconcat
         [ Lookups.unspentOutputs $
             Map.singleton txIn txOut
-        , Lookups.mintingPolicy votePolicyScript
         ]
 
       constraints' :: Constraints.TxConstraints
@@ -250,35 +242,6 @@ mkVoteUtxoConstraintsAndLookups
 
 type VoteInfo = UtxoInfo VoteDatum
 
--- | Reference vote UTXO (don't spend it)
-referenceVoteUtxo ::
-  CurrencySymbol ->
-  Validator ->
-  Contract VoteInfo
-referenceVoteUtxo voteSymbol voteValidator = do
-  logInfo' "Entering referenceVoteUtxo contract"
-  findScriptUtxoBySymbol
-    (Proxy :: Proxy VoteDatum)
-    Reference
-    unitRedeemer
-    voteSymbol
-    voteValidator
-
--- | Spend vote UTXO
-spendVoteUtxo ::
-  VoteActionRedeemer ->
-  CurrencySymbol ->
-  Validator ->
-  Contract VoteInfo
-spendVoteUtxo voteActionRedeemer voteSymbol voteValidator = do
-  logInfo' "Entering spendVoteUtxo contract"
-  findScriptUtxoBySymbol
-    (Proxy :: Proxy VoteDatum)
-    Spend
-    (Redeemer $ toData $ voteActionRedeemer)
-    voteSymbol
-    voteValidator
-
 -- | Spend the vote UTXO corresponding to the user's PKH
 -- | Ensure it is owned by the user and was a vote on
 -- | the provided proposal (proposalTokenName is checked for this)
@@ -304,15 +267,25 @@ spendVoteNftUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract SpendPubKeyResult
-spendVoteNftUtxo voteNftSymbol utxoMap = do
+spendVoteNftUtxo voteNftSymbol utxos = do
   logInfo' "Entering spendVoteNftUtxo contract"
-  findKeyUtxoBySymbol voteNftSymbol utxoMap
 
--- | Spend vote fungible (vote multiplier) UTXO
-spendFungibleUtxo ::
-  CurrencySymbol ->
-  Map TransactionInput TransactionOutputWithRefScript ->
-  Contract SpendPubKeyResult
-spendFungibleUtxo symbol utxoMap = do
-  logInfo' "Entering spendFungibleUtxo contract"
-  findKeyUtxoBySymbol symbol utxoMap
+  (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
+    liftContractM
+      "User does not hold a voteNft token (votePass) so is ineligble to vote"
+      $ head
+      $ filter (hasTokenWithSymbol voteNftSymbol)
+      $ Map.toUnfoldable
+      $ utxos
+
+  let
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat [ Lookups.unspentOutputs $ Map.singleton txIn txOut' ]
+
+    constraints :: Constraints.TxConstraints
+    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  pure { lookups, constraints, value }

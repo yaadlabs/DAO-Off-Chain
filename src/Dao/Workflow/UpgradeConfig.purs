@@ -77,6 +77,7 @@ upgradeConfig params' =
     configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
     tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
+      params.proposalTokenName
       appliedTallyValidator
 
     -- Make on-chain time range

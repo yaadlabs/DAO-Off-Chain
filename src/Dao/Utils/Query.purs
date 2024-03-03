@@ -7,8 +7,9 @@ module Dao.Utils.Query
   , QueryType(..)
   , SpendPubKeyResult
   , getAllWalletUtxos
+  , hasTokenWithSymbol
   , findScriptUtxoBySymbol
-  , findKeyUtxoBySymbol
+  , findScriptUtxoByToken
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   ) where
 
@@ -34,6 +35,7 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
+  , one
   , pure
   , show
   , (#)
@@ -57,6 +59,7 @@ import Contract.Value
   , TokenName
   , Value
   , symbols
+  , valueOf
   )
 import Contract.Wallet (getWalletUtxos)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
@@ -102,6 +105,60 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter (hasTokenWithSymbol symbol)
+      $ Map.toUnfoldable
+      $ utxos
+
+  let
+    constraints :: Constraints.TxConstraints
+    constraints =
+      case spendOrReference of
+        Spend -> Constraints.mustSpendScriptOutput txIn redeemer
+        Reference -> Constraints.mustReferenceOutput txIn
+
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn
+          (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
+      ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+
+  pure { datum, value, lookups, constraints }
+
+-- | Reference or spend a UTXO at script marked by an NFT
+-- | with the given 'CurrencySymbol' and 'TokenName'
+findScriptUtxoByToken ::
+  forall (datum' :: Type).
+  FromData datum' =>
+  Proxy datum' ->
+  QueryType ->
+  Redeemer ->
+  CurrencySymbol ->
+  TokenName ->
+  Validator ->
+  Contract (UtxoInfo datum')
+findScriptUtxoByToken
+  _
+  spendOrReference
+  redeemer
+  symbol
+  tokenName
+  validatorScript = do
+  logInfo' "Entering findScriptUtxoBySymbol contract"
+
+  let
+    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+  utxos <- utxosAt scriptAddr
+
+  (txIn /\ TransactionOutputWithRefScript txOut) ::
+    (TransactionInput /\ TransactionOutputWithRefScript) <-
+    liftContractM "Cannot find UTxO with NFT"
+      $ head
+      $ filter (hasOneOfToken symbol tokenName)
       $ Map.toUnfoldable
       $ utxos
 
@@ -244,39 +301,22 @@ hasTokenWithSymbol ::
 hasTokenWithSymbol symbol (_ /\ TransactionOutputWithRefScript txOut) =
   any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
 
+-- | Check for the presence of a token with the given symbol
+-- | at the provided transactioun output
+hasOneOfToken ::
+  CurrencySymbol ->
+  TokenName ->
+  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  Boolean
+hasOneOfToken symbol tokenName (_ /\ TransactionOutputWithRefScript txOut) =
+  valueOf (txOut.output # unwrap # _.amount) symbol tokenName == one
+
 -- | Result type for 'findKeyUtxoBySymbol' function
 type SpendPubKeyResult =
   { lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
   , value :: Value
   }
-
--- | Spend UTXO marked by an NFT with the given CurrencySymbol
-findKeyUtxoBySymbol ::
-  CurrencySymbol ->
-  Map TransactionInput TransactionOutputWithRefScript ->
-  Contract SpendPubKeyResult
-findKeyUtxoBySymbol symbol utxos = do
-  logInfo' "Entering findKeyUtxoBySymbol contract"
-
-  (txIn /\ TransactionOutputWithRefScript txOut) <-
-    liftContractM "Cannot find UTxO with NFT"
-      $ head
-      $ filter (hasTokenWithSymbol symbol)
-      $ Map.toUnfoldable
-      $ utxos
-
-  let
-    lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.unspentOutputs utxos ] -- TODO: Make this more precise
-
-    constraints :: Constraints.TxConstraints
-    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
-
-    value :: Value
-    value = txOut.output # unwrap # _.amount
-
-  pure { lookups, constraints, value }
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::

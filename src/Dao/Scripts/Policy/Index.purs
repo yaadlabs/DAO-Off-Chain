@@ -6,12 +6,12 @@ module Dao.Scripts.Policy.Index
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
 import Dao.Scripts.Utils (mkUnappliedPolicy)
-import ScriptArguments.Types (IndexNftConfig)
+import ScriptArguments.Types (IndexPolicyParams)
 
-unappliedIndexPolicy :: IndexNftConfig -> Contract MintingPolicy
+unappliedIndexPolicy :: IndexPolicyParams -> Contract MintingPolicy
 unappliedIndexPolicy = mkUnappliedPolicy
   "./src/Dao/Scripts/Json/Optimised/IndexPolicy.json"
 
-unappliedIndexPolicyDebug :: IndexNftConfig -> Contract MintingPolicy
+unappliedIndexPolicyDebug :: IndexPolicyParams -> Contract MintingPolicy
 unappliedIndexPolicyDebug = mkUnappliedPolicy
   "./src/Dao/Scripts/Json/Debug/IndexPolicy.json"

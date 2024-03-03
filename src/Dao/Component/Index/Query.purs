@@ -15,10 +15,10 @@ import Dao.Utils.Query
   , UtxoInfo
   , findScriptUtxoBySymbol
   )
-import LambdaBuffers.ApplicationTypes.Index (IndexNftDatum)
+import LambdaBuffers.ApplicationTypes.Index (IndexDatum)
 import Type.Proxy (Proxy(Proxy))
 
-type IndexInfo = UtxoInfo IndexNftDatum
+type IndexInfo = UtxoInfo IndexDatum
 
 referenceIndexUtxo ::
   CurrencySymbol ->
@@ -27,7 +27,7 @@ referenceIndexUtxo ::
 referenceIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering referenceIndexUtxo contract"
   findScriptUtxoBySymbol
-    (Proxy :: Proxy IndexNftDatum)
+    (Proxy :: Proxy IndexDatum)
     Reference
     unitRedeemer
     indexSymbol
@@ -40,7 +40,7 @@ spendIndexUtxo ::
 spendIndexUtxo indexSymbol indexValidator = do
   logInfo' "Entering spendIndexUtxo contract"
   findScriptUtxoBySymbol
-    (Proxy :: Proxy IndexNftDatum)
+    (Proxy :: Proxy IndexDatum)
     Spend
     unitRedeemer
     indexSymbol

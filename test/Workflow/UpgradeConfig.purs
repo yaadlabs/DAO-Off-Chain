@@ -167,7 +167,6 @@ suite = do
               , maxTripDisbursement: BigInt.fromInt 20_000_000
               , agentDisbursementPercent: BigInt.fromInt 1
               , proposalTallyEndOffset: BigInt.fromInt 0
-              , tallyNft: adaSymbol
               , voteTokenName: adaToken
               , voteFungibleCurrencySymbol: fungibleSymbol
               , voteFungibleTokenName: fungibleTokenName
@@ -260,9 +259,10 @@ suite = do
           let
             upgradeConfigParams :: UpgradeConfigParams
             upgradeConfigParams = UpgradeConfigParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
+              { configSymbol
+              , configTokenName
               , tallySymbol: proposalSymbol
+              , proposalTokenName
               , newDynamicConfigDatum: dummyConfig
               }
 

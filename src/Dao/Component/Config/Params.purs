@@ -13,7 +13,7 @@ import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import ScriptArguments.Types
-  ( ConfigurationValidatorConfig(ConfigurationValidatorConfig)
+  ( ValidatorParams(ValidatorParams)
   )
 
 -- | Parameters passed when initially creating dynamic config
@@ -30,7 +30,6 @@ newtype CreateConfigParams = CreateConfigParams
   , maxTripDisbursement :: BigInt
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
-  , tallyNft :: CurrencySymbol
   , voteTokenName :: TokenName
   -- VoteNft (vote pass) symbol
   , voteNftSymbol :: CurrencySymbol
@@ -51,6 +50,7 @@ newtype UpgradeConfigParams = UpgradeConfigParams
   , configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , proposalTokenName :: TokenName
   }
 
 derive instance Newtype UpgradeConfigParams _
@@ -58,9 +58,9 @@ derive instance Newtype UpgradeConfigParams _
 mkValidatorConfig ::
   CurrencySymbol ->
   TokenName ->
-  ConfigurationValidatorConfig
+  ValidatorParams
 mkValidatorConfig symbol tokenName =
-  ConfigurationValidatorConfig
-    { cvcConfigNftCurrencySymbol: symbol
-    , cvcConfigNftTokenName: tokenName
+  ValidatorParams
+    { vpConfigSymbol: symbol
+    , vpConfigTokenName: tokenName
     }

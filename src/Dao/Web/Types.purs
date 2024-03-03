@@ -69,7 +69,6 @@ newtype CreateConfigParams = CreateConfigParams
   , maxTripDisbursement :: BigInt
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
-  , tallyNft :: Hash28
   , voteTokenName :: TokenName
   , voteNftSymbol :: Hash28
   , voteFungibleCurrencySymbol :: Hash28
@@ -85,6 +84,7 @@ newtype UpgradeConfigParams = UpgradeConfigParams
   , configSymbol :: Hash28
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   }
 
 -- | Create proposal contract paramaters
@@ -100,6 +100,7 @@ newtype CreateProposalParams = CreateProposalParams
 newtype TreasuryParams = TreasuryParams
   { configSymbol :: Hash28
   , tallySymbol :: Hash28
+  , proposalTokenName :: TokenName
   , treasurySymbol :: Hash28
   , configTokenName :: TokenName
   }
@@ -197,7 +198,7 @@ newtype VoteDatum = VoteDatum
   }
 
 -- | Index datum
-newtype IndexNftDatum = IndexNftDatum { index :: BigInt }
+newtype IndexDatum = IndexDatum { index :: BigInt }
 
 data VoteDirection = For | Against
 

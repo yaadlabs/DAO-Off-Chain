@@ -287,7 +287,7 @@ export namespace Foreign {
   export declare class VoteDirection {};
   export declare class For extends VoteDirection {};
   export declare class Against extends VoteDirection {};
-  export interface IndexNftDatum {
+  export interface IndexDatum {
     index: BigInteger;
   }
 

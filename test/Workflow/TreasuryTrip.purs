@@ -166,7 +166,6 @@ suite = do
               , maxTripDisbursement: BigInt.fromInt 20_000_000
               , agentDisbursementPercent: BigInt.fromInt 1
               , proposalTallyEndOffset: BigInt.fromInt 0
-              , tallyNft: adaSymbol
               , voteTokenName: adaToken
               , voteFungibleCurrencySymbol: fungibleSymbol
               , voteFungibleTokenName: fungibleTokenName
@@ -263,9 +262,10 @@ suite = do
           let
             treasuryTripParams :: TreasuryParams
             treasuryTripParams = TreasuryParams
-              { configSymbol: configSymbol
-              , configTokenName: configTokenName
+              { configSymbol
+              , configTokenName
               , tallySymbol: proposalSymbol
+              , proposalTokenName
               , treasurySymbol: treasuryFundSymbol
               }
 

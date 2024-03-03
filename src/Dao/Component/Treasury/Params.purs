@@ -16,6 +16,7 @@ newtype TreasuryParams = TreasuryParams
   { configSymbol :: CurrencySymbol
   , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
+  , proposalTokenName :: TokenName
   , treasurySymbol :: CurrencySymbol
   }
 
