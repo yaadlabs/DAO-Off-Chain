@@ -45,11 +45,14 @@ sampleTripProposalTallyStateDatum travelAgentAddress travellerAddress = do
     , against: BigInt.fromInt 0
     }
 
-sampleUpgradeConfigProposalTallyStateDatum :: CurrencySymbol -> TallyStateDatum
-sampleUpgradeConfigProposalTallyStateDatum symbol =
-  TallyStateDatum
+sampleUpgradeConfigProposalTallyStateDatum ::
+  CurrencySymbol -> Contract TallyStateDatum
+sampleUpgradeConfigProposalTallyStateDatum symbol = do
+  currentTime <- getCurrentTime
+  let endTime = currentTime + offsetPosixTime
+  pure $ TallyStateDatum
     { proposal: ProposalType'Upgrade symbol
-    , proposalEndTime: proposalEndTimeWayInFuture
+    , proposalEndTime: endTime
     , for: BigInt.fromInt 0
     , against: BigInt.fromInt 0
     }
