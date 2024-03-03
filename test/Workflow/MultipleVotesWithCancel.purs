@@ -246,13 +246,13 @@ suite = do
 
               -- ************************** --
               -- Create the first proposal  --
-              let
-                -- The 'TallyStateDatum' to be sent to the proposal UTXO
-                -- The proposal type for this proposal will be a 'General' one
-                -- The payment address is the address of 'walletTwo'
-                tallyStateDatum = sampleGeneralProposalTallyStateDatum
-                  userTwoWalletAddress
+              -- The 'TallyStateDatum' to be sent to the proposal UTXO
+              -- The proposal type for this proposal will be a 'General' one
+              -- The payment address is the address of 'walletTwo'
+              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
+                userTwoWalletAddress
 
+              let
                 -- The params needed for creating the first proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams
@@ -276,13 +276,13 @@ suite = do
 
               -- ************************** --
               -- Create the second proposal --
-              let
-                -- The 'TallyStateDatum' to be sent to the proposal UTXO
-                -- The proposal type for this proposal will be a 'General' one
-                -- The payment address is the address of 'walletSix'
-                tallyStateDatum = sampleGeneralProposalTallyStateDatum
-                  userSixWalletAddress
+              -- The 'TallyStateDatum' to be sent to the proposal UTXO
+              -- The proposal type for this proposal will be a 'General' one
+              -- The payment address is the address of 'walletSix'
+              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
+                userSixWalletAddress
 
+              let
                 -- The params needed for creating the proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams

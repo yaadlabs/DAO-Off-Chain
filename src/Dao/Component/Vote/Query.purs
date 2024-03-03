@@ -193,7 +193,7 @@ mkVoteUtxoConstraintsAndLookups
       burnVoteValue = singleton voteSymbol voteTokenName (negate one)
 
       burnVoteRedeemer :: Redeemer
-      burnVoteRedeemer = Redeemer $ toData $ VoteMinterActionRedeemer'Burn
+      burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
       lookups' :: Lookups.ScriptLookups
       lookups' = mconcat
@@ -204,7 +204,7 @@ mkVoteUtxoConstraintsAndLookups
       constraints' :: Constraints.TxConstraints
       constraints' = mconcat
         [ Constraints.mustSpendScriptOutput txIn
-            (Redeemer $ toData $ VoteActionRedeemer'Count)
+            (Redeemer $ toData VoteActionRedeemer'Count)
         , Constraints.mustPayToPubKey voteOwnerKey
             (voteNftToken <> fungibleToken)
         -- ^ Return the 'voteNft', and 'fungibleToken(s)' if any
@@ -248,7 +248,7 @@ cancelVoteUtxo voteActionRedeemer symbol userPkh proposalTokenName voteValidator
   do
     logInfo' "Entering cancelVoteUtxo contract"
     findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
-      (Redeemer $ toData $ voteActionRedeemer)
+      (Redeemer $ toData voteActionRedeemer)
       symbol
       userPkh
       proposalTokenName

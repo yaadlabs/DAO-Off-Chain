@@ -122,6 +122,8 @@ voteOnProposal params' = do
   -- TODO: Find better solution
   void $ waitNSlots (Natural.fromInt' 10)
 
+  logInfo' $ "onChainTimeRange: " <> show onchainTimeRange
+
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
 

@@ -179,7 +179,7 @@ suite = do
             -- *************************************************************** --
             -- *************************************************************** --
             -- * User one creates two proposals on which the others can vote * --
-            ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+            ( proposalSymbol /\ proposalOneTokenName /\ configSymbol
                 /\ configTokenName
                 /\ proposalTwoTokenName
                 /\ indexSymbol
@@ -257,13 +257,16 @@ suite = do
 
               -- ************************** --
               -- Create the first proposal  --
-              let
-                -- The 'TallyStateDatum' to be sent to the proposal UTXO
-                -- The proposal type for this proposal will be a 'General' one
-                -- The payment address is the address of 'walletTwo'
-                tallyStateDatum = sampleGeneralProposalTallyStateDatum
-                  userTwoWalletAddress
+              -- The 'TallyStateDatum' to be sent to the proposal UTXO
+              -- The proposal type for this proposal will be a 'General' one
+              -- The payment address is the address of 'walletTwo'
+              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
+                userTwoWalletAddress
 
+              logInfo' $ "proposalEndTime in test: " <>
+                (show $ tallyStateDatum # unwrap # _.proposalEndTime)
+
+              let
                 -- The params needed for creating the first proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams
@@ -277,7 +280,7 @@ suite = do
               -- Create the first proposal UTXO
               ContractResult
                 { txHash: createProposalTxHash
-                , symbol: proposalOneSymbol
+                , symbol: proposalSymbol
                 , tokenName: proposalOneTokenName
                 } <- createProposal proposalParams
 
@@ -287,15 +290,15 @@ suite = do
 
               -- ************************** --
               -- Create the second proposal --
-              let
-                -- The 'TallyStateDatum' to be sent to the proposal UTXO
-                -- The proposal type for this proposal will be a 'Trip' one
-                -- The travel agent and traveller addresses are
-                -- 'walletSix' and 'walletTwo' respectively
-                tallyStateDatum = sampleTripProposalTallyStateDatum
-                  userSixWalletAddress
-                  userTwoWalletAddress
+              -- The 'TallyStateDatum' to be sent to the proposal UTXO
+              -- The proposal type for this proposal will be a 'Trip' one
+              -- The travel agent and traveller addresses are
+              -- 'walletSix' and 'walletTwo' respectively
+              tallyStateDatum <- sampleTripProposalTallyStateDatum
+                userSixWalletAddress
+                userTwoWalletAddress
 
+              let
                 -- The params needed for creating the proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams
@@ -309,7 +312,7 @@ suite = do
               -- Create the second proposal UTXO
               ContractResult
                 { txHash: createProposalTxHashTwo
-                , symbol: proposalTwoSymbol
+                , symbol: _proposalSymbol
                 , tokenName: proposalTwoTokenName
                 } <- createProposal proposalParams
 
@@ -424,7 +427,7 @@ suite = do
               void $ waitNSlots (Natural.fromInt' 3)
 
               pure
-                ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+                ( proposalSymbol /\ proposalOneTokenName /\ configSymbol
                     /\ configTokenName
                     /\ proposalTwoTokenName
                     /\ indexSymbol
@@ -465,7 +468,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -493,7 +496,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -521,7 +524,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -582,7 +585,7 @@ suite = do
                   { voteTokenName: adaToken
                   , configSymbol
                   , configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , proposalTokenName: proposalOneTokenName
                   }
 
@@ -608,7 +611,7 @@ suite = do
                   { configSymbol
                   , configTokenName
                   , proposalTokenName: proposalOneTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , treasurySymbol: treasuryFundSymbol
                   }
 
@@ -629,7 +632,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'For
@@ -657,7 +660,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'For
@@ -705,7 +708,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'Against
@@ -736,7 +739,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'For
@@ -765,7 +768,7 @@ suite = do
                   { voteTokenName: adaToken
                   , configSymbol
                   , configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , proposalTokenName: proposalTwoTokenName
                   }
 
@@ -778,6 +781,9 @@ suite = do
             -- ****************************************************************** --
             -- ****************************************************************** --
             -- * User one queries the proposals (returns the proposal datums )  * --
+
+            void $ waitNSlots (Natural.fromInt' 40)
+
             withKeyWallet walletOne do
               logInfo'
                 "Running in wallet one - get all the proposals (proposal query)"

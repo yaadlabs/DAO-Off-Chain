@@ -7,9 +7,10 @@ module Test.Data.Tally
 import Contract.Address (Address)
 import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, ($))
+import Contract.Prelude ((*), (+))
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Value (CurrencySymbol)
-import Dao.Utils.Time (mkPosixTime)
+import Dao.Utils.Time (getCurrentTime, mkPosixTime)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
@@ -18,21 +19,28 @@ import LambdaBuffers.ApplicationTypes.Proposal
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 
-sampleGeneralProposalTallyStateDatum :: Address -> TallyStateDatum
-sampleGeneralProposalTallyStateDatum paymentAddress =
-  TallyStateDatum
-    { proposal: ProposalType'General paymentAddress (BigInt.fromInt 20_000_000)
-    , proposalEndTime: proposalEndTimeWayInFuture
-    , for: BigInt.fromInt 0
-    , against: BigInt.fromInt 0
-    }
+sampleGeneralProposalTallyStateDatum :: Address -> Contract TallyStateDatum
+sampleGeneralProposalTallyStateDatum paymentAddress = do
+  currentTime <- getCurrentTime
+  let endTime = currentTime + offsetPosixTime
+  pure $
+    TallyStateDatum
+      { proposal: ProposalType'General paymentAddress
+          (BigInt.fromInt 20_000_000)
+      , proposalEndTime: endTime
+      , for: BigInt.fromInt 0
+      , against: BigInt.fromInt 0
+      }
 
-sampleTripProposalTallyStateDatum :: Address -> Address -> TallyStateDatum
-sampleTripProposalTallyStateDatum travelAgentAddress travellerAddress =
-  TallyStateDatum
+sampleTripProposalTallyStateDatum ::
+  Address -> Address -> Contract TallyStateDatum
+sampleTripProposalTallyStateDatum travelAgentAddress travellerAddress = do
+  currentTime <- getCurrentTime
+  let endTime = currentTime + offsetPosixTime
+  pure $ TallyStateDatum
     { proposal: ProposalType'Trip travelAgentAddress travellerAddress
         (BigInt.fromInt 10_000_000)
-    , proposalEndTime: proposalEndTimeWayInFuture
+    , proposalEndTime: endTime
     , for: BigInt.fromInt 0
     , against: BigInt.fromInt 0
     }
@@ -48,3 +56,6 @@ sampleUpgradeConfigProposalTallyStateDatum symbol =
 
 proposalEndTimeWayInFuture :: POSIXTime
 proposalEndTimeWayInFuture = mkPosixTime "1795941991500"
+
+offsetPosixTime :: POSIXTime
+offsetPosixTime = mkPosixTime "0000000040000"
