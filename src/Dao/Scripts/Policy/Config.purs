@@ -5,13 +5,13 @@ module Dao.Scripts.Policy.Config
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import Dao.Scripts.Utils (mkUnappliedPolicy)
+import Dao.Scripts.Utils (mkUnappliedPolicy')
+import Dao.Scripts.Serialized.Debug as DebugScripts
+import Dao.Scripts.Serialized.Optimized as OptimizedScripts
 import ScriptArguments.Types (ConfigPolicyParams)
 
 unappliedConfigPolicy :: ConfigPolicyParams -> Contract MintingPolicy
-unappliedConfigPolicy = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Optimised/ConfigPolicy.json"
+unappliedConfigPolicy = mkUnappliedPolicy' OptimizedScripts.configPolicy
 
 unappliedConfigPolicyDebug :: ConfigPolicyParams -> Contract MintingPolicy
-unappliedConfigPolicyDebug = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Debug/ConfigPolicy.json"
+unappliedConfigPolicyDebug = mkUnappliedPolicy' OptimizedScripts.configPolicy

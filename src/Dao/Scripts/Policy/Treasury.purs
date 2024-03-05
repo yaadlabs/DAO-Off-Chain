@@ -6,12 +6,12 @@ module Dao.Scripts.Policy.Treasury
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
 import Contract.Transaction (TransactionInput)
-import Dao.Scripts.Utils (mkUnappliedPolicy)
+import Dao.Scripts.Serialized.Debug as DebugScripts
+import Dao.Scripts.Serialized.Optimized as OptimizedScripts
+import Dao.Scripts.Utils (mkUnappliedPolicy')
 
 unappliedTreasuryPolicy :: TransactionInput -> Contract MintingPolicy
-unappliedTreasuryPolicy = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Optimised/TreasuryPolicy.json"
+unappliedTreasuryPolicy = mkUnappliedPolicy' OptimizedScripts.treasuryPolicy
 
 unappliedTreasuryPolicyDebug :: TransactionInput -> Contract MintingPolicy
-unappliedTreasuryPolicyDebug = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Debug/TreasuryPolicy.json"
+unappliedTreasuryPolicyDebug = mkUnappliedPolicy' DebugScripts.treasuryPolicy

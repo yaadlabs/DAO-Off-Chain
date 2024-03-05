@@ -5,13 +5,13 @@ module Dao.Scripts.Policy.Tally
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy)
-import Dao.Scripts.Utils (mkUnappliedPolicy)
+import Dao.Scripts.Serialized.Debug as DebugScripts
+import Dao.Scripts.Serialized.Optimized as OptimizedScripts
+import Dao.Scripts.Utils (mkUnappliedPolicy')
 import ScriptArguments.Types (TallyPolicyParams)
 
 unappliedTallyPolicy :: TallyPolicyParams -> Contract MintingPolicy
-unappliedTallyPolicy = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Optimised/TallyPolicy.json"
+unappliedTallyPolicy = mkUnappliedPolicy' OptimizedScripts.tallyPolicy
 
 unappliedTallyPolicyDebug :: TallyPolicyParams -> Contract MintingPolicy
-unappliedTallyPolicyDebug = mkUnappliedPolicy
-  "./src/Dao/Scripts/Json/Debug/TallyPolicy.json"
+unappliedTallyPolicyDebug = mkUnappliedPolicy' DebugScripts.tallyPolicy

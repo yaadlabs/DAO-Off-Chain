@@ -6,8 +6,8 @@ module Dao.Scripts.Validator.AlwaysSucceeds
 import Contract.Monad (Contract)
 import Contract.Prelude (pure, ($))
 import Contract.Scripts (Validator(Validator))
-import Dao.Scripts.Utils (mkScript)
+import Dao.Scripts.Serialized.Optimized as OptimizedScripts
+import Dao.Scripts.Utils (mkScript')
 
 alwaysSucceedsValidatorScript :: Contract Validator
-alwaysSucceedsValidatorScript = pure $ Validator $ mkScript
-  "./src/Dao/Scripts/Json/Optimised/AlwaysSucceedsValidator.json"
+alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' OptimizedScripts.alwaysSucceedsValidator
