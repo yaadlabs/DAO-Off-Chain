@@ -24,10 +24,14 @@ import Contract.Transaction
   , TransactionOutputWithRefScript
   )
 import Contract.Utxos (utxosAt)
-import Contract.Value (CurrencySymbol, scriptCurrencySymbol)
+import Contract.Value (CurrencySymbol, TokenName, scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Proposal.Params (QueryProposalParams)
+import Dao.Component.Proposal.Query
+  ( QueryResult(QueryResult)
+  , getTokenNameAndDatumFromOutput
+  )
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
@@ -52,7 +56,7 @@ import Type.Proxy (Proxy(Proxy))
 -- | Retrieve all proposals
 getAllProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllProposals params' = do
   logInfo' "Entering getAllProposals contract"
 
@@ -85,23 +89,25 @@ getAllProposals params' = do
   tallyValidatorUtxos <- utxosAt tallyValidatorAddress
 
   let
-    proposalUtxos :: Array TallyStateDatum
-    proposalUtxos = getProposalInfo $ filter (hasTokenWithSymbol tallySymbol)
+    proposalUtxos :: Array QueryResult
+    proposalUtxos = getProposalInfo tallySymbol $ filter
+      (hasTokenWithSymbol tallySymbol)
       (Map.toUnfoldable tallyValidatorUtxos)
 
   pure proposalUtxos
   where
   getProposalInfo ::
+    CurrencySymbol ->
     Array (TransactionInput /\ TransactionOutputWithRefScript) ->
-    Array TallyStateDatum
-  getProposalInfo = mapMaybe op
+    Array QueryResult
+  getProposalInfo symbol = mapMaybe op
     where
-    op (_ /\ txOut) = extractOutputDatum (Proxy :: Proxy TallyStateDatum) txOut
+    op = getTokenNameAndDatumFromOutput symbol
 
 -- | Retrieve all proposals of type 'General'
 getAllGeneralProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllGeneralProposals params = do
   logInfo' "Entering getAllGeneralProposals contract"
   getProposalsByType params General
@@ -109,7 +115,7 @@ getAllGeneralProposals params = do
 -- | Retrieve all proposals of type 'General'
 getAllTripProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllTripProposals params = do
   logInfo' "Entering getAllTripProposals contract"
   getProposalsByType params Trip
@@ -117,7 +123,7 @@ getAllTripProposals params = do
 -- | Retrieve all proposals of type 'Upgrade'
 getAllUpgradeProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllUpgradeProposals params = do
   logInfo' "Entering getAllUpgradeProposals contract"
   getProposalsByType params Upgrade
@@ -129,11 +135,10 @@ derive instance Eq ProposalType'
 getProposalsByType ::
   QueryProposalParams ->
   ProposalType' ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getProposalsByType params proposalType = do
   allProposals <- getAllProposals params
-  pure $ filter (\p -> isType proposalType (p # unwrap # _.proposal))
-    allProposals
+  pure $ filter (check proposalType) allProposals
   where
   isType :: ProposalType' -> ProposalType -> Boolean
   isType General (ProposalType'General _ _) = true
@@ -141,10 +146,16 @@ getProposalsByType params proposalType = do
   isType Upgrade (ProposalType'Upgrade _) = true
   isType _ _ = false
 
+  check :: ProposalType' -> QueryResult -> Boolean
+  check propType' queryResult = isType propType' $ queryResult # unwrap
+    # _.tallyDatum
+    # unwrap
+    # _.proposal
+
 -- | Retrieve all active proposals
 getAllActiveProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllActiveProposals params = do
   logInfo' "Entering getAllActiveProposals contract"
   getProposalsByTime params isActiveProposal
@@ -154,28 +165,29 @@ getAllActiveProposals params = do
 -- | 'proposalEndTime' has passed
 getAllExpiredProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllExpiredProposals params = do
   logInfo' "Entering getAllExpiredProposals contract"
   getProposalsByTime params (not <<< isActiveProposal)
 
 getProposalsByTime ::
   QueryProposalParams ->
-  (POSIXTime -> TallyStateDatum -> Boolean) ->
-  Contract (Array TallyStateDatum)
+  (POSIXTime -> QueryResult -> Boolean) ->
+  Contract (Array QueryResult)
 getProposalsByTime params condition = do
   allProposals <- getAllProposals params
   currentTime <- getCurrentTime
   pure $ filter (condition currentTime) allProposals
 
-isActiveProposal :: POSIXTime -> TallyStateDatum -> Boolean
-isActiveProposal currentTime tallyDatum =
-  (tallyDatum # unwrap # _.proposalEndTime) > currentTime
+isActiveProposal :: POSIXTime -> QueryResult -> Boolean
+isActiveProposal currentTime queryResult =
+  (queryResult # unwrap # _.tallyDatum # unwrap # _.proposalEndTime) >
+    currentTime
 
 -- | Get all successful proposals
 getAllSuccessfulProposals ::
   QueryProposalParams ->
-  Contract (Array TallyStateDatum)
+  Contract (Array QueryResult)
 getAllSuccessfulProposals params = do
   logInfo' "Entering getAllSuccessfulProposals contract"
 
@@ -197,14 +209,16 @@ getAllSuccessfulProposals params = do
   allExpiredProposals <- getAllExpiredProposals params
   pure $ filter (isSuccessfulProposal configDatum) allExpiredProposals
 
-isSuccessfulProposal :: DynamicConfigDatum -> TallyStateDatum -> Boolean
-isSuccessfulProposal configDatum tallyDatum =
+isSuccessfulProposal :: DynamicConfigDatum -> QueryResult -> Boolean
+isSuccessfulProposal configDatum queryResult =
   case tallyDatum # unwrap # _.proposal of
     ProposalType'General _ _ -> isSuccessfulGeneralProposal configDatum
       tallyDatum
     ProposalType'Trip _ _ _ -> isSuccessfulTripProposal configDatum tallyDatum
     ProposalType'Upgrade _ -> isSuccessfulUpgradeProposal configDatum
       tallyDatum
+  where
+  tallyDatum = queryResult # unwrap # _.tallyDatum
 
 isSuccessfulGeneralProposal ::
   DynamicConfigDatum ->

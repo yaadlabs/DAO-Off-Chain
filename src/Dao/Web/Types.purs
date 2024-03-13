@@ -161,6 +161,12 @@ newtype VoteOnProposalResult = VoteOnProposalResult
   , symbol :: Hash28
   }
 
+-- | General proposal query result
+newtype QueryResult = QueryResult
+  { proposalTokenName :: TokenName
+  , tallyDatum :: TallyStateDatum
+  }
+
 -- * Datums
 
 -- | The app's config datum

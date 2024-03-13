@@ -56,6 +56,9 @@ import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   , QueryProposalParams(QueryProposalParams)
   ) as DaoApi
+import Dao.Component.Proposal.Query
+  ( QueryResult(QueryResult)
+  ) as DaoApi
 import Dao.Component.Treasury.Params
   ( TreasuryParams(TreasuryParams)
   ) as DaoApi
@@ -214,6 +217,28 @@ instance ConvertJsToPs WebApi.ContractResult DaoApi.ContractResult where
       { txHash
       , symbol
       , tokenName
+      }
+
+-- * QueryResult
+
+instance ConvertPsToJs WebApi.QueryResult DaoApi.QueryResult where
+  convertPsToJs (DaoApi.QueryResult params) = do
+    proposalTokenName <- convertPsToJs params.proposalTokenName
+    tallyDatum <- convertPsToJs params.tallyDatum
+
+    pure $ WebApi.QueryResult
+      { proposalTokenName
+      , tallyDatum
+      }
+
+instance ConvertJsToPs WebApi.QueryResult DaoApi.QueryResult where
+  convertJsToPs (WebApi.QueryResult params) = do
+    proposalTokenName <- convertJsToPs params.proposalTokenName
+    tallyDatum <- convertJsToPs params.tallyDatum
+
+    pure $ DaoApi.QueryResult
+      { proposalTokenName
+      , tallyDatum
       }
 
 -- * VoteOnProposalResult

@@ -31,7 +31,7 @@ import Dao.Web.Types
   , CreateProposalParams
   , PaymentPubKeyHash
   , QueryProposalParams
-  , TallyStateDatum
+  , QueryResult
   , TokenName
   , TransactionHash
   , TreasuryParams
@@ -118,36 +118,36 @@ treasuryTrip env = contractCallOneArg env Dao.treasuryTrip
 
 getAllProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllProposals env = contractCallOneArg env Dao.getAllProposals
 
 getAllGeneralProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllGeneralProposals env = contractCallOneArg env Dao.getAllGeneralProposals
 
 getAllTripProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllTripProposals env = contractCallOneArg env Dao.getAllTripProposals
 
 getAllUpgradeProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllUpgradeProposals env = contractCallOneArg env Dao.getAllUpgradeProposals
 
 getAllActiveProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllActiveProposals env = contractCallOneArg env Dao.getAllActiveProposals
 
 getAllExpiredProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllExpiredProposals env = contractCallOneArg env Dao.getAllExpiredProposals
 
 getAllSuccessfulProposals ::
   ContractEnv ->
-  EffectFn1 QueryProposalParams (Promise (Array TallyStateDatum))
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllSuccessfulProposals env = contractCallOneArg env
   Dao.getAllSuccessfulProposals
