@@ -21,6 +21,7 @@ You can edit this file as you like.
   , "exceptions"
   , "foldable-traversable"
   , "foreign-object"
+  , "functions"
   , "gen"
   , "js-bigints"
   , "lambda-buffers"

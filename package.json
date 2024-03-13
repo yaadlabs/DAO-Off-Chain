@@ -3,7 +3,7 @@
   "name": "triphut-dao-offchain",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "./output/Dao.Web.Api",
   "directories": {
     "test": "test"
   },

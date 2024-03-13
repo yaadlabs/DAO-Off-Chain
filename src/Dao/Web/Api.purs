@@ -1,20 +1,28 @@
 module Dao.Web.Api
-  ( createConfig
+  ( cancelVote
+  , config
+  , createConfig
+  , createFungible
   , createIndex
   , createProposal
-  , voteOnProposal
-  , upgradeConfig
-  , countVote
-  , cancelVote
+  , createVotePass
+  , finalize
+  , initialize
   , treasuryGeneral
   , treasuryTrip
-  , createVotePass
-  , createFungible
-  ) where
+  , upgradeConfig
+  , voteOnProposal
+  )
+  where
 
+import Prelude
+
+import Contract.Config (ContractParams)
+import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS)
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
-import Dao.Web.Call (contractCallOneArg)
+import Dao.Web.Call (mkContractCall2, mkContractCall2)
+import Dao.Web.Ctl (contractConfig)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
@@ -41,59 +49,47 @@ import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
+import Data.Function.Uncurried (Fn1, Fn2)
 import Effect.Aff.Compat (EffectFn1)
 
-createConfig ::
-  ContractEnv ->
-  EffectFn1 CreateConfigParams (Promise ContractResult)
-createConfig env = contractCallOneArg env Dao.createConfig
+initialize :: Fn1 ContractParams (Promise ContractEnv)
+initialize = mkContractEnvJS
 
-createIndex ::
-  ContractEnv ->
-  EffectFn1 TokenName (Promise ContractResult)
-createIndex env = contractCallOneArg env Dao.createIndex
+finalize :: Fn1 ContractEnv (Promise Unit)
+finalize = stopContractEnvJS
 
-createProposal ::
-  ContractEnv ->
-  EffectFn1 CreateProposalParams (Promise ContractResult)
-createProposal env = contractCallOneArg env Dao.createProposal
+config :: ContractParams
+config = contractConfig
 
-voteOnProposal ::
-  ContractEnv ->
-  EffectFn1 VoteOnProposalParams (Promise VoteOnProposalResult)
-voteOnProposal env = contractCallOneArg env Dao.voteOnProposal
+createConfig :: Fn2 ContractEnv CreateConfigParams (Promise ContractResult)
+createConfig = mkContractCall2 Dao.createConfig
 
-upgradeConfig ::
-  ContractEnv ->
-  EffectFn1 UpgradeConfigParams (Promise TransactionHash)
-upgradeConfig env = contractCallOneArg env Dao.upgradeConfig
+createIndex :: Fn2 ContractEnv TokenName (Promise ContractResult)
+createIndex = mkContractCall2 Dao.createIndex
 
-countVote ::
-  ContractEnv ->
-  EffectFn1 CountVoteParams (Promise TransactionHash)
-countVote env = contractCallOneArg env Dao.countVote
+createProposal :: Fn2 ContractEnv CreateProposalParams (Promise ContractResult)
+createProposal = mkContractCall2 Dao.createProposal
 
-cancelVote ::
-  ContractEnv ->
-  EffectFn1 CancelVoteParams (Promise TransactionHash)
-cancelVote env = contractCallOneArg env Dao.cancelVote
+voteOnProposal :: Fn2 ContractEnv VoteOnProposalParams (Promise VoteOnProposalResult)
+voteOnProposal = mkContractCall2 Dao.voteOnProposal
 
-treasuryGeneral ::
-  ContractEnv ->
-  EffectFn1 TreasuryParams (Promise TransactionHash)
-treasuryGeneral env = contractCallOneArg env Dao.treasuryGeneral
+upgradeConfig :: Fn2 ContractEnv UpgradeConfigParams (Promise TransactionHash)
+upgradeConfig = mkContractCall2 Dao.upgradeConfig
 
-createVotePass ::
-  ContractEnv ->
-  EffectFn1 PaymentPubKeyHash (Promise ContractResult)
-createVotePass env = contractCallOneArg env Dao.createVotePass
+countVote :: Fn2 ContractEnv CountVoteParams (Promise TransactionHash)
+countVote = mkContractCall2 Dao.countVote
 
-createFungible ::
-  ContractEnv ->
-  EffectFn1 CreateFungibleParams (Promise ContractResult)
-createFungible env = contractCallOneArg env Dao.createFungible
+cancelVote :: Fn2 ContractEnv CancelVoteParams (Promise TransactionHash)
+cancelVote = mkContractCall2 Dao.cancelVote
 
-treasuryTrip ::
-  ContractEnv ->
-  EffectFn1 TreasuryParams (Promise TransactionHash)
-treasuryTrip env = contractCallOneArg env Dao.treasuryTrip
+treasuryGeneral :: Fn2 ContractEnv TreasuryParams (Promise TransactionHash)
+treasuryGeneral = mkContractCall2 Dao.treasuryGeneral
+
+createVotePass :: Fn2 ContractEnv PaymentPubKeyHash (Promise ContractResult)
+createVotePass = mkContractCall2 Dao.createVotePass
+
+createFungible :: Fn2 ContractEnv CreateFungibleParams (Promise ContractResult)
+createFungible = mkContractCall2 Dao.createFungible
+
+treasuryTrip :: Fn2 ContractEnv TreasuryParams (Promise TransactionHash)
+treasuryTrip = mkContractCall2 Dao.treasuryTrip

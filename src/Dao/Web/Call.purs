@@ -1,5 +1,7 @@
 module Dao.Web.Call
-  ( contractCallOneArg
+  ( mkContractCall1
+  , mkContractCall2
+  , contractCallOneArg
   , contractCallNoArgs
   ) where
 
@@ -18,7 +20,34 @@ import Dao.Web.Conversion
   , runConvertJsToPs
   , runConvertPsToJs
   )
+import Data.Function.Uncurried (Fn1, Fn2, mkFn1, mkFn2)
 import Effect.Aff.Compat (EffectFn1, mkEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
+
+-- | Create a function that calls a contract with only the ContractEnv as an argument.
+mkContractCall1 ::
+  forall resJs resPurs argJs argPurs.
+  ConvertPsToJs resJs resPurs =>
+  ConvertJsToPs argJs argPurs =>
+  Ctl.Contract resPurs ->
+  Fn1 Ctl.ContractEnv (Promise resJs)
+mkContractCall1 contractCall = mkFn1 \env -> do
+    unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
+      res <- contractCall
+      convertPsToJsContract res
+
+-- | Create an uncurried function that calls a contract with the ContractEnv and another argument.
+mkContractCall2 ::
+  forall resJs resPurs argJs argPurs.
+  ConvertPsToJs resJs resPurs =>
+  ConvertJsToPs argJs argPurs =>
+  (argPurs -> Ctl.Contract resPurs) ->
+  Fn2 Ctl.ContractEnv argJs (Promise resJs)
+mkContractCall2 contractCall = mkFn2 \env argJs -> do
+    unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
+      argPurs <- convertJsToPsContract argJs
+      res <- contractCall argPurs
+      convertPsToJsContract res
 
 contractCallOneArg ::
   forall resJs resPurs arg1Js arg1Purs.
