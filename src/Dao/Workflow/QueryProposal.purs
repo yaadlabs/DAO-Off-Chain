@@ -53,6 +53,26 @@ import LambdaBuffers.ApplicationTypes.Proposal
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 
+-- | Retrieve an individual proposal by its token name
+getProposalByTokenName ::
+  QueryProposalParams ->
+  TokenName ->
+  Contract (Maybe QueryResult)
+getProposalByTokenName params proposalName = do
+  logInfo' "Entering getProposalByTokenName contract"
+  allProposals <- getAllProposals params
+  case check proposalName allProposals of
+    [ queryResult ] -> pure $ Just queryResult
+    _ -> pure Nothing
+  where
+  check :: TokenName -> Array QueryResult -> Array QueryResult
+  check proposalName = mapMaybe op
+    where
+    op queryResult =
+      if (queryResult # unwrap # _.proposalTokenName) == proposalName then Just
+        queryResult
+      else Nothing
+
 -- | Retrieve all proposals
 getAllProposals ::
   QueryProposalParams ->
