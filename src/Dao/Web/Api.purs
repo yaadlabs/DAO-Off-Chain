@@ -17,11 +17,12 @@ module Dao.Web.Api
   , getAllSuccessfulProposals
   , getAllTripProposals
   , getAllUpgradeProposals
+  , getProposalByTokenName
   ) where
 
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
-import Dao.Web.Call (contractCallOneArg)
+import Dao.Web.Call (contractCallOneArg, contractCallTwoArgs)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
@@ -29,6 +30,7 @@ import Dao.Web.Types
   , CreateConfigParams
   , CreateFungibleParams
   , CreateProposalParams
+  , JsMaybe
   , PaymentPubKeyHash
   , QueryProposalParams
   , QueryResult
@@ -54,12 +56,13 @@ import Dao.Workflow.QueryProposal
   , getAllSuccessfulProposals
   , getAllTripProposals
   , getAllUpgradeProposals
+  , getProposalByTokenName
   ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
-import Effect.Aff.Compat (EffectFn1)
+import Effect.Aff.Compat (EffectFn1, EffectFn2)
 
 createConfig ::
   ContractEnv ->
@@ -151,3 +154,8 @@ getAllSuccessfulProposals ::
   EffectFn1 QueryProposalParams (Promise (Array QueryResult))
 getAllSuccessfulProposals env = contractCallOneArg env
   Dao.getAllSuccessfulProposals
+
+getProposalByTokenName ::
+  ContractEnv ->
+  EffectFn2 QueryProposalParams TokenName (Promise (JsMaybe QueryResult))
+getProposalByTokenName env = contractCallTwoArgs env Dao.getProposalByTokenName

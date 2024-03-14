@@ -617,6 +617,17 @@ instance ConvertPsToJs js ps => ConvertPsToJs (Array js) (Array ps) where
 instance ConvertJsToPs js ps => ConvertJsToPs (Array js) (Array ps) where
   convertJsToPs = traverse convertJsToPs
 
+-- * Maybe
+
+instance ConvertPsToJs js ps => ConvertPsToJs (WebApi.JsMaybe js) (Maybe ps) where
+  convertPsToJs Nothing = pure $ WebApi.toJsMaybe Nothing
+  convertPsToJs (Just somePs) = do
+    someJs <- convertPsToJs somePs
+    pure (WebApi.toJsMaybe $ Just someJs)
+
+instance ConvertJsToPs js ps => ConvertJsToPs (WebApi.JsMaybe js) (Maybe ps) where
+  convertJsToPs jsMaybe = traverse convertJsToPs $ WebApi.fromJsMaybe jsMaybe
+
 -- * TallyStateDatum
 
 instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where

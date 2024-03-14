@@ -10,6 +10,7 @@ module Dao.Workflow.QueryProposal
   , getAllActiveProposals
   , getAllExpiredProposals
   , getAllSuccessfulProposals
+  , getProposalByTokenName
   ) where
 
 import Contract.Prelude
