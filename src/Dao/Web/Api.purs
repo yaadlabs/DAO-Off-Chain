@@ -1,6 +1,6 @@
 module Dao.Web.Api
   ( cancelVote
-  , config
+  , countVote
   , createConfig
   , createFungible
   , createIndex
@@ -17,12 +17,18 @@ module Dao.Web.Api
 
 import Prelude
 
-import Contract.Config (ContractParams)
+import Contract.Config
+  ( NetworkId(TestnetId, MainnetId)
+  , emptyHooks
+  , defaultSynchronizationParams
+  , defaultTimeParams
+  ) as Ctl
 import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS)
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
-import Dao.Web.Call (mkContractCall2, mkContractCall2)
-import Dao.Web.Ctl (contractConfig)
+import Ctl.Internal.Contract.QueryBackend (mkBlockfrostBackendParams) as Ctl
+import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
+import Dao.Web.Call (mkContractCall2)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
@@ -30,6 +36,7 @@ import Dao.Web.Types
   , CreateConfigParams
   , CreateFungibleParams
   , CreateProposalParams
+  , CtlConfig(CtlConfig)
   , PaymentPubKeyHash
   , TokenName
   , TransactionHash
@@ -50,16 +57,45 @@ import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
 import Data.Function.Uncurried (Fn1, Fn2)
-import Effect.Aff.Compat (EffectFn1)
+import Data.Log.Level (LogLevel(Trace))
+import Data.Maybe (Maybe(Just, Nothing))
+import Data.UInt as UInt
 
-initialize :: Fn1 ContractParams (Promise ContractEnv)
-initialize = mkContractEnvJS
+initialize :: CtlConfig -> (Promise ContractEnv)
+initialize = mkContractEnvJS <<< mkContractParams
+  where
+    mkContractParams (CtlConfig config) =
+      let
+        networkId = case config.network of
+          "preview" -> Ctl.TestnetId
+          "preprod" -> Ctl.TestnetId
+          "mainnet" -> Ctl.MainnetId
+          _ -> Ctl.TestnetId
+        blockfrostConfig =
+          { port: UInt.fromInt 443
+          , host: "cardano-" <> config.network <> ".blockfrost.io"
+          , secure: true
+          , path: Just "/api/v0"
+          }
+        backendParams = Ctl.mkBlockfrostBackendParams 
+          { blockfrostConfig: blockfrostConfig
+          , blockfrostApiKey: Just config.blockfrostApiKey
+          , confirmTxDelay: Nothing
+          }
+      in
+        { backendParams
+        , networkId
+        , logLevel: Trace
+        , walletSpec: Just Ctl.ConnectToNami
+        , customLogger: Nothing
+        , suppressLogs: false
+        , hooks: Ctl.emptyHooks
+        , synchronizationParams: Ctl.defaultSynchronizationParams
+        , timeParams: Ctl.defaultTimeParams
+        }
 
 finalize :: Fn1 ContractEnv (Promise Unit)
 finalize = stopContractEnvJS
-
-config :: ContractParams
-config = contractConfig
 
 createConfig :: Fn2 ContractEnv CreateConfigParams (Promise ContractResult)
 createConfig = mkContractCall2 Dao.createConfig

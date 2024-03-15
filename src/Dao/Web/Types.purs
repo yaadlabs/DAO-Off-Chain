@@ -8,6 +8,12 @@ import JS.BigInt (BigInt)
 
 -- * Non app-specific / CTL types
 
+-- | Simplified CTL config (to be expanded)
+newtype CtlConfig = CtlConfig
+  { blockfrostApiKey :: String
+  , network :: String
+  } 
+
 -- | TokenName represented as a wrapped String
 newtype TokenName = TokenName String
 
