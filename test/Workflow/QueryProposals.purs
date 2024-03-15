@@ -70,6 +70,7 @@ import Dao.Workflow.QueryProposal
   , getAllProposals
   , getAllSuccessfulProposals
   , getAllTripProposals
+  , getProposalByTokenName
   )
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal
@@ -785,6 +786,13 @@ suite = do
                 queryProposalParams
               void $ waitNSlots (Natural.fromInt' 3)
 
+              proposalOneResult <- getProposalByTokenName queryProposalParams
+                proposalOneTokenName
+
+              failedGetProposalByTokenName <- getProposalByTokenName
+                queryProposalParams
+                adaToken
+
               logInfo' $ "All proposals: " <> show allProposals
               logInfo' $ "All general proposals: " <> show allGeneralProposals
               logInfo' $ "All trip proposals: " <> show allTripProposals
@@ -792,3 +800,7 @@ suite = do
               logInfo' $ "All expired proposals: " <> show allExpiredProposals
               logInfo' $ "All successful proposals: " <> show
                 allSuccessfulProposals
+              logInfo' $ "Proposal one successfully retrieved: " <> show
+                proposalOneResult
+              logInfo' $ "Failed get proposal by token name returns Nothing: "
+                <> show failedGetProposalByTokenName
