@@ -18,9 +18,9 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
+  , mempty
   , one
   , pure
-  , show
   , unwrap
   , void
   , (#)
@@ -60,6 +60,7 @@ import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
+import Data.Maybe (Maybe(Just, Nothing))
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Vote
@@ -120,8 +121,6 @@ voteOnProposal params' = do
     fungibleTokenName :: TokenName
     fungibleTokenName = configDatum # unwrap # _.voteFungibleTokenName
 
-  logInfo' $ "fungibleSymbol in voteOnProposal: " <> show fungibleSymbol
-
   -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
@@ -130,24 +129,17 @@ voteOnProposal params' = do
   -- TODO: Find better solution
   void $ waitNSlots (Natural.fromInt' 10)
 
-  logInfo' $ "onChainTimeRange: " <> show onchainTimeRange
-
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
-  logInfo' $ "userUtxos: " <> show userUtxos
 
   -- Look for vote tokens at the user's wallet,
   -- the required 'voteNft' and potentially 'fungible' multiplier tokens,
   -- get the constraints and lookups to spend this UTXO if found.
   voteNftInfo <- spendVoteNftUtxo voteNftSymbol userUtxos
 
-  logInfo' $ "voteNftInfo.value in voteOnProposal: " <> show voteNftInfo.value
-
   fungibleInfo <- spendFungibleUtxo fungibleSymbol voteNftSymbol
     fungibleTokenName
     userUtxos
-
-  logInfo' $ "fungibleInfo.value in voteOnProposal: " <> show fungibleInfo.value
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -179,6 +171,14 @@ voteOnProposal params' = do
     voteValue :: Value
     voteValue = Value.singleton voteSymbol voteTokenName one
 
+    -- The value to be paid to the script
+    -- Consists of the vote value, voteNft value, and maybe a fungible value
+    valueToPayToScript :: Value
+    valueToPayToScript = case fungibleInfo of
+      Just fungibleInfo' ->
+        (voteValue <> voteNftInfo.value <> fungibleInfo'.value)
+      Nothing -> (voteValue <> voteNftInfo.value)
+
     -- The 'votePolicy' minting policy takes two possible redeemers, Mint or Burn
     -- In this case we wish to mint a vote token in order to vote on the proposal
     votePolicyRedeemer :: Redeemer
@@ -188,6 +188,11 @@ voteOnProposal params' = do
     voteValidatorHash :: ValidatorHash
     voteValidatorHash = ValidatorHash $ configDatum # unwrap # _.voteValidator
 
+    fungibleLookups :: Lookups.ScriptLookups
+    fungibleLookups = case fungibleInfo of
+      Just fungibleInfo' -> fungibleInfo'.lookups
+      Nothing -> mempty
+
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
@@ -195,8 +200,13 @@ voteOnProposal params' = do
         , configInfo.lookups
         , tallyInfo.lookups
         , voteNftInfo.lookups
-        -- , fungibleInfo.lookups
+        , fungibleLookups
         ]
+
+    fungibleConstraints :: Constraints.TxConstraints
+    fungibleConstraints = case fungibleInfo of
+      Just fungibleInfo' -> fungibleInfo'.constraints
+      Nothing -> mempty
 
     constraints :: Constraints.TxConstraints
     constraints =
@@ -206,7 +216,7 @@ voteOnProposal params' = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftInfo.value <> fungibleInfo.value)
+            valueToPayToScript
         -- ^ We send the 'VoteDatum' along with the relevant vote
         -- tokens to a UTXO at the 'vote validator' script
         , Constraints.mustValidateIn onchainTimeRange
@@ -215,7 +225,7 @@ voteOnProposal params' = do
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints
-        -- , fungibleInfo.constraints
+        , fungibleConstraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints

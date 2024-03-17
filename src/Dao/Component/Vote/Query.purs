@@ -289,8 +289,6 @@ spendVoteNftUtxo voteNftSymbol utxos = do
       "User does not hold a voteNft token (votePass) so is ineligble to vote"
       (filterOneOfTokenInUtxo voteNftSymbol utxos)
 
-  logInfo' $ "txOut in spendVoteNftUtxo: " <> show txOut
-
   -- The vote 'pass' token name
   voteNftTokenName :: TokenName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
@@ -310,8 +308,6 @@ spendVoteNftUtxo voteNftSymbol utxos = do
     voteNftValue = singleton voteNftSymbol voteNftTokenName
       (valueOf value voteNftSymbol voteNftTokenName)
 
-  logInfo' $ "value in voteNft: " <> show voteNftValue
-
   pure { lookups, constraints, value: voteNftValue }
 
 -- | Spend fungible vote multiplier UTXO
@@ -320,34 +316,29 @@ spendFungibleUtxo ::
   CurrencySymbol ->
   TokenName ->
   Map TransactionInput TransactionOutputWithRefScript ->
-  Contract SpendPubKeyResult
+  Contract (Maybe SpendPubKeyResult)
 spendFungibleUtxo fungibleSymbol voteNftSymbol fungibleTokenName utxos = do
-  logInfo' "Entering spendVoteNftUtxo contract"
+  logInfo' "Entering spendFungibleUtxo contract"
 
-  (txIn /\ txOutFungible@(TransactionOutputWithRefScript txOut)) <-
-    liftContractM
-      "User does not hold any fungible tokens"
-      (filterOneOfTokenInUtxo fungibleSymbol utxos)
+  case filterOneOfTokenInUtxo fungibleSymbol utxos of
+    Nothing -> pure Nothing
+    Just (txIn /\ txOutFungible@(TransactionOutputWithRefScript txOut)) -> do
+      let
+        lookups :: Lookups.ScriptLookups
+        lookups = mconcat
+          [ Lookups.unspentOutputs $ Map.singleton txIn txOutFungible ]
 
-  let
-    lookups :: Lookups.ScriptLookups
-    lookups = mconcat
-      [ Lookups.unspentOutputs $ Map.singleton txIn txOutFungible ]
+        constraints :: Constraints.TxConstraints
+        constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
 
-    constraints :: Constraints.TxConstraints
-    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+        value :: Value
+        value = txOut.output # unwrap # _.amount
 
-    value :: Value
-    value = txOut.output # unwrap # _.amount
+        fungibleValue :: Value
+        fungibleValue = singleton fungibleSymbol fungibleTokenName
+          (valueOf value fungibleSymbol fungibleTokenName)
 
-    fungibleValue :: Value
-    fungibleValue = singleton fungibleSymbol fungibleTokenName
-      (valueOf value fungibleSymbol fungibleTokenName)
-
-  logInfo' $ "value in fungible: " <> show value
-  logInfo' $ "fungibleValue in fungible: " <> show fungibleValue
-
-  pure { lookups, constraints, value: fungibleValue }
+      pure $ Just { lookups, constraints, value: fungibleValue }
 
 filterOneOfTokenInUtxo ::
   CurrencySymbol ->
