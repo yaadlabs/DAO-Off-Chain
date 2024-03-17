@@ -53,7 +53,7 @@ import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
-import Dao.Component.Vote.Query (spendVoteNftUtxo)
+import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
 import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
 import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
@@ -114,6 +114,14 @@ voteOnProposal params' = do
     voteNftSymbol :: CurrencySymbol
     voteNftSymbol = configDatum # unwrap # _.voteNft
 
+    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
+
+    fungibleTokenName :: TokenName
+    fungibleTokenName = configDatum # unwrap # _.voteFungibleTokenName
+
+  logInfo' $ "fungibleSymbol in voteOnProposal: " <> show fungibleSymbol
+
   -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
@@ -126,11 +134,20 @@ voteOnProposal params' = do
 
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
+  logInfo' $ "userUtxos: " <> show userUtxos
 
   -- Look for vote tokens at the user's wallet,
   -- the required 'voteNft' and potentially 'fungible' multiplier tokens,
   -- get the constraints and lookups to spend this UTXO if found.
   voteNftInfo <- spendVoteNftUtxo voteNftSymbol userUtxos
+
+  logInfo' $ "voteNftInfo.value in voteOnProposal: " <> show voteNftInfo.value
+
+  fungibleInfo <- spendFungibleUtxo fungibleSymbol voteNftSymbol
+    fungibleTokenName
+    userUtxos
+
+  logInfo' $ "fungibleInfo.value in voteOnProposal: " <> show fungibleInfo.value
 
   ownPaymentPkh <- liftedM "Could not get own payment pkh" ownPaymentPubKeyHash
   let
@@ -178,6 +195,7 @@ voteOnProposal params' = do
         , configInfo.lookups
         , tallyInfo.lookups
         , voteNftInfo.lookups
+        -- , fungibleInfo.lookups
         ]
 
     constraints :: Constraints.TxConstraints
@@ -188,7 +206,7 @@ voteOnProposal params' = do
             voteValidatorHash
             (Datum $ toData voteDatum)
             Constraints.DatumInline
-            (voteValue <> voteNftInfo.value)
+            (voteValue <> voteNftInfo.value <> fungibleInfo.value)
         -- ^ We send the 'VoteDatum' along with the relevant vote
         -- tokens to a UTXO at the 'vote validator' script
         , Constraints.mustValidateIn onchainTimeRange
@@ -197,6 +215,7 @@ voteOnProposal params' = do
         , configInfo.constraints
         , tallyInfo.constraints
         , voteNftInfo.constraints
+        -- , fungibleInfo.constraints
         ]
 
   txHash <- submitTxFromConstraints lookups constraints

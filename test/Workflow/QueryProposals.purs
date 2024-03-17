@@ -789,6 +789,9 @@ suite = do
               proposalOneResult <- getProposalByTokenName queryProposalParams
                 proposalOneTokenName
 
+              proposalTwoResult <- getProposalByTokenName queryProposalParams
+                proposalTwoTokenName
+
               failedGetProposalByTokenName <- getProposalByTokenName
                 queryProposalParams
                 adaToken
@@ -802,5 +805,7 @@ suite = do
                 allSuccessfulProposals
               logInfo' $ "Proposal one successfully retrieved: " <> show
                 proposalOneResult
+              logInfo' $ "Proposal two successfully retrieved: " <> show
+                proposalTwoResult
               logInfo' $ "Failed get proposal by token name returns Nothing: "
                 <> show failedGetProposalByTokenName

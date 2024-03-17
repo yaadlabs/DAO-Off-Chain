@@ -5,7 +5,9 @@ Description: Helpers for voting related contracts
 module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
+  , spendFungibleUtxo
   , spendVoteNftUtxo
+  , spendFungibleUtxo
   , cancelVoteUtxo
   ) where
 
@@ -26,11 +28,14 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
+  , mempty
   , negate
   , one
   , pure
+  , show
   , traverse
   , unwrap
+  , wrap
   , (#)
   , ($)
   , (&&)
@@ -38,6 +43,7 @@ import Contract.Prelude
   , (+)
   , (/)
   , (/\)
+  , (<<<)
   , (<>)
   , (==)
   )
@@ -48,7 +54,19 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  , Value
+  , getValue
+  , singleton
+  , symbols
+  , valueOf
+  )
+import Ctl.Internal.Plutus.Types.AssocMap
+  ( Map(Map)
+  , lookup
+  ) as Plutus.Map
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Error (guardContract)
@@ -135,6 +153,10 @@ mkVoteUtxoConstraintsAndLookups
   (txIn /\ txOut) =
   do
     logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
+
+    logInfo' $ "fungibleSymbol in mkAllVoteConstraintsAndLookups: " <> show
+      fungibleSymbol
+    logInfo' $ "txOut in mkAllVoteConstraintsAndLookups: " <> show txOut
 
     -- Extract the 'VoteDatum' fields
     voteDatum :: VoteDatum <- liftContractM "Failed to extract datum" $
@@ -265,10 +287,14 @@ spendVoteNftUtxo voteNftSymbol utxos = do
   (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
     liftContractM
       "User does not hold a voteNft token (votePass) so is ineligble to vote"
-      $ head
-      $ filter (hasTokenWithSymbol voteNftSymbol)
-      $ Map.toUnfoldable
-      $ utxos
+      (filterOneOfTokenInUtxo voteNftSymbol utxos)
+
+  logInfo' $ "txOut in spendVoteNftUtxo: " <> show txOut
+
+  -- The vote 'pass' token name
+  voteNftTokenName :: TokenName <-
+    liftContractM "Could not make voteNft token name" $ mkTokenName
+      "vote_pass"
 
   let
     lookups :: Lookups.ScriptLookups
@@ -280,4 +306,52 @@ spendVoteNftUtxo voteNftSymbol utxos = do
     value :: Value
     value = txOut.output # unwrap # _.amount
 
-  pure { lookups, constraints, value }
+    voteNftValue :: Value
+    voteNftValue = singleton voteNftSymbol voteNftTokenName
+      (valueOf value voteNftSymbol voteNftTokenName)
+
+  logInfo' $ "value in voteNft: " <> show voteNftValue
+
+  pure { lookups, constraints, value: voteNftValue }
+
+-- | Spend fungible vote multiplier UTXO
+spendFungibleUtxo ::
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract SpendPubKeyResult
+spendFungibleUtxo fungibleSymbol voteNftSymbol fungibleTokenName utxos = do
+  logInfo' "Entering spendVoteNftUtxo contract"
+
+  (txIn /\ txOutFungible@(TransactionOutputWithRefScript txOut)) <-
+    liftContractM
+      "User does not hold any fungible tokens"
+      (filterOneOfTokenInUtxo fungibleSymbol utxos)
+
+  let
+    lookups :: Lookups.ScriptLookups
+    lookups = mconcat
+      [ Lookups.unspentOutputs $ Map.singleton txIn txOutFungible ]
+
+    constraints :: Constraints.TxConstraints
+    constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+    value :: Value
+    value = txOut.output # unwrap # _.amount
+
+    fungibleValue :: Value
+    fungibleValue = singleton fungibleSymbol fungibleTokenName
+      (valueOf value fungibleSymbol fungibleTokenName)
+
+  logInfo' $ "value in fungible: " <> show value
+  logInfo' $ "fungibleValue in fungible: " <> show fungibleValue
+
+  pure { lookups, constraints, value: fungibleValue }
+
+filterOneOfTokenInUtxo ::
+  CurrencySymbol ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Maybe (TransactionInput /\ TransactionOutputWithRefScript)
+filterOneOfTokenInUtxo symbol = head <<< filter (hasTokenWithSymbol symbol) <<<
+  Map.toUnfoldable
