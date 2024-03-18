@@ -25,6 +25,7 @@ import Effect.Aff
   )
 import Test.Spec.Runner (defaultConfig)
 import Test.Workflow.MultipleVotesWithCancel as MultipleVotesWithCancel
+import Test.Workflow.QueryProposals as QueryProposals
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
@@ -32,6 +33,7 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts plutipConfig do
+        QueryProposals.suite
         MultipleVotesWithCancel.suite
 
 plutipConfig :: PlutipConfig

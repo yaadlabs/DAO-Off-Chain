@@ -10,11 +10,19 @@ module Dao.Web.Api
   , treasuryTrip
   , createVotePass
   , createFungible
+  , getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  , getProposalByTokenName
   ) where
 
 import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
-import Dao.Web.Call (contractCallOneArg)
+import Dao.Web.Call (contractCallOneArg, contractCallTwoArgs)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
@@ -22,7 +30,10 @@ import Dao.Web.Types
   , CreateConfigParams
   , CreateFungibleParams
   , CreateProposalParams
+  , JsMaybe
   , PaymentPubKeyHash
+  , QueryProposalParams
+  , QueryResult
   , TokenName
   , TransactionHash
   , TreasuryParams
@@ -37,11 +48,21 @@ import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
+import Dao.Workflow.QueryProposal
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  , getProposalByTokenName
+  ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
-import Effect.Aff.Compat (EffectFn1)
+import Effect.Aff.Compat (EffectFn1, EffectFn2)
 
 createConfig ::
   ContractEnv ->
@@ -97,3 +118,44 @@ treasuryTrip ::
   ContractEnv ->
   EffectFn1 TreasuryParams (Promise TransactionHash)
 treasuryTrip env = contractCallOneArg env Dao.treasuryTrip
+
+getAllProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllProposals env = contractCallOneArg env Dao.getAllProposals
+
+getAllGeneralProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllGeneralProposals env = contractCallOneArg env Dao.getAllGeneralProposals
+
+getAllTripProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllTripProposals env = contractCallOneArg env Dao.getAllTripProposals
+
+getAllUpgradeProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllUpgradeProposals env = contractCallOneArg env Dao.getAllUpgradeProposals
+
+getAllActiveProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllActiveProposals env = contractCallOneArg env Dao.getAllActiveProposals
+
+getAllExpiredProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllExpiredProposals env = contractCallOneArg env Dao.getAllExpiredProposals
+
+getAllSuccessfulProposals ::
+  ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllSuccessfulProposals env = contractCallOneArg env
+  Dao.getAllSuccessfulProposals
+
+getProposalByTokenName ::
+  ContractEnv ->
+  EffectFn2 QueryProposalParams TokenName (Promise (JsMaybe QueryResult))
+getProposalByTokenName env = contractCallTwoArgs env Dao.getProposalByTokenName

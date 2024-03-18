@@ -129,7 +129,7 @@ createProposal params' = do
         [ Constraints.mustMintValue tallyNft
         , Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData $ params.tallyStateDatum)
+            (Datum $ toData params.tallyStateDatum)
             Constraints.DatumInline
             tallyNft
         -- ^ We pay the newly created tally datum (passed as an argument by the user)

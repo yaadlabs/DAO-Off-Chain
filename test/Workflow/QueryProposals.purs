@@ -1,9 +1,8 @@
 {-|
-Module: Test.Workflow.MultipleVotesWithCancel
-Description: Workflow that includes multiple votes and one user cancelling their
-  vote before votes are counted and the general treasury effect is executed.
+Module: Test.Workflow.QueryProposals
+Description: Workflow for testing proposal querying functionality
 -}
-module Test.Workflow.MultipleVotesWithCancel (suite) where
+module Test.Workflow.QueryProposals (suite) where
 
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
@@ -43,6 +42,7 @@ import Dao.Component.Fungible.Params
   )
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
+  , QueryProposalParams(QueryProposalParams)
   )
 import Dao.Component.Treasury.Params (TreasuryParams(TreasuryParams))
 import Dao.Component.Vote.Params
@@ -63,6 +63,15 @@ import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
+import Dao.Workflow.QueryProposal
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getProposalByTokenName
+  )
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral)
 import Dao.Workflow.VoteOnProposal
   ( VoteOnProposalResult(VoteOnProposalResult)
@@ -72,21 +81,22 @@ import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
-import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteDirection(VoteDirection'For, VoteDirection'Against)
+  )
 import Mote (group, test)
-import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
+import Test.Data.Tally
+  ( sampleGeneralProposalTallyStateDatum
+  , sampleTripProposalTallyStateDatum
+  )
 
 suite :: TestPlanM PlutipTest Unit
 suite = do
   group "DAO tests" do
     test
       ( mconcat
-          [ "Full workflow: "
-          , "with multiple proposals, "
-          , "multiple votes on the proposals, "
-          , "a vote cancelled, "
-          , "a vote cancelled but then cast again, "
-          , "treasury effects executed"
+          [ "Query proposals workflow: "
+          , "with multiple proposals."
           ]
       )
       do
@@ -170,9 +180,11 @@ suite = do
             -- *************************************************************** --
             -- *************************************************************** --
             -- * User one creates two proposals on which the others can vote * --
-            ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+            ( proposalSymbol /\ proposalOneTokenName /\ configSymbol
                 /\ configTokenName
                 /\ proposalTwoTokenName
+                /\ indexSymbol
+                /\ indexTokenName
             ) <- withKeyWallet walletOne do
               logInfo' "Running in walletOne - walletOne creates a proposal"
 
@@ -198,7 +210,7 @@ suite = do
                 liftContractM "Could not make voteNft token name" $ mkTokenName
                   "vote_fungible"
               let
-                -- The symbol for the 'voteNft' 
+                -- The symbol for the 'voteNft'
                 -- This is the vote 'pass' that a user must possess
                 -- in order to vote on a proposal
                 votePassSymbol = scriptCurrencySymbol votePassPolicy
@@ -252,6 +264,9 @@ suite = do
               tallyStateDatum <- sampleGeneralProposalTallyStateDatum
                 userTwoWalletAddress
 
+              logInfo' $ "proposalEndTime in test: " <>
+                (show $ tallyStateDatum # unwrap # _.proposalEndTime)
+
               let
                 -- The params needed for creating the first proposal
                 proposalParams :: CreateProposalParams
@@ -266,7 +281,7 @@ suite = do
               -- Create the first proposal UTXO
               ContractResult
                 { txHash: createProposalTxHash
-                , symbol: proposalOneSymbol
+                , symbol: proposalSymbol
                 , tokenName: proposalOneTokenName
                 } <- createProposal proposalParams
 
@@ -277,10 +292,12 @@ suite = do
               -- ************************** --
               -- Create the second proposal --
               -- The 'TallyStateDatum' to be sent to the proposal UTXO
-              -- The proposal type for this proposal will be a 'General' one
-              -- The payment address is the address of 'walletSix'
-              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
+              -- The proposal type for this proposal will be a 'Trip' one
+              -- The travel agent and traveller addresses are
+              -- 'walletSix' and 'walletTwo' respectively
+              tallyStateDatum <- sampleTripProposalTallyStateDatum
                 userSixWalletAddress
+                userTwoWalletAddress
 
               let
                 -- The params needed for creating the proposal
@@ -293,10 +310,10 @@ suite = do
                   , tallyStateDatum
                   }
 
-              -- Create the proposal UTXO
+              -- Create the second proposal UTXO
               ContractResult
                 { txHash: createProposalTxHashTwo
-                , symbol: proposalTwoSymbol
+                , symbol: _proposalSymbol
                 , tokenName: proposalTwoTokenName
                 } <- createProposal proposalParams
 
@@ -411,9 +428,11 @@ suite = do
               void $ waitNSlots (Natural.fromInt' 3)
 
               pure
-                ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
+                ( proposalSymbol /\ proposalOneTokenName /\ configSymbol
                     /\ configTokenName
                     /\ proposalTwoTokenName
+                    /\ indexSymbol
+                    /\ indexTokenName
                 )
 
             -- *************************************** --
@@ -450,7 +469,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -478,7 +497,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -506,7 +525,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalOneTokenName
                   , voteDirection: VoteDirection'For
@@ -567,7 +586,7 @@ suite = do
                   { voteTokenName: adaToken
                   , configSymbol
                   , configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , proposalTokenName: proposalOneTokenName
                   }
 
@@ -593,7 +612,7 @@ suite = do
                   { configSymbol
                   , configTokenName
                   , proposalTokenName: proposalOneTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , treasurySymbol: treasuryFundSymbol
                   }
 
@@ -614,7 +633,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'For
@@ -642,7 +661,7 @@ suite = do
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
                   , voteDirection: VoteDirection'For
@@ -678,25 +697,22 @@ suite = do
                 cancelVoteTxHash
               void $ waitNSlots (Natural.fromInt' 3)
 
-            -- ************************************************************************** --
-            -- ************************************************************************** --
-            -- * User three (walletThree) votes on proposal two again after cancelling  * --
-            -- * their previous vote. This will only work if the 'cancelVote' contract  * --
-            -- * works correctly and returns the 'voteNft' to the user after they       * --
-            -- * cancelled their previous vote.                                         * --
-            withKeyWallet walletThree do
+            -- **************************************************** * --
+            -- ****************************************************** --
+            -- * User five (walletFive) votes against proposal two * --
+            withKeyWallet walletFive do
               logInfo'
-                "Running in wallet three - voting on proposal two again after cancelling previous vote"
+                "Running in wallet five - voting against proposal two created by walletOne"
 
               let
                 voteParams :: VoteOnProposalParams
                 voteParams = VoteOnProposalParams
                   { configSymbol: configSymbol
                   , configTokenName: configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   -- Vote datum fields
                   , proposalTokenName: proposalTwoTokenName
-                  , voteDirection: VoteDirection'For
+                  , voteDirection: VoteDirection'Against
                   , returnAda: (BigInt.fromInt 0)
                   }
 
@@ -722,7 +738,7 @@ suite = do
                   { voteTokenName: adaToken
                   , configSymbol
                   , configTokenName
-                  , tallySymbol: proposalOneSymbol
+                  , tallySymbol: proposalSymbol
                   , proposalTokenName: proposalTwoTokenName
                   }
 
@@ -734,25 +750,62 @@ suite = do
 
             -- ****************************************************************** --
             -- ****************************************************************** --
-            -- * User one executes the effect of the second proposal, that      * --
-            -- * is to disburse treasury funds to the 'General' payment address * --
-            -- * specified in the 'TallyStateDatum'. In this case that is       * --
-            -- * 'walletTwoAddress', the address of the user 'walletSix'.       * --
+            -- * User one queries the proposals (returns the proposal datums )  * --
+
+            void $ waitNSlots (Natural.fromInt' 40)
+
             withKeyWallet walletOne do
               logInfo'
-                "Running in wallet one - executing the treasury general effect"
+                "Running in wallet one - get all the proposals (proposal query)"
 
               let
-                treasuryGeneralParams :: TreasuryParams
-                treasuryGeneralParams = TreasuryParams
+                queryProposalParams :: QueryProposalParams
+                queryProposalParams = QueryProposalParams
                   { configSymbol
+                  , indexSymbol
                   , configTokenName
-                  , proposalTokenName: proposalOneTokenName
-                  , tallySymbol: proposalOneSymbol
-                  , treasurySymbol: treasuryFundSymbol
+                  , indexTokenName
                   }
 
-              treasuryTxHash <- treasuryGeneral treasuryGeneralParams
-
-              void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
+              allProposals <- getAllProposals queryProposalParams
               void $ waitNSlots (Natural.fromInt' 3)
+
+              allGeneralProposals <- getAllGeneralProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allTripProposals <- getAllTripProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allActiveProposals <- getAllActiveProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allExpiredProposals <- getAllExpiredProposals queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              allSuccessfulProposals <- getAllSuccessfulProposals
+                queryProposalParams
+              void $ waitNSlots (Natural.fromInt' 3)
+
+              proposalOneResult <- getProposalByTokenName queryProposalParams
+                proposalOneTokenName
+
+              proposalTwoResult <- getProposalByTokenName queryProposalParams
+                proposalTwoTokenName
+
+              failedGetProposalByTokenName <- getProposalByTokenName
+                queryProposalParams
+                adaToken
+
+              logInfo' $ "All proposals: " <> show allProposals
+              logInfo' $ "All general proposals: " <> show allGeneralProposals
+              logInfo' $ "All trip proposals: " <> show allTripProposals
+              logInfo' $ "All active proposals: " <> show allActiveProposals
+              logInfo' $ "All expired proposals: " <> show allExpiredProposals
+              logInfo' $ "All successful proposals: " <> show
+                allSuccessfulProposals
+              logInfo' $ "Proposal one successfully retrieved: " <> show
+                proposalOneResult
+              logInfo' $ "Proposal two successfully retrieved: " <> show
+                proposalTwoResult
+              logInfo' $ "Failed get proposal by token name returns Nothing: "
+                <> show failedGetProposalByTokenName

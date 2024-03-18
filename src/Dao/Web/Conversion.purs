@@ -19,6 +19,7 @@ import Contract.Prelude
   ( bind
   , pure
   , show
+  , traverse
   , unwrap
   , ($)
   , (<<<)
@@ -53,6 +54,10 @@ import Dao.Component.Fungible.Params
   ) as DaoApi
 import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
+  , QueryProposalParams(QueryProposalParams)
+  ) as DaoApi
+import Dao.Component.Proposal.Query
+  ( QueryResult(QueryResult)
   ) as DaoApi
 import Dao.Component.Treasury.Params
   ( TreasuryParams(TreasuryParams)
@@ -212,6 +217,28 @@ instance ConvertJsToPs WebApi.ContractResult DaoApi.ContractResult where
       { txHash
       , symbol
       , tokenName
+      }
+
+-- * QueryResult
+
+instance ConvertPsToJs WebApi.QueryResult DaoApi.QueryResult where
+  convertPsToJs (DaoApi.QueryResult params) = do
+    proposalTokenName <- convertPsToJs params.proposalTokenName
+    tallyDatum <- convertPsToJs params.tallyDatum
+
+    pure $ WebApi.QueryResult
+      { proposalTokenName
+      , tallyDatum
+      }
+
+instance ConvertJsToPs WebApi.QueryResult DaoApi.QueryResult where
+  convertJsToPs (WebApi.QueryResult params) = do
+    proposalTokenName <- convertJsToPs params.proposalTokenName
+    tallyDatum <- convertJsToPs params.tallyDatum
+
+    pure $ DaoApi.QueryResult
+      { proposalTokenName
+      , tallyDatum
       }
 
 -- * VoteOnProposalResult
@@ -438,6 +465,38 @@ instance ConvertJsToPs WebApi.CreateProposalParams DaoApi.CreateProposalParams w
       , tallyStateDatum: tallyStateDatum'
       }
 
+-- * QueryProposalParams
+
+instance ConvertPsToJs WebApi.QueryProposalParams DaoApi.QueryProposalParams where
+  convertPsToJs (DaoApi.QueryProposalParams params) = do
+
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+    indexSymbol <- convertPsToJs params.indexSymbol
+    indexTokenName <- convertPsToJs params.indexTokenName
+
+    pure $ WebApi.QueryProposalParams
+      { configSymbol
+      , indexSymbol
+      , configTokenName
+      , indexTokenName
+      }
+
+instance ConvertJsToPs WebApi.QueryProposalParams DaoApi.QueryProposalParams where
+  convertJsToPs (WebApi.QueryProposalParams params) = do
+
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+    indexSymbol <- convertJsToPs params.indexSymbol
+    indexTokenName <- convertJsToPs params.indexTokenName
+
+    pure $ DaoApi.QueryProposalParams
+      { configSymbol
+      , indexSymbol
+      , configTokenName
+      , indexTokenName
+      }
+
 -- * CountVoteParams
 
 instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
@@ -550,15 +609,34 @@ instance ConvertJsToPs WebApi.VoteDirection DaoApi.VoteDirection where
   convertJsToPs WebApi.For = pure DaoApi.VoteDirection'For
   convertJsToPs WebApi.Against = pure DaoApi.VoteDirection'Against
 
+-- * Array
+
+instance ConvertPsToJs js ps => ConvertPsToJs (Array js) (Array ps) where
+  convertPsToJs = traverse convertPsToJs
+
+instance ConvertJsToPs js ps => ConvertJsToPs (Array js) (Array ps) where
+  convertJsToPs = traverse convertJsToPs
+
+-- * Maybe
+
+instance ConvertPsToJs js ps => ConvertPsToJs (WebApi.JsMaybe js) (Maybe ps) where
+  convertPsToJs Nothing = pure $ WebApi.toJsMaybe Nothing
+  convertPsToJs (Just somePs) = do
+    someJs <- convertPsToJs somePs
+    pure (WebApi.toJsMaybe $ Just someJs)
+
+instance ConvertJsToPs js ps => ConvertJsToPs (WebApi.JsMaybe js) (Maybe ps) where
+  convertJsToPs jsMaybe = traverse convertJsToPs $ WebApi.fromJsMaybe jsMaybe
+
 -- * TallyStateDatum
 
 instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
   convertPsToJs (DaoApi.TallyStateDatum params) = do
 
-    proposal' <- convertPsToJs params.proposal
+    proposal <- convertPsToJs params.proposal
 
     pure $ WebApi.TallyStateDatum
-      { proposal: proposal'
+      { proposal
       , proposalEndTime: params.proposalEndTime
       , for: params.for
       , against: params.against
@@ -567,10 +645,10 @@ instance ConvertPsToJs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
 instance ConvertJsToPs WebApi.TallyStateDatum DaoApi.TallyStateDatum where
   convertJsToPs (WebApi.TallyStateDatum params) = do
 
-    proposal' <- convertJsToPs params.proposal
+    proposal <- convertJsToPs params.proposal
 
     pure $ DaoApi.TallyStateDatum
-      { proposal: proposal'
+      { proposal
       , proposalEndTime: params.proposalEndTime
       , for: params.for
       , against: params.against

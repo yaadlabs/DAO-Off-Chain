@@ -2,7 +2,10 @@
 Module: Dao.Component.Proposal.Params
 Description: Helpers for create proposal workflow
 -}
-module Dao.Component.Proposal.Params (CreateProposalParams(..)) where
+module Dao.Component.Proposal.Params
+  ( CreateProposalParams(..)
+  , QueryProposalParams(..)
+  ) where
 
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.Newtype (class Newtype)
@@ -18,3 +21,13 @@ newtype CreateProposalParams = CreateProposalParams
   }
 
 derive instance Newtype CreateProposalParams _
+
+-- | Query proposal contract paramaters
+newtype QueryProposalParams = QueryProposalParams
+  { configSymbol :: CurrencySymbol
+  , indexSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , indexTokenName :: TokenName
+  }
+
+derive instance Newtype QueryProposalParams _

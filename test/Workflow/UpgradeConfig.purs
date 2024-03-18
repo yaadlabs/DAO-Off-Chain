@@ -196,9 +196,10 @@ suite = do
           upgradePolicy' <- upgradePolicy
           let
             upgradePolicySymbol = scriptCurrencySymbol upgradePolicy'
-            tallyStateDatum = sampleUpgradeConfigProposalTallyStateDatum
-              upgradePolicySymbol
+          tallyStateDatum <- sampleUpgradeConfigProposalTallyStateDatum
+            upgradePolicySymbol
 
+          let
             proposalParams :: CreateProposalParams
             proposalParams = CreateProposalParams
               { configSymbol

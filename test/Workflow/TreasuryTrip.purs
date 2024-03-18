@@ -198,11 +198,11 @@ suite = do
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
           void $ waitNSlots (Natural.fromInt' 3)
 
-          let
-            tallyStateDatum = sampleTripProposalTallyStateDatum
-              walletTwoAddress
-              walletThreeAddress
+          tallyStateDatum <- sampleTripProposalTallyStateDatum
+            walletTwoAddress
+            walletThreeAddress
 
+          let
             proposalParams :: CreateProposalParams
             proposalParams = CreateProposalParams
               { configSymbol

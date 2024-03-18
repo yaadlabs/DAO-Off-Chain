@@ -207,7 +207,7 @@ countVote params' = do
       mconcat
         [ Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData $ tallyDatumWithUpdatedVoteCount)
+            (Datum $ toData tallyDatumWithUpdatedVoteCount)
             Constraints.DatumInline
             tallyInfo.value
         , voteConstraints
