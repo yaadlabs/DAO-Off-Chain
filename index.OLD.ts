@@ -153,26 +153,26 @@ BigNum
   /* Dao contract params and result types */
 
   export interface CreateConfigParams
-    { configTokenName : TokenName
-    , upgradeMajorityPercent : BigInteger
-    , upgradeRelativeMajorityPercent : BigInteger
-    , generalMajorityPercent : BigInteger
-    , generalRelativeMajorityPercent : BigInteger
-    , tripMajorityPercent : BigInteger
-    , tripRelativeMajorityPercent : BigInteger
-    , totalVotes : BigInteger
-    , maxGeneralDisbursement : BigInteger
-    , maxTripDisbursement : BigInteger
-    , agentDisbursementPercent : BigInteger
-    , proposalTallyEndOffset : BigInteger
-    , tallyNft : CurrencySymbol
-    , voteTokenName : TokenName
-    , voteNftSymbol : CurrencySymbol
-    , voteFungibleCurrencySymbol : CurrencySymbol
-    , voteFungibleTokenName : TokenName
-    , fungibleVotePercent : BigInteger
-    , indexSymbol : CurrencySymbol
-    , indexTokenName : TokenName
+    { configTokenName : string
+    , upgradeMajorityPercent : bigint
+    , upgradeRelativeMajorityPercent : bigint
+    , generalMajorityPercent : bigint
+    , generalRelativeMajorityPercent : bigint
+    , tripMajorityPercent : bigint
+    , tripRelativeMajorityPercent : bigint
+    , totalVotes : bigint
+    , maxGeneralDisbursement : bigint
+    , maxTripDisbursement : bigint
+    , agentDisbursementPercent : bigint
+    , proposalTallyEndOffset : bigint
+    , tallyNft : string // currency symbol
+    , voteTokenName : string
+    , voteNftSymbol : string
+    , voteFungibleCurrencySymbol : string
+    , voteFungibleTokenName : string
+    , fungibleVotePercent : bigint
+    , indexSymbol : string
+    , indexTokenName : string
     }
 
   export interface TreasuryParams {

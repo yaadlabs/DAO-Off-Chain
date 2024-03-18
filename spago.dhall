@@ -37,6 +37,7 @@ You can edit this file as you like.
   , "prelude"
   , "quickcheck"
   , "quickcheck-utf8"
+  , "record"
   , "spec"
   , "strings"
   , "transformers"

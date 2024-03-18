@@ -26,9 +26,8 @@ import Effect.Unsafe (unsafePerformEffect)
 
 -- | Create a function that calls a contract with only the ContractEnv as an argument.
 mkContractCall1 ::
-  forall resJs resPurs argJs argPurs.
+  forall resJs resPurs.
   ConvertPsToJs resJs resPurs =>
-  ConvertJsToPs argJs argPurs =>
   Ctl.Contract resPurs ->
   Fn1 Ctl.ContractEnv (Promise resJs)
 mkContractCall1 contractCall = mkFn1 \env -> do

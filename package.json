@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "",
   "main": "./output/Dao.Web.Api",
+  "types": "./index.d.ts",
   "directories": {
     "test": "test"
   },
