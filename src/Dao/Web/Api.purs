@@ -1,5 +1,6 @@
 module Dao.Web.Api
-  ( cancelVote
+  ( module WebTypes
+  , cancelVote
   , countVote
   , createConfig
   , createFungible
@@ -57,6 +58,7 @@ import Dao.Web.Types
   , VoteOnProposalParams
   , VoteOnProposalResult
   )
+import Dao.Web.Types (ProposalType(..)) as WebTypes
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
 import Dao.Workflow.CreateConfig (createConfig) as Dao
