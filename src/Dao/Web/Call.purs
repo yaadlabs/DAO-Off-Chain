@@ -47,6 +47,7 @@ mkContractCall2 contractCall = mkFn2 \env argJs -> do
     unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
       argPurs <- convertJsToPsContract argJs
       res <- contractCall argPurs
+      convertPsToJsContract res
 
 contractCallTwoArgs ::
   forall resJs resPurs arg1Js arg1Purs arg2Js arg2Purs.
