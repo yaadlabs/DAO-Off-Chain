@@ -1,9 +1,13 @@
 module Dao.Web.Types where
 
+import Contract.Prelude
+
 import Aeson as Aeson
 import Contract.Time (POSIXTime)
 import Data.Newtype (class Newtype)
 import Data.Show (class Show, show)
+import Foreign (Foreign)
+import Foreign (unsafeFromForeign, unsafeToForeign) as Foreign
 import JS.BigInt (BigInt)
 
 -- * Non app-specific / CTL types
@@ -59,6 +63,29 @@ newtype Address = Address String
 instance Show Address where
   show (Address a) = a
 
+-- | JS Maybe type
+
+newtype JsMaybe :: forall k. k -> Type
+newtype JsMaybe a = JsMaybe Foreign
+
+instance Show a => Show (JsMaybe a) where
+  show x = case fromJsMaybe x of
+    Nothing -> "null"
+    Just x' -> show x'
+
+fromJsMaybe :: forall a. JsMaybe a -> Maybe a
+fromJsMaybe (JsMaybe x) =
+  if isNullOrUndefined x then Nothing else Just (Foreign.unsafeFromForeign x)
+
+foreign import isNullOrUndefined :: Foreign -> Boolean
+foreign import nullF :: Foreign
+
+toJsMaybe :: forall a. Maybe a -> JsMaybe a
+toJsMaybe = JsMaybe <<< maybe nullF Foreign.unsafeToForeign
+
+toJsMaybe' :: forall a. a -> JsMaybe a
+toJsMaybe' = JsMaybe <<< Foreign.unsafeToForeign
+
 -- * Contract parameters
 
 -- | Parameters passed when initially creating dynamic config
@@ -100,6 +127,14 @@ newtype CreateProposalParams = CreateProposalParams
   , configTokenName :: TokenName
   , indexTokenName :: TokenName
   , tallyStateDatum :: TallyStateDatum
+  }
+
+-- | Query proposal contract paramaters
+newtype QueryProposalParams = QueryProposalParams
+  { configSymbol :: Hash28
+  , indexSymbol :: Hash28
+  , configTokenName :: TokenName
+  , indexTokenName :: TokenName
   }
 
 -- | Parameters for treasury general contract
@@ -157,6 +192,12 @@ newtype ContractResult = ContractResult
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash
   , symbol :: Hash28
+  }
+
+-- | General proposal query result
+newtype QueryResult = QueryResult
+  { proposalTokenName :: TokenName
+  , tallyDatum :: TallyStateDatum
   }
 
 -- * Datums

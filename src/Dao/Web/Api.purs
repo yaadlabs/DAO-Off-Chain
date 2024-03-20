@@ -41,7 +41,7 @@ import Dao.Scripts.Policy.Fungible (fungiblePolicy) as Scripts
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy) as Scripts
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
-import Dao.Web.Call (mkContractCall1, mkContractCall2)
+import Dao.Web.Call (mkContractCall1, mkContractCall2, contractCallOneArg, contractCallTwoArgs)
 import Dao.Web.Types
   ( CancelVoteParams
   , ContractResult
@@ -50,7 +50,10 @@ import Dao.Web.Types
   , CreateFungibleParams
   , CreateProposalParams
   , CtlConfig(CtlConfig)
+  , JsMaybe
   , PaymentPubKeyHash
+  , QueryProposalParams
+  , QueryResult
   , TokenName
   , TransactionHash
   , TreasuryParams
@@ -66,6 +69,16 @@ import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
+import Dao.Workflow.QueryProposal
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  , getProposalByTokenName
+  ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -76,6 +89,7 @@ import Data.Maybe (Maybe(Just, Nothing))
 import Data.UInt as UInt
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
+import Effect.Aff.Compat (EffectFn1, EffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import JS.BigInt (fromInt) as BigInt
 import Record (merge)
@@ -199,3 +213,44 @@ createFungible = mkContractCall2 Dao.createFungible
 
 treasuryTrip :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
 treasuryTrip = mkContractCall2 Dao.treasuryTrip
+
+getAllProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllProposals env = contractCallOneArg env Dao.getAllProposals
+
+getAllGeneralProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllGeneralProposals env = contractCallOneArg env Dao.getAllGeneralProposals
+
+getAllTripProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllTripProposals env = contractCallOneArg env Dao.getAllTripProposals
+
+getAllUpgradeProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllUpgradeProposals env = contractCallOneArg env Dao.getAllUpgradeProposals
+
+getAllActiveProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllActiveProposals env = contractCallOneArg env Dao.getAllActiveProposals
+
+getAllExpiredProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllExpiredProposals env = contractCallOneArg env Dao.getAllExpiredProposals
+
+getAllSuccessfulProposals ::
+  Ctl.ContractEnv ->
+  EffectFn1 QueryProposalParams (Promise (Array QueryResult))
+getAllSuccessfulProposals env = contractCallOneArg env
+  Dao.getAllSuccessfulProposals
+
+getProposalByTokenName ::
+  Ctl.ContractEnv ->
+  EffectFn2 QueryProposalParams TokenName (Promise (JsMaybe QueryResult))
+getProposalByTokenName env = contractCallTwoArgs env Dao.getProposalByTokenName

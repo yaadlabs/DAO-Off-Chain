@@ -188,6 +188,11 @@ BigNum
     tokenName: TokenName;
   }
 
+  export interface QueryResult {
+      proposalTokenName: TokenName;
+      tallyDatum: TallyStateDatum;
+    }
+
   export interface VoteOnProposalResult {
     txHash: TransactionHash;
     symbol: CurrencySymbol;
@@ -199,6 +204,13 @@ BigNum
     configTokenName: TokenName;
     indexTokenName: TokenName;
     tallyStateDatum: TallyStateDatum;
+  }
+
+  export interface QueryProposalParams {
+    configSymbol: CurrencySymbol;
+    indexSymbol: CurrencySymbol;
+    configTokenName: TokenName;
+    indexTokenName: TokenName;
   }
 
   export interface CancelVoteParams {
@@ -348,3 +360,45 @@ export const upgradeConfig = async (
   env: Foreign.ContractEnv,
   params: Foreign.UpgradeConfigParams
 ): Promise<TransactionHash> => (await purescript).upgradeConfig(env, params);
+
+export const getAllProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllProposals(env, params);
+
+export const getAllGeneralProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllGeneralProposals(env, params);
+
+export const getAllTripProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllTripProposals(env, params);
+
+export const getAllUpgradeProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllUpgradeProposals(env, params);
+
+export const getAllActiveProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllActiveProposals(env, params);
+
+export const getAllExpiredProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllExpiredProposals(env, params);
+
+export const getAllSuccessfulProposals = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams
+): Promise<Array Foreign.QueryResult> => (await purescript).getAllSuccessfulProposals(env, params);
+
+export const getProposalByTokenName = async (
+  env: Foreign.ContractEnv,
+  params: Foreign.QueryProposalParams,
+  proposalTokenName: Foreign.TokenName
+): Promise<Foreign.Maybe Foreign.QueryResult> =>
+    (await purescript).getProposalByTokenName(env, params, proposalTokenName);
