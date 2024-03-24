@@ -56,7 +56,7 @@ import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (createConfig)
+import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -176,7 +176,7 @@ suite = do
               , indexTokenName: indexTokenName
               }
 
-          ContractResult
+          CreateConfigResult
             { txHash: createConfigTxHash
             , symbol: configSymbol
             , tokenName: configTokenName

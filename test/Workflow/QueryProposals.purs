@@ -57,7 +57,7 @@ import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (createConfig)
+import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -246,7 +246,7 @@ suite = do
                   }
 
               -- Create the UTXO that holds the 'DynamicConfigDatum'
-              ContractResult
+              CreateConfigResult
                 { txHash: createConfigTxHash
                 , symbol: configSymbol
                 , tokenName: configTokenName

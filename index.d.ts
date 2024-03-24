@@ -16,9 +16,18 @@ export interface ContractResult {
   tokenName: string;
 }
 
+export interface CreateConfigResult extends ContractResult {
+  tallySymbol: string;
+}
+
 export interface QueryResult {
   proposalTokenName: string;
   tallyDatum: TallyStateDatum;
+}
+
+export interface VoteOnProposalResult {
+  txHash: string;
+  symbol: string;
 }
 
 // ====================================
@@ -54,6 +63,20 @@ export interface CreateProposalParams {
   indexTokenName: string;
   tallyStateDatum: TallyStateDatum;
 }
+
+export interface VoteOnProposalParams {
+  configSymbol: string;
+  configTokenName: string;
+  tallySymbol: string;
+  // Vote datum fields
+  proposalTokenName: string;
+  voteDirection: VoteDirection;
+  returnAda: bigint;
+}
+
+export declare class VoteDirection {};
+export declare class For extends VoteDirection {};
+export declare class Against extends VoteDirection {};
 
 export interface QueryProposalParams {
   configSymbol: string;
@@ -91,19 +114,6 @@ export declare class Trip extends ProposalType {
 }
 
 // ====================================
-// Misc.
-// ====================================
-
-export declare class Maybe<T> {}
-export declare class Just<T> extends Maybe<T> {
-  constructor(value0: T);
-  value0: T;
-}
-export declare class Nothing<T> extends Maybe<T> {
-  constructor();
-}
-
-// ====================================
 // Contract environment functions
 // ====================================
 
@@ -118,7 +128,7 @@ export declare function finalize(env: ContractEnv): Promise<void>;
 export declare function createConfig(
   env: ContractEnv,
   params: CreateConfigParams
-): Promise<ContractResult>;
+): Promise<CreateConfigResult>;
 
 export declare function createIndex(
   env: ContractEnv,
@@ -127,12 +137,17 @@ export declare function createIndex(
 
 export declare function createIndexConfig(
   env: ContractEnv
-): Promise<ContractResult>;
+): Promise<CreateConfigResult>;
 
 export declare function createProposal(
   env: ContractEnv,
   params: CreateProposalParams
 ): Promise<ContractResult>;
+
+export declare function voteOnProposal(
+  env: ContractEnv,
+  params: VoteOnProposalParams
+): Promise<VoteOnProposalResult>;
 
 export declare function getAllProposals(
   env: ContractEnv,
@@ -173,4 +188,4 @@ export declare function getProposalByTokenName(
   env: ContractEnv,
   params: QueryProposalParams,
   proposalTokenName: TokenName
-): Promise<Maybe<QueryResult>>;
+): Promise<QueryResult | null>;

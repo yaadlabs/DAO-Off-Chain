@@ -69,6 +69,7 @@ import Dao.Component.Vote.Params
   ) as DaoApi
 import Dao.Utils.Contract (ContractResult(ContractResult)) as DaoApi
 import Dao.Web.Types as WebApi
+import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult)) as DaoApi
 import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult)) as DaoApi
 import Data.Either (Either(Left))
 import Data.Maybe (Maybe(Just, Nothing))
@@ -239,6 +240,38 @@ instance ConvertJsToPs WebApi.QueryResult DaoApi.QueryResult where
     pure $ DaoApi.QueryResult
       { proposalTokenName
       , tallyDatum
+      }
+
+--- * CreateConfigResult
+
+-- * ContractResult
+
+instance ConvertPsToJs WebApi.CreateConfigResult DaoApi.CreateConfigResult where
+  convertPsToJs (DaoApi.CreateConfigResult params) = do
+    txHash <- convertPsToJs params.txHash
+    symbol <- convertPsToJs params.symbol
+    tokenName <- convertPsToJs params.tokenName
+    tallySymbol <- convertPsToJs params.tallySymbol
+
+    pure $ WebApi.CreateConfigResult
+      { txHash
+      , symbol
+      , tokenName
+      , tallySymbol
+      }
+
+instance ConvertJsToPs WebApi.CreateConfigResult DaoApi.CreateConfigResult where
+  convertJsToPs (WebApi.CreateConfigResult params) = do
+    txHash <- convertJsToPs params.txHash
+    symbol <- convertJsToPs params.symbol
+    tokenName <- convertJsToPs params.tokenName
+    tallySymbol <- convertJsToPs params.tallySymbol
+
+    pure $ DaoApi.CreateConfigResult
+      { txHash
+      , symbol
+      , tokenName
+      , tallySymbol
       }
 
 -- * VoteOnProposalResult

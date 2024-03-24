@@ -3,7 +3,10 @@ Module: Dao.Workflow.CreateConfig
 Description: Contract for creating dynamic config datum
   and locking it at UTXO at config validator marked by config NFT
 -}
-module Dao.Workflow.CreateConfig (createConfig) where
+module Dao.Workflow.CreateConfig
+  ( CreateConfigResult(CreateConfigResult)
+  , createConfig
+  ) where
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
@@ -67,11 +70,19 @@ import ScriptArguments.Types
   , ValidatorParams(ValidatorParams)
   )
 
+-- | Create config result
+newtype CreateConfigResult = CreateConfigResult
+  { txHash :: TransactionHash
+  , symbol :: CurrencySymbol
+  , tokenName :: TokenName
+  , tallySymbol :: CurrencySymbol
+  }
+
 -- | Contract for creating dynamic config datum and locking
 -- | it at UTXO at config validator marked by config NFT
 createConfig ::
   CreateConfigParams ->
-  Contract ContractResult
+  Contract CreateConfigResult
 createConfig params = do
   logInfo' "Entering createConfig transaction"
 
@@ -96,16 +107,20 @@ createConfig params = do
     symbol :: CurrencySymbol
     symbol = dynamicConfigInfo.symbol
 
+    tallySymbol :: CurrencySymbol
+    tallySymbol = dynamicConfigInfo.tallySymbol
+
     tokenName :: TokenName
     tokenName = params # unwrap # _.configTokenName
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure $ ContractResult
-    { txHash, symbol, tokenName }
+  pure $ CreateConfigResult
+    { txHash, symbol, tokenName, tallySymbol }
 
 type ConfigInfo =
   { symbol :: CurrencySymbol
+  , tallySymbol :: CurrencySymbol
   , lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
   }
@@ -248,4 +263,4 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         -- validator, marked by the 'nftConfig'
         ]
 
-    pure { symbol: configSymbol, lookups: lookups', constraints: constraints' }
+    pure { symbol: configSymbol, tallySymbol: tallyNftSymbol, lookups: lookups', constraints: constraints' }

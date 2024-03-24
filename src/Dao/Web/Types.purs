@@ -188,6 +188,14 @@ newtype ContractResult = ContractResult
   , tokenName :: TokenName
   }
 
+-- | CreateConfigResult
+newtype CreateConfigResult = CreateConfigResult
+  { txHash :: TransactionHash
+  , symbol :: Hash28
+  , tokenName :: TokenName
+  , tallySymbol :: Hash28
+  }
+
 -- | VoteOnProposalResult
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash

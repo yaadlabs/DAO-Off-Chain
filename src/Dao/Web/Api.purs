@@ -54,6 +54,7 @@ import Dao.Web.Types
   , ContractResult
   , CountVoteParams
   , CreateConfigParams
+  , CreateConfigResult
   , CreateFungibleParams
   , CreateProposalParams
   , CtlConfig(CtlConfig)
@@ -68,7 +69,7 @@ import Dao.Web.Types
   , VoteOnProposalParams
   , VoteOnProposalResult
   )
-import Dao.Web.Types (ProposalType(..)) as WebTypes
+import Dao.Web.Types (ProposalType(..), VoteDirection(..)) as WebTypes
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
 import Dao.Workflow.CreateConfig (createConfig) as Dao
@@ -136,11 +137,11 @@ finalize = Ctl.stopContractEnvJS
 createIndex :: Fn2 Ctl.ContractEnv TokenName (Promise ContractResult)
 createIndex = mkContractCall2 Dao.createIndex
 
-createConfig :: Fn2 Ctl.ContractEnv CreateConfigParams (Promise ContractResult)
+createConfig :: Fn2 Ctl.ContractEnv CreateConfigParams (Promise CreateConfigResult)
 createConfig = mkContractCall2 Dao.createConfig
 
 -- | Create both the index and config with default config params
-createIndexConfig :: Fn1 Ctl.ContractEnv (Promise ContractResult)
+createIndexConfig :: Fn1 Ctl.ContractEnv (Promise CreateConfigResult)
 createIndexConfig = mkContractCall1 createIndexConfig'
   where 
     createIndexConfig' = do
