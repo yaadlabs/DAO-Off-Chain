@@ -1,6 +1,5 @@
 module Dao.Web.Api
-  ( module WebTypes
-  , cancelVote
+  ( cancelVote
   , countVote
   , createConfig
   , createFungible
@@ -9,19 +8,20 @@ module Dao.Web.Api
   , createProposal
   , createVotePass
   , finalize
+  , getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  , getProposalByTokenName
   , initialize
+  , module WebTypes
   , treasuryGeneral
   , treasuryTrip
   , upgradeConfig
   , voteOnProposal
-  , getAllProposals
-  , getAllGeneralProposals
-  , getAllTripProposals
-  , getAllUpgradeProposals
-  , getAllActiveProposals
-  , getAllExpiredProposals
-  , getAllSuccessfulProposals
-  , getProposalByTokenName
   )
   where
 
@@ -46,11 +46,13 @@ import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams)) as Component
 import Dao.Scripts.Policy.Fungible (fungiblePolicy) as Scripts
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy) as Scripts
+import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
 import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)
 import Dao.Web.Types
-  ( CancelVoteParams
+  ( Address
+  , CancelVoteParams
   , ContractResult
   , CountVoteParams
   , CreateConfigParams
@@ -59,7 +61,6 @@ import Dao.Web.Types
   , CreateProposalParams
   , CtlConfig(CtlConfig)
   , JsMaybe
-  , PaymentPubKeyHash
   , QueryProposalParams
   , QueryResult
   , TokenName
@@ -209,8 +210,11 @@ cancelVote = mkContractCall2 Dao.cancelVote
 treasuryGeneral :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
 treasuryGeneral = mkContractCall2 Dao.treasuryGeneral
 
-createVotePass :: Fn2 Ctl.ContractEnv PaymentPubKeyHash (Promise ContractResult)
-createVotePass = mkContractCall2 Dao.createVotePass
+createVotePass :: Fn2 Ctl.ContractEnv Address (Promise ContractResult)
+createVotePass = mkContractCall2 $ \address -> do
+  pkh <- Ctl.liftContractM "Could not convert address to key" $
+    Utils.addressToPaymentPubKeyHash address
+  Dao.createVotePass pkh
 
 createFungible :: Fn2 Ctl.ContractEnv CreateFungibleParams (Promise ContractResult)
 createFungible = mkContractCall2 Dao.createFungible

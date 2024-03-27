@@ -144,6 +144,11 @@ export declare function createProposal(
   params: CreateProposalParams
 ): Promise<ContractResult>;
 
+export declare function createVotePass(
+  env: ContractEnv,
+  address: string
+): Promise<ContractResult>;
+
 export declare function voteOnProposal(
   env: ContractEnv,
   params: VoteOnProposalParams
