@@ -12,8 +12,8 @@ import ScriptArguments.Types (ValidatorParams)
 
 
 unappliedVotePolicy :: ValidatorParams -> Contract MintingPolicy
-unappliedVotePolicy = mkUnappliedPolicy' OptimizedScripts.voteNftPolicy
+unappliedVotePolicy = mkUnappliedPolicy' OptimizedScripts.votePolicy
 
 unappliedVotePolicyDebug ::
   ValidatorParams -> Contract MintingPolicy
-unappliedVotePolicyDebug = mkUnappliedPolicy' DebugScripts.voteNftPolicy
+unappliedVotePolicyDebug = mkUnappliedPolicy' DebugScripts.votePolicy
