@@ -14,4 +14,4 @@ unappliedConfigPolicy :: ConfigPolicyParams -> Contract MintingPolicy
 unappliedConfigPolicy = mkUnappliedPolicy' OptimizedScripts.configPolicy
 
 unappliedConfigPolicyDebug :: ConfigPolicyParams -> Contract MintingPolicy
-unappliedConfigPolicyDebug = mkUnappliedPolicy' OptimizedScripts.configPolicy
+unappliedConfigPolicyDebug = mkUnappliedPolicy' DebugScripts.configPolicy

@@ -53,10 +53,10 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicy)
+import Dao.Scripts.Validator.Config (unappliedConfigValidator)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidator)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
@@ -78,13 +78,13 @@ countVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+  appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+  appliedTallyValidator :: Validator <- unappliedTallyValidator
     validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+  appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
