@@ -429,8 +429,10 @@ suite = do
                   , configTokenName: configTokenName
                   }
 
-              (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
-                treasuryFundParams
+              ContractResult
+                { txHash: treasuryFundTxHash
+                , symbol: treasuryFundSymbol
+                } <- createTreasuryFund treasuryFundParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 treasuryFundTxHash
@@ -564,8 +566,7 @@ suite = do
               let
                 countVoteParams :: CountVoteParams
                 countVoteParams = CountVoteParams
-                  { voteTokenName: adaToken
-                  , configSymbol
+                  { configSymbol
                   , configTokenName
                   , tallySymbol: proposalOneSymbol
                   , proposalTokenName: proposalOneTokenName
@@ -719,8 +720,7 @@ suite = do
               let
                 countVoteParams :: CountVoteParams
                 countVoteParams = CountVoteParams
-                  { voteTokenName: adaToken
-                  , configSymbol
+                  { configSymbol
                   , configTokenName
                   , tallySymbol: proposalOneSymbol
                   , proposalTokenName: proposalTwoTokenName

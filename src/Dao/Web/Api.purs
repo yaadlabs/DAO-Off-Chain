@@ -6,6 +6,7 @@ module Dao.Web.Api
   , createIndex
   , createIndexConfig
   , createProposal
+  , createTreasuryFund
   , createVotePass
   , finalize
   , getAllActiveProposals
@@ -59,6 +60,7 @@ import Dao.Web.Types
   , CreateConfigResult
   , CreateFungibleParams
   , CreateProposalParams
+  , CreateTreasuryFundParams
   , CtlConfig(CtlConfig)
   , JsMaybe
   , QueryProposalParams
@@ -78,6 +80,7 @@ import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
+import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
 import Dao.Workflow.QueryProposal
   ( getAllActiveProposals
   , getAllExpiredProposals
@@ -194,6 +197,9 @@ createIndexConfig = mkContractCall1 createIndexConfig'
 
 createProposal :: Fn2 Ctl.ContractEnv CreateProposalParams (Promise ContractResult)
 createProposal = mkContractCall2 Dao.createProposal
+
+createTreasuryFund :: Fn2 Ctl.ContractEnv CreateTreasuryFundParams (Promise ContractResult)
+createTreasuryFund = mkContractCall2 Dao.createTreasuryFund
 
 voteOnProposal :: Fn2 Ctl.ContractEnv VoteOnProposalParams (Promise VoteOnProposalResult)
 voteOnProposal = mkContractCall2 Dao.voteOnProposal

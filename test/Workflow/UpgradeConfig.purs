@@ -243,8 +243,7 @@ suite = do
           let
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
-              { voteTokenName: adaToken
-              , tallySymbol: proposalSymbol
+              { tallySymbol: proposalSymbol
               , configSymbol
               , configTokenName
               , proposalTokenName

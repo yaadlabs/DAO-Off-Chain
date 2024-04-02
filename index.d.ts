@@ -78,6 +78,27 @@ export declare class VoteDirection {};
 export declare class For extends VoteDirection {};
 export declare class Against extends VoteDirection {};
 
+export interface CountVoteParams {
+  configSymbol: string;
+  configTokenName: string;
+  tallySymbol: string;
+  proposalTokenName: string;
+}
+
+export interface CreateTreasuryFundParams {
+  configSymbol: string;
+  configTokenName: string;
+  adaAmount: bigint;
+}
+
+export interface TreasuryParams {
+  configSymbol: string;
+  configTokenName: string;
+  tallySymbol: string;
+  treasurySymbol: string;
+  proposalTokenName: string;
+}
+
 export interface QueryProposalParams {
   configSymbol: string;
   indexSymbol: string;
@@ -153,6 +174,21 @@ export declare function voteOnProposal(
   env: ContractEnv,
   params: VoteOnProposalParams
 ): Promise<VoteOnProposalResult>;
+
+export declare function countVote(
+  env: ContractEnv,
+  params: CountVoteParams
+): Promise<string>;
+
+export declare function createTreasuryFund(
+  env: ContractEnv,
+  params: CreateTreasuryFundParams
+): Promise<ContractResult>;
+
+export declare function treasuryGeneral(
+  env: ContractEnv,
+  params: TreasuryParams
+): Promise<string>;
 
 export declare function getAllProposals(
   env: ContractEnv,

@@ -61,6 +61,7 @@ import Dao.Component.Proposal.Query
   ) as DaoApi
 import Dao.Component.Treasury.Params
   ( TreasuryParams(TreasuryParams)
+  , TreasuryFundParams
   ) as DaoApi
 import Dao.Component.Vote.Params
   ( CancelVoteParams(CancelVoteParams)
@@ -332,6 +333,27 @@ instance ConvertJsToPs WebApi.UpgradeConfigParams DaoApi.UpgradeConfigParams whe
       , proposalTokenName
       }
 
+-- * CreateTreasuryFundParams
+instance ConvertPsToJs WebApi.CreateTreasuryFundParams DaoApi.TreasuryFundParams where
+  convertPsToJs (params) = do
+
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
+
+    pure $ WebApi.CreateTreasuryFundParams
+      { adaAmount: params.adaAmount
+      , configSymbol
+      , configTokenName
+      }
+
+instance ConvertJsToPs WebApi.CreateTreasuryFundParams DaoApi.TreasuryFundParams where
+  convertJsToPs (WebApi.CreateTreasuryFundParams params) = do
+
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
+
+    pure { adaAmount: params.adaAmount, configSymbol, configTokenName }
+
 -- * TreasuryParams
 
 instance ConvertPsToJs WebApi.TreasuryParams DaoApi.TreasuryParams where
@@ -539,14 +561,12 @@ instance ConvertPsToJs WebApi.CountVoteParams DaoApi.CountVoteParams where
     configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
     proposalTokenName <- convertPsToJs params.proposalTokenName
-    voteTokenName <- convertPsToJs params.voteTokenName
 
     pure $ WebApi.CountVoteParams
       { configSymbol
       , configTokenName
       , tallySymbol
       , proposalTokenName
-      , voteTokenName
       }
 
 instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
@@ -556,14 +576,12 @@ instance ConvertJsToPs WebApi.CountVoteParams DaoApi.CountVoteParams where
     configTokenName <- convertJsToPs params.configTokenName
     tallySymbol <- convertJsToPs params.tallySymbol
     proposalTokenName <- convertJsToPs params.proposalTokenName
-    voteTokenName <- convertJsToPs params.voteTokenName
 
     pure $ DaoApi.CountVoteParams
       { configSymbol
       , configTokenName
       , tallySymbol
       , proposalTokenName
-      , voteTokenName
       }
 
 -- * CancelVoteParams

@@ -1,4 +1,40 @@
-module Dao.Web.Types where
+module Dao.Web.Types
+  ( Address(..)
+  , CancelVoteParams(..)
+  , ContractResult(..)
+  , CountVoteParams(..)
+  , CreateConfigParams(..)
+  , CreateConfigResult(..)
+  , CreateFungibleParams(..)
+  , CreateProposalParams(..)
+  , CreateTreasuryFundParams(..)
+  , CtlConfig(..)
+  , DynamicConfigDatum(..)
+  , Hash28(..)
+  , Hash32(..)
+  , IndexDatum(..)
+  , JsMaybe
+  , PaymentPubKeyHash(..)
+  , ProposalType(..)
+  , QueryProposalParams(..)
+  , QueryResult(..)
+  , ScriptHash(..)
+  , TallyStateDatum(..)
+  , TokenName(..)
+  , TransactionHash
+  , TreasuryParams(..)
+  , UpgradeConfigParams(..)
+  , VoteDatum(..)
+  , VoteDirection(..)
+  , VoteOnProposalParams(..)
+  , VoteOnProposalResult(..)
+  , fromJsMaybe
+  , isNullOrUndefined
+  , nullF
+  , toJsMaybe
+  , toJsMaybe'
+  )
+  where
 
 import Contract.Prelude
 
@@ -137,6 +173,13 @@ newtype QueryProposalParams = QueryProposalParams
   , indexTokenName :: TokenName
   }
 
+-- | Create treasury fund contract paramaters
+newtype CreateTreasuryFundParams = CreateTreasuryFundParams
+  { adaAmount :: BigInt
+  , configSymbol :: Hash28
+  , configTokenName :: TokenName
+  }
+
 -- | Parameters for treasury general contract
 newtype TreasuryParams = TreasuryParams
   { configSymbol :: Hash28
@@ -163,7 +206,6 @@ newtype CountVoteParams = CountVoteParams
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
   , proposalTokenName :: TokenName
-  , voteTokenName :: TokenName
   }
 
 -- | Cancel vote contract paramaters
