@@ -34,8 +34,8 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Scripts.Policy.Index (unappliedIndexPolicy)
-import Dao.Scripts.Validator.Index (indexValidatorScript)
+import Dao.Scripts.Policy.Index (unappliedIndexPolicyDebug)
+import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
@@ -89,7 +89,7 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
   do
     logInfo' "Entering buildIndex transaction"
 
-    indexValidator :: Validator <- indexValidatorScript
+    indexValidator :: Validator <- indexValidatorScriptDebug
 
     let
       indexValidatorHash :: ValidatorHash
@@ -102,7 +102,7 @@ buildIndex (txInput /\ txInputWithScript) indexTokenName =
         , ipIndexValidator: unwrap indexValidatorHash
         }
 
-    appliedIndexPolicy :: MintingPolicy <- unappliedIndexPolicy
+    appliedIndexPolicy :: MintingPolicy <- unappliedIndexPolicyDebug
       indexPolicyParams
 
     let

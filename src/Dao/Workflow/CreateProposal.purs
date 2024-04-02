@@ -39,9 +39,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy.Tally (unappliedTallyPolicy)
-import Dao.Scripts.Validator.Config (unappliedConfigValidator)
-import Dao.Scripts.Validator.Index (indexValidatorScript)
+import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (Maybe)
@@ -63,9 +63,9 @@ createProposal params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
-  indexValidator :: Validator <- indexValidatorScript
+  indexValidator :: Validator <- indexValidatorScriptDebug
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -79,7 +79,7 @@ createProposal params' = do
       params.indexSymbol
       params.configTokenName
       params.indexTokenName
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
     -- The index field of the IndexDatum must be incremented

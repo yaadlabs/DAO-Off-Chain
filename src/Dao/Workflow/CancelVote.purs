@@ -44,9 +44,9 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, cancelVoteUtxo)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicy)
-import Dao.Scripts.Validator.Config (unappliedConfigValidator)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidator)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Newtype (unwrap)
@@ -70,10 +70,10 @@ cancelVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
     validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs

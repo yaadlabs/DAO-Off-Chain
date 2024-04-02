@@ -34,9 +34,9 @@ import Dao.Component.Proposal.Query
   , getTokenNameAndDatumFromOutput
   )
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy.Tally (unappliedTallyPolicy)
-import Dao.Scripts.Validator.Config (unappliedConfigValidator)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
+import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Dao.Utils.Time (getCurrentTime)
@@ -87,7 +87,7 @@ getAllProposals params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
 
   -- Make the tally policy script
@@ -96,7 +96,7 @@ getAllProposals params' = do
       params.indexSymbol
       params.configTokenName
       params.indexTokenName
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
   let
     tallySymbol :: CurrencySymbol
@@ -114,6 +114,8 @@ getAllProposals params' = do
     proposalUtxos = getProposalInfo tallySymbol $ filter
       (hasTokenWithSymbol tallySymbol)
       (Map.toUnfoldable tallyValidatorUtxos)
+
+  logInfo' $ "Proposal UTXOs: " <> show proposalUtxos
 
   pure proposalUtxos
   where
@@ -217,7 +219,7 @@ getAllSuccessfulProposals params = do
     params' = params # unwrap
     validatorConfig = mkValidatorConfig params'.configSymbol
       params'.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
   configInfo :: ConfigInfo <- referenceConfigUtxo params'.configSymbol
     appliedConfigValidator

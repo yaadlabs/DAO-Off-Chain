@@ -42,9 +42,9 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
-import Dao.Scripts.Validator.Config (unappliedConfigValidator)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
-import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidator)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
@@ -69,11 +69,11 @@ treasuryGeneral params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs

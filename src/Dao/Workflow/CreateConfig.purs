@@ -47,16 +47,16 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (CreateConfigParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy.Config (unappliedConfigPolicy)
-import Dao.Scripts.Policy.Tally (unappliedTallyPolicy)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicy)
+import Dao.Scripts.Policy.Config (unappliedConfigPolicyDebug)
+import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
 import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Scripts.Validator.Config
-  ( unappliedConfigValidator
+  ( unappliedConfigValidatorDebug
   )
-import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidator)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidator)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
@@ -141,7 +141,7 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
       configPolicyParams = ConfigPolicyParams
         { cpInitialUtxo: txInput, cpTokenName: params.configTokenName }
 
-    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicy
+    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicyDebug
       configPolicyParams
 
     let
@@ -161,20 +161,20 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         params.configTokenName
         params.indexTokenName
 
-    appliedConfigValidator :: Validator <- unappliedConfigValidator
+    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
       configValidatorParams
 
     -- Make the scripts for the dynamic config datum
     appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
       configValidatorParams
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
       configValidatorParams
-    appliedVoteValidator :: Validator <- unappliedVoteValidator
+    appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
       configValidatorParams
-    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy
+    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug
       configValidatorParams
     voteNftPolicy' :: MintingPolicy <- voteNftPolicy
-    appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+    appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
 
     let
       tallyScriptHash :: ScriptHash
