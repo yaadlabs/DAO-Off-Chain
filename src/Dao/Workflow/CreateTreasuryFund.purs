@@ -39,8 +39,8 @@ import Dao.Component.Treasury.Params (TreasuryFundParams)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
-import Dao.Scripts.Policy.Treasury (unappliedTreasuryPolicyDebug)
-import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
+import Dao.Scripts.Policy (unappliedTreasuryPolicy)
+import Dao.Scripts.Validator (unappliedTreasuryValidator)
 import Data.Array (head)
 import Data.Map as Map
 import JS.BigInt (fromInt)
@@ -66,8 +66,8 @@ createTreasuryFund params = do
     $ head
     $ Map.toUnfoldable userUtxos
 
-  appliedTreasuryPolicy :: MintingPolicy <- unappliedTreasuryPolicyDebug txIn
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
+  appliedTreasuryPolicy :: MintingPolicy <- unappliedTreasuryPolicy txIn
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
     validatorConfig
 
   let

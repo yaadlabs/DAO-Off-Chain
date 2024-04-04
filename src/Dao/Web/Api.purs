@@ -45,8 +45,8 @@ import Contract.Value (adaToken, scriptCurrencySymbol) as Value
 import Ctl.Internal.Contract.QueryBackend (mkBlockfrostBackendParams) as Ctl
 import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams)) as Component
-import Dao.Scripts.Policy.Fungible (fungiblePolicy) as Scripts
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy) as Scripts
+import Dao.Scripts.Policy (fungiblePolicy) as Scripts
+import Dao.Scripts.Policy (voteNftPolicy) as Scripts
 import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils

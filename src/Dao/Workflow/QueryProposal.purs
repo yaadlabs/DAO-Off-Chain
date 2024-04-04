@@ -34,9 +34,11 @@ import Dao.Component.Proposal.Query
   , getTokenNameAndDatumFromOutput
   )
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Policy (unappliedTallyPolicy)
+import Dao.Scripts.Validator
+  ( unappliedConfigValidator
+  , unappliedTallyValidator
+  )
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Dao.Utils.Time (getCurrentTime)
@@ -87,7 +89,7 @@ getAllProposals params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+  appliedTallyValidator :: Validator <- unappliedTallyValidator
     validatorConfig
 
   -- Make the tally policy script
@@ -96,7 +98,7 @@ getAllProposals params' = do
       params.indexSymbol
       params.configTokenName
       params.indexTokenName
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
+  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
 
   let
     tallySymbol :: CurrencySymbol
@@ -219,7 +221,7 @@ getAllSuccessfulProposals params = do
     params' = params # unwrap
     validatorConfig = mkValidatorConfig params'.configSymbol
       params'.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+  appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
   configInfo :: ConfigInfo <- referenceConfigUtxo params'.configSymbol
     appliedConfigValidator

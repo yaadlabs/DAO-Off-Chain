@@ -4,6 +4,10 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
+
+import Prelude
+import Contract.Prelude (show)
+
 import Contract.Address (Address, scriptHashAddress)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
@@ -53,10 +57,12 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Policy (unappliedVotePolicy)
+import Dao.Scripts.Validator
+  ( unappliedConfigValidator
+  , unappliedTallyValidator
+  , unappliedVoteValidator
+  )
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
@@ -74,17 +80,19 @@ countVote params' = do
 
   let params = params' # unwrap
 
+  logInfo' $ "countVoteParams:\n" <> show params
+
   -- Make the scripts
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+  appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+  appliedTallyValidator :: Validator <- unappliedTallyValidator
     validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+  appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol

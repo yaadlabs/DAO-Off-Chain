@@ -38,10 +38,11 @@ import Contract.Value
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Scripts.Policy.Upgrade (upgradePolicy)
-import Dao.Scripts.Policy.Upgrade (upgradePolicy)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Policy (upgradePolicy)
+import Dao.Scripts.Validator
+  ( unappliedConfigValidator
+  , unappliedTallyValidator
+  )
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import JS.BigInt (BigInt, fromInt)
@@ -62,9 +63,9 @@ upgradeConfig params' =
     let
       validatorConfig = mkValidatorConfig params.configSymbol
         params.configTokenName
-    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    appliedTallyValidator :: Validator <- unappliedTallyValidator
       validatorConfig
-    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+    appliedConfigValidator :: Validator <- unappliedConfigValidator
       validatorConfig
 
     -- We are updating the config datum so we need to spend the UTXO at
