@@ -9469,16 +9469,15 @@
         "psm": "psm"
       },
       "locked": {
-        "lastModified": 1702679921,
-        "narHash": "sha256-mjnpace4cMtirs8m2Xc8Q1GfeRb6FvStt1drwToWOf8=",
-        "ref": "refs/heads/nf/add-scripts",
-        "rev": "79a57cc16fec31c054afd16311f631f1aeb0b236",
-        "revCount": 242,
+        "lastModified": 1709408281,
+        "narHash": "sha256-fISUWndQT5UGbgFmuOTFxg8DFP4zuuxarbySVRA7fWA=",
+        "ref": "refs/heads/nf/fix-tallying-period-checks",
+        "rev": "d4dd8792f8ee3372041c8b569be0a1faadc58154",
+        "revCount": 262,
         "type": "git",
         "url": "file:///home/nini/dev/triphut-repos/DAO"
       },
       "original": {
-        "rev": "79a57cc16fec31c054afd16311f631f1aeb0b236",
         "type": "git",
         "url": "file:///home/nini/dev/triphut-repos/DAO"
       }

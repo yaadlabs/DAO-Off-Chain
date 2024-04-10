@@ -17,7 +17,7 @@
 
     lbf.url = "github:mlabs-haskell/lambda-buffers";
 
-    dao-onchain.url = "/home/nini/dev/triphut-repos/DAO?rev=79a57cc16fec31c054afd16311f631f1aeb0b236";
+    dao-onchain.url = "/home/nini/dev/triphut-repos/DAO";
   };
 
   outputs = { self, nixpkgs, ctl, lbf, ... }@inputs:
