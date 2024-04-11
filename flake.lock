@@ -10189,11 +10189,9 @@
         "psm": "psm"
       },
       "locked": {
-        "lastModified": 1707373240,
-        "narHash": "sha256-cCQbgQu912KCzqsxUoewFosqkS+LKwKlt6kZ9VSnocM=",
         "owner": "yaadlabs",
         "repo": "DAO",
-        "rev": "d132454742be4a53d5d946a04fc76f6fd3c047c2",
+        "rev": "ade0a5a76b156d77e48f10fcc35d752e7c682da6",
         "type": "github"
       },
       "original": {
