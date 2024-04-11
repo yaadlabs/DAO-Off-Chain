@@ -33,7 +33,7 @@ unappliedIndexPolicy :: IndexPolicyParams -> Contract MintingPolicy
 unappliedIndexPolicy = mkUnappliedPolicy' Debug.indexPolicy
 
 unappliedTallyPolicy :: TallyPolicyParams -> Contract MintingPolicy
-unappliedTallyPolicy = mkUnappliedPolicy' Debug.tallyPolicy
+unappliedTallyPolicy = mkUnappliedPolicy' Optimised.tallyPolicy
 
 unappliedTreasuryPolicy :: TransactionInput -> Contract MintingPolicy
 unappliedTreasuryPolicy = mkUnappliedPolicy' Debug.treasuryPolicy
@@ -46,7 +46,7 @@ upgradePolicy :: Contract MintingPolicy
 upgradePolicy = pure $ PlutusMintingPolicy $ mkScript' Optimised.alwaysMints
 
 unappliedVotePolicy :: ValidatorParams -> Contract MintingPolicy
-unappliedVotePolicy = mkUnappliedPolicy' Debug.votePolicy
+unappliedVotePolicy = mkUnappliedPolicy' Optimised.votePolicy
 
 voteNftPolicy :: Contract MintingPolicy
 voteNftPolicy = pure $ PlutusMintingPolicy $ mkScript' Optimised.voteNftPolicy

@@ -23,7 +23,7 @@ alwaysSucceedsValidatorScript :: Contract Validator
 alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysSucceedsValidator
 
 unappliedConfigValidator :: ValidatorParams -> Contract Validator
-unappliedConfigValidator = mkUnappliedValidator' Debug.configValidator
+unappliedConfigValidator = mkUnappliedValidator' Optimised.configValidator
 
 indexValidatorScript :: Contract Validator
 indexValidatorScript = pure $ Validator $ mkScript' Debug.indexValidator
@@ -35,4 +35,4 @@ unappliedTreasuryValidator :: ValidatorParams -> Contract Validator
 unappliedTreasuryValidator = mkUnappliedValidator' Debug.treasuryValidator
 
 unappliedVoteValidator :: ValidatorParams -> Contract Validator
-unappliedVoteValidator = mkUnappliedValidator' Debug.voteValidator
+unappliedVoteValidator = mkUnappliedValidator' Optimised.voteValidator
