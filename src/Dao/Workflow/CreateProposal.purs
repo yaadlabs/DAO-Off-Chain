@@ -44,6 +44,7 @@ import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
 import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
+import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
@@ -63,8 +64,11 @@ createProposal params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
+
   appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
+  configValidatorRef <- retrieveReferenceScript $ unwrap appliedConfigValidator
+
   indexValidator :: Validator <- indexValidatorScriptDebug
 
   -- Query the UTXOs

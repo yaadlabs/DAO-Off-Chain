@@ -37,7 +37,10 @@ import Contract.Test.Plutip
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (TokenName, adaSymbol, adaToken, scriptCurrencySymbol)
 import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , mkValidatorConfig
+  )
 import Dao.Component.Fungible.Params
   ( CreateFungibleParams(CreateFungibleParams)
   )
