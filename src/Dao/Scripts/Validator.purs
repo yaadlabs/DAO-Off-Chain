@@ -14,13 +14,13 @@ import Contract.PlutusData (toData)
 import Contract.Prelude (pure, ($))
 import Contract.Scripts (Validator(Validator))
 import Dao.Scripts.Serialized.Debug as Debug
-import Dao.Scripts.Serialized.Optimized as Optimized
+import Dao.Scripts.Serialized.Optimised as Optimised
 import Dao.Scripts.Utils (mkUnappliedValidator')
 import Dao.Scripts.Utils (mkScript')
 import ScriptArguments.Types (ValidatorParams)
 
 alwaysSucceedsValidatorScript :: Contract Validator
-alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' Optimized.alwaysSucceedsValidator
+alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysSucceedsValidator
 
 unappliedConfigValidator :: ValidatorParams -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator' Debug.configValidator
