@@ -45,6 +45,7 @@ import Dao.Scripts.Validator
   )
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
+import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
@@ -72,8 +73,11 @@ upgradeConfig params' =
     -- the config validator holding the old datum, we will then create
     -- a new UTXO at the config validator holding the new config datum
     -- and also marked by the config NFT
+    configValidatorRef <- retrieveReferenceScript $ unwrap
+      appliedConfigValidator
     configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
+      configValidatorRef
     tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
       params.proposalTokenName
       appliedTallyValidator

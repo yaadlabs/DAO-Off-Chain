@@ -9,11 +9,13 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (unitRedeemer)
 import Contract.Prelude (discard)
 import Contract.Scripts (Validator)
+import Contract.TxConstraints (InputWithScriptRef)
 import Contract.Value (CurrencySymbol, TokenName)
 import Dao.Utils.Query
   ( QueryType(Reference, Spend)
   , UtxoInfo
   , findScriptUtxoByToken
+  , findScriptUtxoByTokenWithScriptRef
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
@@ -39,13 +41,15 @@ spendTallyUtxo ::
   CurrencySymbol ->
   TokenName ->
   Validator ->
+  InputWithScriptRef ->
   Contract TallyInfo
-spendTallyUtxo tallySymbol proposalTokenName tallyValidator = do
+spendTallyUtxo tallySymbol proposalTokenName tallyValidator scriptRef = do
   logInfo' "Entering spendTallyUtxo contract"
-  findScriptUtxoByToken
+  findScriptUtxoByTokenWithScriptRef
     (Proxy :: Proxy TallyStateDatum)
     Spend
     unitRedeemer
     tallySymbol
     proposalTokenName
     tallyValidator
+    scriptRef

@@ -46,6 +46,7 @@ import Dao.Scripts.Validator
   )
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
+import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
