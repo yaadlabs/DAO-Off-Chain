@@ -24,12 +24,14 @@ import Contract.Prelude
   , pure
   , unwrap
   , void
+  , show
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
   , (==)
+  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
@@ -55,10 +57,10 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicy)
+import Dao.Scripts.Validator.Config (unappliedConfigValidator)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidator)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Map (Map)
@@ -82,13 +84,13 @@ countVote params' = do
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
 
-  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+  appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+  appliedTallyValidator :: Validator <- unappliedTallyValidator
     validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+  appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
 
   tallyValidatorRef <- retrieveReferenceScript $ unwrap appliedTallyValidator
   voteValidatorRef <- retrieveReferenceScript $ unwrap appliedVoteValidator
@@ -121,6 +123,7 @@ countVote params' = do
   -- Get the UTXOs at the vote validator
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     voteValidatorAddress
+  logInfo' $ "voteUtxos: " <> show voteUtxos
 
   -- Extract the config values
   let
@@ -168,6 +171,8 @@ countVote params' = do
       voteValidatorRef
       votePolicyRef
       voteUtxos
+
+  logInfo' $ "voteConstraints: " <> show voteDirectionsConstraintsAndLookups
 
   -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)

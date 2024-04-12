@@ -42,15 +42,15 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
+import Dao.Scripts.Policy.Vote (unappliedVotePolicy)
 import Dao.Scripts.Validator.AlwaysFails
   ( alwaysFailsValidatorScript
   )
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Validator.Config (unappliedConfigValidator)
+import Dao.Scripts.Validator.Index (indexValidatorScript)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidator)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidator)
+import Dao.Scripts.Validator.Vote (unappliedVoteValidator)
 import Data.Array (head, mapMaybe)
 import Data.Map as Map
 import Data.Time.Duration (Seconds(Seconds))
@@ -118,9 +118,9 @@ deployReferenceScriptsOne validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   voteValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedVoteValidatorDebug
+    unappliedVoteValidator
   tallyValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedTallyValidatorDebug
+    unappliedTallyValidator
 
   let
     allConstraints = mconcat
@@ -137,9 +137,9 @@ deployReferenceScriptsTwo validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   configValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedConfigValidatorDebug
+    unappliedConfigValidator
   treasuryValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedTreasuryValidatorDebug
+    unappliedTreasuryValidator
 
   let
     allConstraints = mconcat
@@ -156,9 +156,9 @@ deployReferenceScriptsThree validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   indexValidatorConstraints <- deployReferenceValidator'
-    indexValidatorScriptDebug
+    indexValidatorScript
   votePolicyConstraints <- deployReferencePolicy validatorParams
-    unappliedVotePolicyDebug
+    unappliedVotePolicy
 
   let
     allConstraints = mconcat
