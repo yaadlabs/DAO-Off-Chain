@@ -1,6 +1,7 @@
 -- Just for debugging, will remove later
 module Dao.Scripts.Validator
-  ( alwaysSucceedsValidatorScript
+  ( alwaysFailsValidatorScript
+  , alwaysSucceedsValidatorScript
   , indexValidatorScript
   , unappliedConfigValidator
   , unappliedTallyValidator
@@ -18,6 +19,9 @@ import Dao.Scripts.Serialized.Optimised as Optimised
 import Dao.Scripts.Utils (mkUnappliedValidator')
 import Dao.Scripts.Utils (mkScript')
 import ScriptArguments.Types (ValidatorParams)
+
+alwaysFailsValidatorScript :: Contract Validator
+alwaysFailsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysFailsValidator
 
 alwaysSucceedsValidatorScript :: Contract Validator
 alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysSucceedsValidator

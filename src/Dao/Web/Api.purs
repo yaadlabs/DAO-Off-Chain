@@ -8,6 +8,10 @@ module Dao.Web.Api
   , createProposal
   , createTreasuryFund
   , createVotePass
+  , deployAllReferenceScripts
+  , deployReferenceScriptsOne
+  , deployReferenceScriptsTwo
+  , deployReferenceScriptsThree
   , finalize
   , getAllActiveProposals
   , getAllExpiredProposals
@@ -40,11 +44,11 @@ import Contract.Log (logInfo') as Ctl
 import Contract.Monad (ContractEnv, liftContractM) as Ctl
 import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Transaction (awaitTxConfirmedWithTimeout) as Ctl
-import Control.Promise (Promise)
 import Contract.Value (adaToken, scriptCurrencySymbol) as Value
+import Control.Promise (Promise)
 import Ctl.Internal.Contract.QueryBackend (mkBlockfrostBackendParams) as Ctl
 import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams)) as Component
+import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), mkValidatorConfig) as Component
 import Dao.Scripts.Policy (fungiblePolicy) as Scripts
 import Dao.Scripts.Policy (voteNftPolicy) as Scripts
 import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
@@ -69,6 +73,7 @@ import Dao.Web.Types
   , TransactionHash
   , TreasuryParams
   , UpgradeConfigParams
+  , ValidatorParams
   , VoteOnProposalParams
   , VoteOnProposalResult
   )
@@ -79,8 +84,8 @@ import Dao.Workflow.CreateConfig (createConfig) as Dao
 import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
-import Dao.Workflow.CreateVotePass (createVotePass) as Dao
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
+import Dao.Workflow.CreateVotePass (createVotePass) as Dao
 import Dao.Workflow.QueryProposal
   ( getAllActiveProposals
   , getAllExpiredProposals
@@ -91,6 +96,11 @@ import Dao.Workflow.QueryProposal
   , getAllUpgradeProposals
   , getProposalByTokenName
   ) as Dao
+import Dao.Workflow.ReferenceScripts
+  ( deployReferenceScriptsOne
+  , deployReferenceScriptsTwo
+  , deployReferenceScriptsThree
+  ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -98,9 +108,10 @@ import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
 import Data.Function.Uncurried (Fn1, Fn2, Fn3)
 import Data.Log.Level (LogLevel(Trace))
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.UInt as UInt
 import Data.Time.Duration (Seconds(Seconds))
+import Data.UInt as UInt
 import JS.BigInt (fromInt) as BigInt
+import ScriptArguments.Types (ValidatorParams(ValidatorParams)) as ScriptArguments
 
 initialize :: CtlConfig -> (Promise Ctl.ContractEnv)
 initialize = Ctl.mkContractEnvJS <<< mkContractParams
@@ -194,6 +205,35 @@ createIndexConfig = mkContractCall1 createIndexConfig'
           }
           
       Dao.createConfig params
+
+deployReferenceScriptsOne :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
+deployReferenceScriptsOne = 
+  mkContractCall2
+    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
+      Dao.deployReferenceScriptsOne (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
+
+deployReferenceScriptsTwo :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
+deployReferenceScriptsTwo = 
+  mkContractCall2
+    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
+      Dao.deployReferenceScriptsTwo (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
+
+deployReferenceScriptsThree :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
+deployReferenceScriptsThree = 
+  mkContractCall2
+    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
+      Dao.deployReferenceScriptsThree (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
+
+deployAllReferenceScripts :: Fn2 Ctl.ContractEnv ValidatorParams (Promise (Array TransactionHash))
+deployAllReferenceScripts = 
+  mkContractCall2
+    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) -> do
+      let 
+        validatorConfig = Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName
+      txId1 <- Dao.deployReferenceScriptsOne validatorConfig
+      txId2 <- Dao.deployReferenceScriptsTwo validatorConfig
+      txid3 <- Dao.deployReferenceScriptsThree validatorConfig
+      pure [txId1, txId2, txid3]
 
 createProposal :: Fn2 Ctl.ContractEnv CreateProposalParams (Promise ContractResult)
 createProposal = mkContractCall2 Dao.createProposal

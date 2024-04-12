@@ -32,6 +32,7 @@ import Contract.Scripts
   )
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef)
+  , TransactionHash
   , awaitTxConfirmedWithTimeout
   , mkTxUnspentOut
   , submitTxFromConstraints
@@ -42,15 +43,15 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.AlwaysFails
+import Dao.Scripts.Policy (unappliedVotePolicy)
+import Dao.Scripts.Validator
   ( alwaysFailsValidatorScript
+  , unappliedConfigValidator
+  , indexValidatorScript
+  , unappliedTallyValidator
+  , unappliedTreasuryValidator
+  , unappliedVoteValidator
   )
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Index (indexValidatorScriptDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
 import Data.Array (head, mapMaybe)
 import Data.Map as Map
 import Data.Time.Duration (Seconds(Seconds))
@@ -113,14 +114,14 @@ deployReferencePolicy validatorParams policy' = do
               mempty
           ]
 
-deployReferenceScriptsOne :: ValidatorParams -> Contract Unit
+deployReferenceScriptsOne :: ValidatorParams -> Contract TransactionHash
 deployReferenceScriptsOne validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   voteValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedVoteValidatorDebug
+    unappliedVoteValidator
   tallyValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedTallyValidatorDebug
+    unappliedTallyValidator
 
   let
     allConstraints = mconcat
@@ -131,15 +132,16 @@ deployReferenceScriptsOne validatorParams = do
   txId <- submitTxFromConstraints mempty allConstraints
   logInfo' $ mconcat [ "deployReferenceScripts tx submitted: ", show txId ]
   awaitTxConfirmedWithTimeout (Seconds 600.0) txId
+  pure txId
 
-deployReferenceScriptsTwo :: ValidatorParams -> Contract Unit
+deployReferenceScriptsTwo :: ValidatorParams -> Contract TransactionHash
 deployReferenceScriptsTwo validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   configValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedConfigValidatorDebug
+    unappliedConfigValidator
   treasuryValidatorConstraints <- deployReferenceValidator validatorParams
-    unappliedTreasuryValidatorDebug
+    unappliedTreasuryValidator
 
   let
     allConstraints = mconcat
@@ -150,15 +152,16 @@ deployReferenceScriptsTwo validatorParams = do
   txId <- submitTxFromConstraints mempty allConstraints
   logInfo' $ mconcat [ "deployReferenceScripts tx submitted: ", show txId ]
   awaitTxConfirmedWithTimeout (Seconds 600.0) txId
+  pure txId
 
-deployReferenceScriptsThree :: ValidatorParams -> Contract Unit
+deployReferenceScriptsThree :: ValidatorParams -> Contract TransactionHash
 deployReferenceScriptsThree validatorParams = do
   logInfo' "Entering deployReferenceScripts"
 
   indexValidatorConstraints <- deployReferenceValidator'
-    indexValidatorScriptDebug
+    indexValidatorScript
   votePolicyConstraints <- deployReferencePolicy validatorParams
-    unappliedVotePolicyDebug
+    unappliedVotePolicy
 
   let
     allConstraints = mconcat
@@ -169,6 +172,7 @@ deployReferenceScriptsThree validatorParams = do
   txId <- submitTxFromConstraints mempty allConstraints
   logInfo' $ mconcat [ "deployReferenceScripts tx submitted: ", show txId ]
   awaitTxConfirmedWithTimeout (Seconds 600.0) txId
+  pure txId
 
 retrieveReferenceScript ::
   PlutusScript ->

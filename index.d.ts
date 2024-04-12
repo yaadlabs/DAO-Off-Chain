@@ -30,6 +30,8 @@ export interface VoteOnProposalResult {
   symbol: string;
 }
 
+export type TransactionHash = string;
+
 // ====================================
 // Contract params
 // ====================================
@@ -106,6 +108,11 @@ export interface QueryProposalParams {
   indexTokenName: string;
 }
 
+export interface ValidatorParams {
+  configSymbol: string;
+  configTokenName: string;
+}
+
 // ====================================
 // Datums
 // ====================================
@@ -160,6 +167,26 @@ export declare function createIndexConfig(
   env: ContractEnv
 ): Promise<CreateConfigResult>;
 
+export declare function deployAllReferenceScripts(
+  env: ContractEnv,
+  params: ValidatorParams
+): Promise<TransactionHash[]>;
+
+export declare function deployReferenceScriptsOne(
+  env: ContractEnv,
+  params: ValidatorParams
+): Promise<TransactionHash>;
+
+export declare function deployReferenceScriptsTwo(
+  env: ContractEnv,
+  params: ValidatorParams
+): Promise<TransactionHash>;
+
+export declare function deployReferenceScriptsThree(
+  env: ContractEnv,
+  params: ValidatorParams
+): Promise<TransactionHash>;
+
 export declare function createProposal(
   env: ContractEnv,
   params: CreateProposalParams
@@ -178,7 +205,7 @@ export declare function voteOnProposal(
 export declare function countVote(
   env: ContractEnv,
   params: CountVoteParams
-): Promise<string>;
+): Promise<TransactionHash>;
 
 export declare function createTreasuryFund(
   env: ContractEnv,
@@ -188,7 +215,7 @@ export declare function createTreasuryFund(
 export declare function treasuryGeneral(
   env: ContractEnv,
   params: TreasuryParams
-): Promise<string>;
+): Promise<TransactionHash>;
 
 export declare function getAllProposals(
   env: ContractEnv,

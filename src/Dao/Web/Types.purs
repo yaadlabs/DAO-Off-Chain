@@ -24,6 +24,7 @@ module Dao.Web.Types
   , TransactionHash
   , TreasuryParams(..)
   , UpgradeConfigParams(..)
+  , ValidatorParams(..)
   , VoteDatum(..)
   , VoteDirection(..)
   , VoteOnProposalParams(..)
@@ -219,6 +220,12 @@ newtype CancelVoteParams = CancelVoteParams
 newtype CreateFungibleParams = CreateFungibleParams
   { userPkh :: PaymentPubKeyHash
   , amount :: BigInt
+  }
+
+-- | Validator paramaters
+newtype ValidatorParams = ValidatorParams
+  { configSymbol :: Hash28
+  , configTokenName :: TokenName
   }
 
 -- * Contract Results

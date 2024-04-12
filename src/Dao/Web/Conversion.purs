@@ -84,6 +84,7 @@ import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum)) a
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDirection(VoteDirection'For, VoteDirection'Against)
   ) as DaoApi
+import ScriptArguments.Types (ValidatorParams(ValidatorParams)) as DaoApi
 
 type Conversion a = ReaderT Ctl.NetworkId (Either String) a
 
@@ -295,6 +296,30 @@ instance ConvertJsToPs WebApi.VoteOnProposalResult DaoApi.VoteOnProposalResult w
     pure $ DaoApi.VoteOnProposalResult
       { txHash
       , symbol
+      }
+
+-- * ValidatorParams
+
+instance ConvertPsToJs WebApi.ValidatorParams DaoApi.ValidatorParams where
+  convertPsToJs (DaoApi.ValidatorParams params) = do
+
+    configSymbol' <- convertPsToJs params.vpConfigSymbol
+    configTokenName' <- convertPsToJs params.vpConfigTokenName
+
+    pure $ WebApi.ValidatorParams
+      { configSymbol: configSymbol'
+      , configTokenName: configTokenName'
+      }
+
+instance ConvertJsToPs WebApi.ValidatorParams DaoApi.ValidatorParams where
+  convertJsToPs (WebApi.ValidatorParams params) = do
+
+    configSymbol' <- convertJsToPs params.configSymbol
+    configTokenName' <- convertJsToPs params.configTokenName
+
+    pure $ DaoApi.ValidatorParams
+      { vpConfigSymbol: configSymbol'
+      , vpConfigTokenName: configTokenName'
       }
 
 -- * UpgradeConfigParams
