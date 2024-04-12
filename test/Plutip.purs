@@ -64,6 +64,6 @@ plutipConfig =
       { slotLength: Seconds 0.1
       , epochSize: Nothing
       , maxTxSize: Just $ UInt.fromInt 16000
-      , raiseExUnitsToMax: true
+      , raiseExUnitsToMax: false
       }
   }

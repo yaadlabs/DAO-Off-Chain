@@ -223,7 +223,7 @@ mkVoteUtxoConstraintsAndLookups
       burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
       lookups' :: Lookups.ScriptLookups
-      lookups' =
+      lookups' = -- mempty
         mconcat
           [ Lookups.unspentOutputs $ Map.singleton txIn txOut
           ]

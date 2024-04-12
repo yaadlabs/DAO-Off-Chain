@@ -66,8 +66,11 @@ createProposal params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
+
   appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
+  configValidatorRef <- retrieveReferenceScript $ unwrap appliedConfigValidator
+
   indexValidator :: Validator <- indexValidatorScript
 
   -- Query the UTXOs

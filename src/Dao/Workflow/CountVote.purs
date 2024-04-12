@@ -28,12 +28,14 @@ import Contract.Prelude
   , pure
   , unwrap
   , void
+  , show
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
   , (==)
+  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
@@ -128,6 +130,7 @@ countVote params' = do
   -- Get the UTXOs at the vote validator
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     voteValidatorAddress
+  logInfo' $ "voteUtxos: " <> show voteUtxos
 
   -- Extract the config values
   let
@@ -175,6 +178,8 @@ countVote params' = do
       voteValidatorRef
       votePolicyRef
       voteUtxos
+
+  logInfo' $ "voteConstraints: " <> show voteDirectionsConstraintsAndLookups
 
   -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
