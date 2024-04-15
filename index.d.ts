@@ -217,6 +217,10 @@ export declare function treasuryGeneral(
   params: TreasuryParams
 ): Promise<TransactionHash>;
 
+export declare function getWalletAddressBech32(
+  env: ContractEnv
+): Promise<string>;
+
 export declare function getAllProposals(
   env: ContractEnv,
   params: QueryProposalParams
