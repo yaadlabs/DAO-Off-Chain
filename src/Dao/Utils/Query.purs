@@ -121,6 +121,7 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
           (TransactionOutputWithRefScript txOut)
+      , Lookups.validator validatorScript
       ]
 
     value :: Value
