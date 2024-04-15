@@ -24,19 +24,19 @@ import ScriptArguments.Types
   )
 
 unappliedConfigPolicy :: ConfigPolicyParams -> Contract MintingPolicy
-unappliedConfigPolicy = mkUnappliedPolicy' Debug.configPolicy
+unappliedConfigPolicy = mkUnappliedPolicy' Optimised.configPolicy
 
 fungiblePolicy :: Contract MintingPolicy
 fungiblePolicy = pure $ PlutusMintingPolicy $ mkScript' Optimised.fungiblePolicy
 
 unappliedIndexPolicy :: IndexPolicyParams -> Contract MintingPolicy
-unappliedIndexPolicy = mkUnappliedPolicy' Debug.indexPolicy
+unappliedIndexPolicy = mkUnappliedPolicy' Optimised.indexPolicy
 
 unappliedTallyPolicy :: TallyPolicyParams -> Contract MintingPolicy
 unappliedTallyPolicy = mkUnappliedPolicy' Optimised.tallyPolicy
 
 unappliedTreasuryPolicy :: TransactionInput -> Contract MintingPolicy
-unappliedTreasuryPolicy = mkUnappliedPolicy' Debug.treasuryPolicy
+unappliedTreasuryPolicy = mkUnappliedPolicy' Optimised.treasuryPolicy
 
 -- | The upgrade proposal requires a policy script to be included
 -- | in the transaction as well, with the intention of delegating some

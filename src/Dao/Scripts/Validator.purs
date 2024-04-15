@@ -30,10 +30,10 @@ unappliedConfigValidator :: ValidatorParams -> Contract Validator
 unappliedConfigValidator = mkUnappliedValidator' Optimised.configValidator
 
 indexValidatorScript :: Contract Validator
-indexValidatorScript = pure $ Validator $ mkScript' Debug.indexValidator
+indexValidatorScript = pure $ Validator $ mkScript' Optimised.indexValidator
 
 unappliedTallyValidator :: ValidatorParams -> Contract Validator
-unappliedTallyValidator = mkUnappliedValidator' Debug.tallyValidator
+unappliedTallyValidator = mkUnappliedValidator' Optimised.tallyValidator
 
 unappliedTreasuryValidator :: ValidatorParams -> Contract Validator
 unappliedTreasuryValidator = mkUnappliedValidator' Debug.treasuryValidator
