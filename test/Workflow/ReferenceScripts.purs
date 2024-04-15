@@ -296,6 +296,39 @@ suite = do
 
                 pure (proposalOneSymbol /\ proposalOneTokenName)
 
+            (proposalTwoSymbol /\ proposalTwoTokenName) <- withKeyWallet
+              walletTwo
+              do
+                logInfo'
+                  "Running in walletTwo - walletTwo creates the second proposal"
+
+                tallyStateDatum <- sampleGeneralProposalTallyStateDatum
+                  userTwoWalletAddress
+
+                let
+                  -- The params needed for creating the first proposal
+                  proposalParams :: CreateProposalParams
+                  proposalParams = CreateProposalParams
+                    { configSymbol
+                    , indexSymbol
+                    , configTokenName
+                    , indexTokenName
+                    , tallyStateDatum
+                    }
+
+                -- Create the first proposal UTXO
+                ContractResult
+                  { txHash: createProposalTxHash
+                  , symbol: proposalTwoSymbol
+                  , tokenName: proposalTwoTokenName
+                  } <- createProposal proposalParams
+
+                void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                  createProposalTxHash
+                void $ waitNSlots (Natural.fromInt' 3)
+
+                pure (proposalTwoSymbol /\ proposalTwoTokenName)
+
             -- *************************************** --
             -- *************************************** --
             -- * User one creates the treasury fund  * --
@@ -458,30 +491,30 @@ suite = do
             -- ************************************************ --
             -- ************************************************ --
             -- * User four (walletFour) votes on proposal one * --
-            -- withKeyWallet walletFour do
-            --   logInfo'
-            --     "Running in wallet four - voting on proposal created by walletOne"
+            withKeyWallet walletFour do
+              logInfo'
+                "Running in wallet four - voting on proposal created by walletTwo"
 
-            --   let
-            --     voteParams :: VoteOnProposalParams
-            --     voteParams = VoteOnProposalParams
-            --       { configSymbol: configSymbol
-            --       , configTokenName: configTokenName
-            --       , tallySymbol: proposalOneSymbol
-            --       -- Vote datum fields
-            --       , proposalTokenName: proposalOneTokenName
-            --       , voteDirection: VoteDirection'For
-            --       , returnAda: (BigInt.fromInt 0)
-            --       }
+              let
+                voteParams :: VoteOnProposalParams
+                voteParams = VoteOnProposalParams
+                  { configSymbol: configSymbol
+                  , configTokenName: configTokenName
+                  , tallySymbol: proposalTwoSymbol
+                  -- Vote datum fields
+                  , proposalTokenName: proposalTwoTokenName
+                  , voteDirection: VoteDirection'For
+                  , returnAda: (BigInt.fromInt 0)
+                  }
 
-            --   VoteOnProposalResult
-            --     { txHash: voteOnProposalTxHash
-            --     , symbol: voteOnProposalSymbol
-            --     } <- voteOnProposal voteParams
+              VoteOnProposalResult
+                { txHash: voteOnProposalTxHash
+                , symbol: voteOnProposalSymbol
+                } <- voteOnProposal voteParams
 
-            --   void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
-            --     voteOnProposalTxHash
-            --   void $ waitNSlots (Natural.fromInt' 3)
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
+                voteOnProposalTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
 
             -- ********************************************************* --
             -- ********************************************************* --
