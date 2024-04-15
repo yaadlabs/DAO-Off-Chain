@@ -45,8 +45,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Dao.Scripts.Policy (unappliedVotePolicy)
 import Dao.Scripts.Validator
-  ( alwaysFailsValidatorScript
-  , unappliedConfigValidator
+  ( unappliedConfigValidator
   , indexValidatorScript
   , unappliedTallyValidator
   , unappliedTreasuryValidator
@@ -62,13 +61,13 @@ deployReferenceValidator' ::
   Contract Validator ->
   Contract Constraints.TxConstraints
 deployReferenceValidator' validator' = do
-  alwaysFailsValidator <- alwaysFailsValidatorScript
+  indexValidator <- indexValidatorScript
   validator <- validator'
   let referenceScript = PlutusScriptRef $ unwrap validator
   pure $
     mconcat
       [ Constraints.mustPayToScriptWithScriptRef
-          (validatorHash alwaysFailsValidator)
+          (validatorHash indexValidator)
           unitDatum
           DatumInline
           referenceScript
@@ -80,13 +79,13 @@ deployReferenceValidator ::
   (ValidatorParams -> Contract Validator) ->
   Contract Constraints.TxConstraints
 deployReferenceValidator validatorParams validator' = do
-  alwaysFailsValidator <- alwaysFailsValidatorScript
+  indexValidator <- indexValidatorScript
   validator <- validator' validatorParams
   let referenceScript = PlutusScriptRef $ unwrap validator
   pure $
     mconcat
       [ Constraints.mustPayToScriptWithScriptRef
-          (validatorHash alwaysFailsValidator)
+          (validatorHash indexValidator)
           unitDatum
           DatumInline
           referenceScript
@@ -98,7 +97,7 @@ deployReferencePolicy ::
   (ValidatorParams -> Contract MintingPolicy) ->
   Contract Constraints.TxConstraints
 deployReferencePolicy validatorParams policy' = do
-  alwaysFailsValidator <- alwaysFailsValidatorScript
+  indexValidator <- indexValidatorScript
   policy <- policy' validatorParams
   case policy of
     NativeMintingPolicy _ -> mempty
@@ -107,7 +106,7 @@ deployReferencePolicy validatorParams policy' = do
       pure $
         mconcat
           [ Constraints.mustPayToScriptWithScriptRef
-              (validatorHash alwaysFailsValidator)
+              (validatorHash indexValidator)
               unitDatum
               DatumInline
               referenceScript
@@ -178,10 +177,10 @@ retrieveReferenceScript ::
   PlutusScript ->
   Contract InputWithScriptRef
 retrieveReferenceScript script = do
-  alwaysFailScript <- alwaysFailsValidatorScript
+  indexValidator <- indexValidatorScript
   let
     scriptHolderAddress = scriptHashAddress
-      (validatorHash alwaysFailScript)
+      (validatorHash indexValidator)
       Nothing
   utxos <- utxosAt scriptHolderAddress
   let

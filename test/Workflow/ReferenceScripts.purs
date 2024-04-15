@@ -243,8 +243,8 @@ suite = do
                 -- Create the UTXO that holds the 'DynamicConfigDatum'
                 CreateConfigResult
                   { txHash: createConfigTxHash
-                  , symbol: configSymbol
-                  , tokenName: configTokenName
+                  , configSymbol
+                  , configTokenName
                   } <- createConfig sampleConfigParams
 
                 void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
@@ -504,4 +504,28 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 countVoteTxHash
+              void $ waitNSlots (Natural.fromInt' 3)
+
+            -- ************************************************************ --
+            -- * User one executes the effect of the proposal, that is to * --
+            -- * disburse treasury funds to the 'General' payment address * --
+            -- * specified in the 'TallyStateDatum'. In this case that is * --
+            -- * 'walletTwoAddress', the address of the user 'walletTwo'. * --
+            withKeyWallet walletOne do
+              logInfo'
+                "Running in wallet one - executing the treasury general effect"
+
+              let
+                treasuryGeneralParams :: TreasuryParams
+                treasuryGeneralParams = TreasuryParams
+                  { configSymbol
+                  , configTokenName
+                  , proposalTokenName: proposalOneTokenName
+                  , tallySymbol: proposalOneSymbol
+                  , treasurySymbol: treasuryFundSymbol
+                  }
+
+              treasuryTxHash <- treasuryGeneral treasuryGeneralParams
+
+              void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
               void $ waitNSlots (Natural.fromInt' 3)

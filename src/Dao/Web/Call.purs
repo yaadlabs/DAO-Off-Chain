@@ -1,7 +1,5 @@
 module Dao.Web.Call
-  ( contractCallNoArgs
-  , contractCallOneArg
-  , mkContractCall1
+  ( mkContractCall1
   , mkContractCall2
   , mkContractCall3
   )
@@ -80,31 +78,6 @@ contractCallTwoArgs env contractCall =
       arg2Purs <- convertJsToPsContract arg2Js
       res <- contractCall arg1Purs arg2Purs
       convertPsToJsContract res
-
-contractCallOneArg ::
-  forall resJs resPurs arg1Js arg1Purs.
-  ConvertPsToJs resJs resPurs =>
-  ConvertJsToPs arg1Js arg1Purs =>
-  Ctl.ContractEnv ->
-  (arg1Purs -> Ctl.Contract resPurs) ->
-  EffectFn1 arg1Js (Promise resJs)
-contractCallOneArg env contractCall =
-  mkEffectFn1 $ \arg1Js -> do
-    fromAff $ Ctl.runContractInEnv env $ do
-      arg1Purs <- convertJsToPsContract arg1Js
-      res <- contractCall arg1Purs
-      convertPsToJsContract res
-
-contractCallNoArgs ::
-  forall resJs resPurs.
-  (ConvertPsToJs resJs resPurs) =>
-  Ctl.ContractEnv ->
-  Ctl.Contract resPurs ->
-  Effect (Promise resJs)
-contractCallNoArgs env contractCall = do
-  fromAff $ Ctl.runContractInEnv env $ do
-    res <- contractCall
-    convertPsToJsContract res
 
 convertPsToJsContract ::
   forall js ps. (ConvertPsToJs js ps) => ps -> Ctl.Contract js

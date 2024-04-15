@@ -10,8 +10,8 @@ module Dao.Web.Api
   , createVotePass
   , deployAllReferenceScripts
   , deployReferenceScriptsOne
-  , deployReferenceScriptsTwo
   , deployReferenceScriptsThree
+  , deployReferenceScriptsTwo
   , finalize
   , getAllActiveProposals
   , getAllExpiredProposals
@@ -21,6 +21,7 @@ module Dao.Web.Api
   , getAllTripProposals
   , getAllUpgradeProposals
   , getProposalByTokenName
+  , getWalletAddressBech32
   , initialize
   , module WebTypes
   , treasuryGeneral
@@ -32,51 +33,25 @@ module Dao.Web.Api
 
 import Prelude
 
+import Contract.Address (addressWithNetworkTagToBech32)
 import Contract.Chain (waitNSlots) as Ctl
-import Contract.Config
-  ( NetworkId(TestnetId, MainnetId)
-  , emptyHooks
-  , defaultSynchronizationParams
-  , defaultTimeParams
-  ) as Ctl
+import Contract.Config (NetworkId(TestnetId, MainnetId), emptyHooks, defaultSynchronizationParams, defaultTimeParams) as Ctl
 import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS) as Ctl
-import Contract.Log (logInfo') as Ctl
 import Contract.Monad (ContractEnv, liftContractM) as Ctl
 import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Transaction (awaitTxConfirmedWithTimeout) as Ctl
 import Contract.Value (adaToken, scriptCurrencySymbol) as Value
+import Contract.Wallet (getWalletAddressWithNetworkTag) as Ctl
 import Control.Promise (Promise)
 import Ctl.Internal.Contract.QueryBackend (mkBlockfrostBackendParams) as Ctl
 import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), mkValidatorConfig) as Component
-import Dao.Scripts.Policy (fungiblePolicy) as Scripts
-import Dao.Scripts.Policy (voteNftPolicy) as Scripts
+import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy) as Scripts
 import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
 import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)
-import Dao.Web.Types
-  ( Address
-  , CancelVoteParams
-  , ContractResult
-  , CountVoteParams
-  , CreateConfigParams
-  , CreateConfigResult
-  , CreateFungibleParams
-  , CreateProposalParams
-  , CreateTreasuryFundParams
-  , CtlConfig(CtlConfig)
-  , JsMaybe
-  , QueryProposalParams
-  , QueryResult
-  , TokenName
-  , TransactionHash
-  , TreasuryParams
-  , UpgradeConfigParams
-  , ValidatorParams
-  , VoteOnProposalParams
-  , VoteOnProposalResult
-  )
+import Dao.Web.Types (Address, CancelVoteParams, ContractResult, CountVoteParams, CreateConfigParams, CreateConfigResult, CreateFungibleParams, CreateProposalParams, CreateTreasuryFundParams, CtlConfig(CtlConfig), JsMaybe, QueryProposalParams, QueryResult, TokenName, TransactionHash, TreasuryParams, UpgradeConfigParams, ValidatorParams, VoteOnProposalParams, VoteOnProposalResult)
 import Dao.Web.Types (ProposalType(..), VoteDirection(..)) as WebTypes
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
@@ -86,21 +61,8 @@ import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
-import Dao.Workflow.QueryProposal
-  ( getAllActiveProposals
-  , getAllExpiredProposals
-  , getAllGeneralProposals
-  , getAllProposals
-  , getAllSuccessfulProposals
-  , getAllTripProposals
-  , getAllUpgradeProposals
-  , getProposalByTokenName
-  ) as Dao
-import Dao.Workflow.ReferenceScripts
-  ( deployReferenceScriptsOne
-  , deployReferenceScriptsTwo
-  , deployReferenceScriptsThree
-  ) as Dao
+import Dao.Workflow.QueryProposal (getAllActiveProposals, getAllExpiredProposals, getAllGeneralProposals, getAllProposals, getAllSuccessfulProposals, getAllTripProposals, getAllUpgradeProposals, getProposalByTokenName) as Dao
+import Dao.Workflow.ReferenceScripts (deployReferenceScriptsOne, deployReferenceScriptsTwo, deployReferenceScriptsThree) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -149,6 +111,15 @@ initialize = Ctl.mkContractEnvJS <<< mkContractParams
 finalize :: Fn1 Ctl.ContractEnv (Promise Unit)
 finalize = Ctl.stopContractEnvJS
 
+getWalletAddressBech32 :: Fn1 Ctl.ContractEnv (Promise String)
+getWalletAddressBech32 = mkContractCall1 $ do
+  addressWithNetworkTag <- Ctl.getWalletAddressWithNetworkTag
+  case addressWithNetworkTag of
+    Nothing -> pure ""
+    Just addressWithNetworkTag ->
+      pure $ addressWithNetworkTagToBech32 addressWithNetworkTag
+
+
 createIndex :: Fn2 Ctl.ContractEnv TokenName (Promise ContractResult)
 createIndex = mkContractCall2 Dao.createIndex
 
@@ -171,8 +142,6 @@ createIndexConfig = mkContractCall1 createIndexConfig'
       void $ Ctl.awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
       void $ Ctl.waitNSlots (Natural.fromInt' 3)
         
-      Ctl.logInfo' $ "Index created with symbol: " <> show indexSymbol <> " and token name: " <> show indexTokenName'
-
       voteNftPolicy <- Scripts.voteNftPolicy
       fungiblePolicy <- Scripts.fungiblePolicy
       voteFungibleTokenName <-
@@ -206,6 +175,12 @@ createIndexConfig = mkContractCall1 createIndexConfig'
           
       Dao.createConfig params
 
+upgradeConfig :: Fn2 Ctl.ContractEnv UpgradeConfigParams (Promise TransactionHash)
+upgradeConfig = mkContractCall2 Dao.upgradeConfig
+
+createTreasuryFund :: Fn2 Ctl.ContractEnv CreateTreasuryFundParams (Promise ContractResult)
+createTreasuryFund = mkContractCall2 Dao.createTreasuryFund
+
 deployReferenceScriptsOne :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
 deployReferenceScriptsOne = 
   mkContractCall2
@@ -235,17 +210,20 @@ deployAllReferenceScripts =
       txid3 <- Dao.deployReferenceScriptsThree validatorConfig
       pure [txId1, txId2, txid3]
 
+createVotePass :: Fn2 Ctl.ContractEnv Address (Promise ContractResult)
+createVotePass = mkContractCall2 $ \address -> do
+  pkh <- Ctl.liftContractM "Could not convert address to key" $
+    Utils.addressToPaymentPubKeyHash address
+  Dao.createVotePass pkh
+
+createFungible :: Fn2 Ctl.ContractEnv CreateFungibleParams (Promise ContractResult)
+createFungible = mkContractCall2 Dao.createFungible
+
 createProposal :: Fn2 Ctl.ContractEnv CreateProposalParams (Promise ContractResult)
 createProposal = mkContractCall2 Dao.createProposal
 
-createTreasuryFund :: Fn2 Ctl.ContractEnv CreateTreasuryFundParams (Promise ContractResult)
-createTreasuryFund = mkContractCall2 Dao.createTreasuryFund
-
 voteOnProposal :: Fn2 Ctl.ContractEnv VoteOnProposalParams (Promise VoteOnProposalResult)
 voteOnProposal = mkContractCall2 Dao.voteOnProposal
-
-upgradeConfig :: Fn2 Ctl.ContractEnv UpgradeConfigParams (Promise TransactionHash)
-upgradeConfig = mkContractCall2 Dao.upgradeConfig
 
 countVote :: Fn2 Ctl.ContractEnv CountVoteParams (Promise TransactionHash)
 countVote = mkContractCall2 Dao.countVote
@@ -255,15 +233,6 @@ cancelVote = mkContractCall2 Dao.cancelVote
 
 treasuryGeneral :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
 treasuryGeneral = mkContractCall2 Dao.treasuryGeneral
-
-createVotePass :: Fn2 Ctl.ContractEnv Address (Promise ContractResult)
-createVotePass = mkContractCall2 $ \address -> do
-  pkh <- Ctl.liftContractM "Could not convert address to key" $
-    Utils.addressToPaymentPubKeyHash address
-  Dao.createVotePass pkh
-
-createFungible :: Fn2 Ctl.ContractEnv CreateFungibleParams (Promise ContractResult)
-createFungible = mkContractCall2 Dao.createFungible
 
 treasuryTrip :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
 treasuryTrip = mkContractCall2 Dao.treasuryTrip

@@ -251,28 +251,36 @@ instance ConvertJsToPs WebApi.QueryResult DaoApi.QueryResult where
 instance ConvertPsToJs WebApi.CreateConfigResult DaoApi.CreateConfigResult where
   convertPsToJs (DaoApi.CreateConfigResult params) = do
     txHash <- convertPsToJs params.txHash
-    symbol <- convertPsToJs params.symbol
-    tokenName <- convertPsToJs params.tokenName
+    indexSymbol <- convertPsToJs params.indexSymbol
+    indexTokenName <- convertPsToJs params.indexTokenName
+    configSymbol <- convertPsToJs params.configSymbol
+    configTokenName <- convertPsToJs params.configTokenName
     tallySymbol <- convertPsToJs params.tallySymbol
 
     pure $ WebApi.CreateConfigResult
       { txHash
-      , symbol
-      , tokenName
+      , indexSymbol
+      , indexTokenName
+      , configSymbol
+      , configTokenName
       , tallySymbol
       }
 
 instance ConvertJsToPs WebApi.CreateConfigResult DaoApi.CreateConfigResult where
   convertJsToPs (WebApi.CreateConfigResult params) = do
     txHash <- convertJsToPs params.txHash
-    symbol <- convertJsToPs params.symbol
-    tokenName <- convertJsToPs params.tokenName
+    indexSymbol <- convertJsToPs params.indexSymbol
+    indexTokenName <- convertJsToPs params.indexTokenName
+    configSymbol <- convertJsToPs params.configSymbol
+    configTokenName <- convertJsToPs params.configTokenName
     tallySymbol <- convertJsToPs params.tallySymbol
 
     pure $ DaoApi.CreateConfigResult
       { txHash
-      , symbol
-      , tokenName
+      , indexSymbol
+      , indexTokenName
+      , configSymbol
+      , configTokenName
       , tallySymbol
       }
 
@@ -684,6 +692,14 @@ instance ConvertPsToJs WebApi.VoteDirection DaoApi.VoteDirection where
 instance ConvertJsToPs WebApi.VoteDirection DaoApi.VoteDirection where
   convertJsToPs WebApi.For = pure DaoApi.VoteDirection'For
   convertJsToPs WebApi.Against = pure DaoApi.VoteDirection'Against
+
+-- * String
+
+instance ConvertPsToJs String String where
+  convertPsToJs = pure
+
+instance ConvertJsToPs String String where
+  convertJsToPs = pure
 
 -- * Array
 

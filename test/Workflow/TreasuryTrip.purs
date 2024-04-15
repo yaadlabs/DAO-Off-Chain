@@ -177,8 +177,8 @@ suite = do
 
           CreateConfigResult
             { txHash: createConfigTxHash
-            , symbol: configSymbol
-            , tokenName: configTokenName
+            , configSymbol
+            , configTokenName
             } <- createConfig sampleConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash

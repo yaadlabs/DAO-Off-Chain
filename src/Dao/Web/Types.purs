@@ -240,8 +240,10 @@ newtype ContractResult = ContractResult
 -- | CreateConfigResult
 newtype CreateConfigResult = CreateConfigResult
   { txHash :: TransactionHash
-  , symbol :: Hash28
-  , tokenName :: TokenName
+  , indexSymbol :: Hash28
+  , indexTokenName :: TokenName
+  , configSymbol :: Hash28
+  , configTokenName :: TokenName
   , tallySymbol :: Hash28
   }
 

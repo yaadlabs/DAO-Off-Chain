@@ -11,72 +11,31 @@ module Dao.Workflow.CreateConfig
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Datum(Datum), toData)
-import Contract.Prelude
-  ( type (/\)
-  , bind
-  , discard
-  , mconcat
-  , one
-  , pure
-  , unwrap
-  , (#)
-  , ($)
-  , (/\)
-  )
+import Contract.Prelude (type (/\), bind, discard, mconcat, one, pure, unwrap, (#), ($), (/\))
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , ValidatorHash
-  , validatorHash
-  )
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
-  , submitTxFromConstraints
-  )
+import Contract.Scripts (MintingPolicy, ScriptHash, Validator, ValidatorHash, validatorHash)
+import Contract.Transaction (TransactionHash, TransactionInput, TransactionOutputWithRefScript, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
+import Contract.Value (CurrencySymbol, TokenName, Value, scriptCurrencySymbol)
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (CreateConfigParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy
-  ( unappliedConfigPolicy
-  , unappliedTallyPolicy
-  , unappliedVotePolicy
-  , voteNftPolicy
-  )
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  , unappliedTreasuryValidator
-  , unappliedVoteValidator
-  )
+import Dao.Scripts.Policy (unappliedConfigPolicy, unappliedTallyPolicy, unappliedVotePolicy, voteNftPolicy)
+import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator, unappliedTreasuryValidator, unappliedVoteValidator)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
-import LambdaBuffers.ApplicationTypes.Configuration
-  ( DynamicConfigDatum(DynamicConfigDatum)
-  )
-import ScriptArguments.Types
-  ( ConfigPolicyParams(ConfigPolicyParams)
-  , TallyPolicyParams
-  , ValidatorParams(ValidatorParams)
-  )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(DynamicConfigDatum))
+import ScriptArguments.Types (ConfigPolicyParams(ConfigPolicyParams), TallyPolicyParams, ValidatorParams(ValidatorParams))
 
 -- | Create config result
 newtype CreateConfigResult = CreateConfigResult
   { txHash :: TransactionHash
-  , symbol :: CurrencySymbol
-  , tokenName :: TokenName
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
+  , configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
   , tallySymbol :: CurrencySymbol
   }
 
@@ -106,19 +65,31 @@ createConfig params = do
     constraints :: Constraints.TxConstraints
     constraints = dynamicConfigInfo.constraints
 
-    symbol :: CurrencySymbol
-    symbol = dynamicConfigInfo.symbol
+    indexSymbol :: CurrencySymbol
+    indexSymbol = params # unwrap # _.indexSymbol
+
+    indexTokenName :: TokenName
+    indexTokenName = params # unwrap # _.indexTokenName
+
+    configSymbol :: CurrencySymbol
+    configSymbol = dynamicConfigInfo.symbol
+
+    configTokenName :: TokenName
+    configTokenName = params # unwrap # _.configTokenName
 
     tallySymbol :: CurrencySymbol
     tallySymbol = dynamicConfigInfo.tallySymbol
 
-    tokenName :: TokenName
-    tokenName = params # unwrap # _.configTokenName
-
   txHash <- submitTxFromConstraints lookups constraints
 
   pure $ CreateConfigResult
-    { txHash, symbol, tokenName, tallySymbol }
+    { txHash
+    , indexSymbol
+    , indexTokenName
+    , configSymbol
+    , configTokenName
+    , tallySymbol
+    }
 
 type ConfigInfo =
   { symbol :: CurrencySymbol
