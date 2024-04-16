@@ -4,7 +4,7 @@ Description: Contract for disbursing treasury funds based on a general proposal
 -}
 module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
-import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Address (Address, PaymentPubKeyHash, StakePubKeyHash(..))
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -47,7 +47,8 @@ import Dao.Scripts.Validator
   , unappliedTallyValidator
   , unappliedTreasuryValidator
   )
-import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Address (addressToPaymentPubKeyHash, addressToStakePubKeyHash)
+import Dao.Utils.Constraints (mustPayToPubKeyStakeAddress)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
 import Data.Maybe (Maybe(Nothing, Just))
@@ -107,10 +108,14 @@ treasuryGeneral params' = do
     getPaymentAmount tallyDatum
   -- The PKH of the user
   paymentKey :: PaymentPubKeyHash <-
-    liftContractM "Could not convert address to key" $
+    liftContractM "Could not convert address to payment key" $
       addressToPaymentPubKeyHash paymentAddress
 
   let
+    -- The SKH of the user
+    paymentStakeKey :: Maybe StakePubKeyHash 
+    paymentStakeKey = addressToStakePubKeyHash paymentAddress
+
     -- The number of votes cast in favour of the proposal
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
@@ -211,7 +216,7 @@ treasuryGeneral params' = do
             Constraints.DatumInline
             amountToSendBackToTreasury
         -- ^ Send the change back to the treasury
-        , Constraints.mustPayToPubKey paymentKey amountToSendToPaymentAddress
+        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey amountToSendToPaymentAddress
         -- ^ Send the Ada to the user's key corresponding to
         -- the payment address specified in the tally datum
         , treasuryInfo.constraints
