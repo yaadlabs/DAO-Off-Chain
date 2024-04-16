@@ -16,8 +16,8 @@
       "bundle": "spago bundle-module --main Dao.Web.Api --to library.js"
   },
   "files": [
-    "dist",
-    "library.js"
+    "output",
+    "index.d.ts"
   ],
   "author": "",
   "license": "MIT",
