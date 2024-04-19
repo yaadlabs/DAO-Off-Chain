@@ -1,12 +1,59 @@
-module Dao.Web.Types where
+module Dao.Web.Types
+  ( Address(..)
+  , CancelVoteParams(..)
+  , ContractResult(..)
+  , CountVoteParams(..)
+  , CreateConfigParams(..)
+  , CreateConfigResult(..)
+  , CreateFungibleParams(..)
+  , CreateProposalParams(..)
+  , CreateTreasuryFundParams(..)
+  , CtlConfig(..)
+  , DynamicConfigDatum(..)
+  , Hash28(..)
+  , Hash32(..)
+  , IndexDatum(..)
+  , JsMaybe
+  , PaymentPubKeyHash(..)
+  , ProposalType(..)
+  , QueryProposalParams(..)
+  , QueryResult(..)
+  , ScriptHash(..)
+  , TallyStateDatum(..)
+  , TokenName(..)
+  , TransactionHash
+  , TreasuryParams(..)
+  , UpgradeConfigParams(..)
+  , ValidatorParams(..)
+  , VoteDatum(..)
+  , VoteDirection(..)
+  , VoteOnProposalParams(..)
+  , VoteOnProposalResult(..)
+  , fromJsMaybe
+  , isNullOrUndefined
+  , nullF
+  , toJsMaybe
+  , toJsMaybe'
+  )
+  where
+
+import Contract.Prelude
 
 import Aeson as Aeson
 import Contract.Time (POSIXTime)
 import Data.Newtype (class Newtype)
 import Data.Show (class Show, show)
+import Foreign (Foreign)
+import Foreign (unsafeFromForeign, unsafeToForeign) as Foreign
 import JS.BigInt (BigInt)
 
 -- * Non app-specific / CTL types
+
+-- | Simplified CTL config (to be expanded)
+newtype CtlConfig = CtlConfig
+  { blockfrostApiKey :: String
+  , network :: String
+  } 
 
 -- | TokenName represented as a wrapped String
 newtype TokenName = TokenName String
@@ -53,6 +100,29 @@ newtype Address = Address String
 instance Show Address where
   show (Address a) = a
 
+-- | JS Maybe type
+
+newtype JsMaybe :: forall k. k -> Type
+newtype JsMaybe a = JsMaybe Foreign
+
+instance Show a => Show (JsMaybe a) where
+  show x = case fromJsMaybe x of
+    Nothing -> "null"
+    Just x' -> show x'
+
+fromJsMaybe :: forall a. JsMaybe a -> Maybe a
+fromJsMaybe (JsMaybe x) =
+  if isNullOrUndefined x then Nothing else Just (Foreign.unsafeFromForeign x)
+
+foreign import isNullOrUndefined :: Foreign -> Boolean
+foreign import nullF :: Foreign
+
+toJsMaybe :: forall a. Maybe a -> JsMaybe a
+toJsMaybe = JsMaybe <<< maybe nullF Foreign.unsafeToForeign
+
+toJsMaybe' :: forall a. a -> JsMaybe a
+toJsMaybe' = JsMaybe <<< Foreign.unsafeToForeign
+
 -- * Contract parameters
 
 -- | Parameters passed when initially creating dynamic config
@@ -96,6 +166,21 @@ newtype CreateProposalParams = CreateProposalParams
   , tallyStateDatum :: TallyStateDatum
   }
 
+-- | Query proposal contract paramaters
+newtype QueryProposalParams = QueryProposalParams
+  { configSymbol :: Hash28
+  , indexSymbol :: Hash28
+  , configTokenName :: TokenName
+  , indexTokenName :: TokenName
+  }
+
+-- | Create treasury fund contract paramaters
+newtype CreateTreasuryFundParams = CreateTreasuryFundParams
+  { adaAmount :: BigInt
+  , configSymbol :: Hash28
+  , configTokenName :: TokenName
+  }
+
 -- | Parameters for treasury general contract
 newtype TreasuryParams = TreasuryParams
   { configSymbol :: Hash28
@@ -122,7 +207,6 @@ newtype CountVoteParams = CountVoteParams
   , configTokenName :: TokenName
   , tallySymbol :: Hash28
   , proposalTokenName :: TokenName
-  , voteTokenName :: TokenName
   }
 
 -- | Cancel vote contract paramaters
@@ -138,6 +222,12 @@ newtype CreateFungibleParams = CreateFungibleParams
   , amount :: BigInt
   }
 
+-- | Validator paramaters
+newtype ValidatorParams = ValidatorParams
+  { configSymbol :: Hash28
+  , configTokenName :: TokenName
+  }
+
 -- * Contract Results
 
 -- | ContractResult
@@ -147,10 +237,26 @@ newtype ContractResult = ContractResult
   , tokenName :: TokenName
   }
 
+-- | CreateConfigResult
+newtype CreateConfigResult = CreateConfigResult
+  { txHash :: TransactionHash
+  , indexSymbol :: Hash28
+  , indexTokenName :: TokenName
+  , configSymbol :: Hash28
+  , configTokenName :: TokenName
+  , tallySymbol :: Hash28
+  }
+
 -- | VoteOnProposalResult
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash
   , symbol :: Hash28
+  }
+
+-- | General proposal query result
+newtype QueryResult = QueryResult
+  { proposalTokenName :: TokenName
+  , tallyDatum :: TallyStateDatum
   }
 
 -- * Datums

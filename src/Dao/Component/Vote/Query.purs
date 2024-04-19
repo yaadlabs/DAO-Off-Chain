@@ -5,6 +5,7 @@ Description: Helpers for voting related contracts
 module Dao.Component.Vote.Query
   ( VoteInfo
   , mkAllVoteConstraintsAndLookups
+  , spendFungibleUtxo
   , spendVoteNftUtxo
   , cancelVoteUtxo
   ) where
@@ -13,16 +14,11 @@ import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData
-  ( Datum(Datum)
-  , OutputDatum(OutputDatum)
-  , Redeemer(Redeemer)
-  , fromData
+  ( Redeemer(Redeemer)
   , toData
-  , unitRedeemer
   )
 import Contract.Prelude
   ( type (/\)
-  , any
   , bind
   , discard
   , mconcat
@@ -33,34 +29,40 @@ import Contract.Prelude
   , unwrap
   , (#)
   , ($)
-  , (&&)
   , (*)
   , (+)
   , (/)
   , (/\)
+  , (<<<)
   , (<>)
-  , (==)
+  , (<$>)
+  , (/=)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Scripts (MintingPolicyHash, Validator)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
+import Contract.TxConstraints (InputWithScriptRef(SpendInput, RefInput))
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName, Value, singleton, symbols)
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  , Value
+  , singleton
+  , valueOf
+  )
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
-import Dao.Utils.Error (guardContract)
+import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query
-  ( QueryType(Reference, Spend)
-  , SpendPubKeyResult
+  ( SpendPubKeyResult
   , UtxoInfo
-  , findScriptUtxoBySymbol
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   , hasTokenWithSymbol
   )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
-import Data.Array (filter, head)
+import Data.Array (catMaybes, filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
@@ -83,6 +85,9 @@ mkAllVoteConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
+  MintingPolicyHash ->
+  InputWithScriptRef ->
+  InputWithScriptRef ->
   Map TransactionInput TransactionOutputWithRefScript ->
   Contract
     ( Array
@@ -97,8 +102,11 @@ mkAllVoteConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
+  votePolicyHash
+  voteValidatorScriptRef
+  votePolicyScriptRef
   utxos =
-  traverse
+  catMaybes <$> traverse
     ( mkVoteUtxoConstraintsAndLookups
         voteNftSymbol
         voteSymbol
@@ -106,6 +114,9 @@ mkAllVoteConstraintsAndLookups
         proposalTokenName
         voteTokenName
         fungiblePercent
+        votePolicyHash
+        voteValidatorScriptRef
+        votePolicyScriptRef
     )
     (Map.toUnfoldableUnordered utxos)
 
@@ -119,10 +130,15 @@ mkVoteUtxoConstraintsAndLookups ::
   TokenName ->
   TokenName ->
   BigInt ->
+  MintingPolicyHash ->
+  InputWithScriptRef ->
+  InputWithScriptRef ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   Contract
-    ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
-        Constraints.TxConstraints
+    ( Maybe 
+      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+          Constraints.TxConstraints
+      )
     )
 mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
@@ -131,14 +147,16 @@ mkVoteUtxoConstraintsAndLookups
   proposalTokenName
   voteTokenName
   fungiblePercent
+  votePolicyHash
+  voteValidatorScriptRef
+  votePolicyScriptRef
   (txIn /\ txOut) =
   do
     logInfo' "Entering mkVoteUtxoConstraintsAndLookups"
 
     -- Extract the 'VoteDatum' fields
     voteDatum :: VoteDatum <- liftContractM "Failed to extract datum" $
-      extractOutputDatum
-        txOut
+      extractOutputDatum (Proxy :: Proxy VoteDatum) txOut
 
     let
       -- Extract the 'proposalTokenName' from the 'VoteDatum'
@@ -148,97 +166,73 @@ mkVoteUtxoConstraintsAndLookups
       voteProposalTokenName :: TokenName
       voteProposalTokenName = voteDatum # unwrap # _.proposalTokenName
 
-    guardContract "Vote is for another proposal"
-      $ voteProposalTokenName
-      == proposalTokenName
+    -- Only include votes for the specified proposal
+    if (voteProposalTokenName /= proposalTokenName) then pure Nothing else do
 
-    voteValue :: Value <-
-      liftContractM "Vote value does not contain both vote NFT and vote token" $
-        extractToken voteNftSymbol voteSymbol txOut
+      voteOwnerKey :: PaymentPubKeyHash <-
+        liftContractM "Cannot get pkh" $ addressToPaymentPubKeyHash $ voteDatum
+          # unwrap
+          # _.voteOwner
 
-    voteOwnerKey :: PaymentPubKeyHash <-
-      liftContractM "Cannot get pkh" $ addressToPaymentPubKeyHash $ voteDatum
-        # unwrap
-        # _.voteOwner
+      -- The vote 'pass' token name
+      voteNftTokenName :: TokenName <-
+        liftContractM "Could not make voteNft token name" $ mkTokenName
+          "vote_pass"
 
-    -- The vote 'pass' token name
-    voteNftTokenName :: TokenName <-
-      liftContractM "Could not make voteNft token name" $ mkTokenName
-        "vote_pass"
+      -- The vote 'multiplier' token name
+      fungibleTokenName :: TokenName <-
+        liftContractM "Could not make voteNft token name" $ mkTokenName
+          "vote_fungible"
 
-    -- The vote 'multiplier' token name
-    fungibleTokenName :: TokenName <-
-      liftContractM "Could not make voteNft token name" $ mkTokenName
-        "vote_fungible"
+      let
+        -- If the user holds fungible tokens we need to add the calculated weight
+        -- of these tokens to the vote amount
+        fungibleAmount = countOfToken fungibleSymbol txOut
+        fungibleVoteWeight = (fungibleAmount * fungiblePercent) / (fromInt 1000)
 
-    let
-      -- If the user holds fungible tokens we need to add the calculated weight
-      -- of these tokens to the vote amount
-      fungibleAmount = countOfToken fungibleSymbol txOut
-      fungibleVoteWeight = (fungibleAmount * fungiblePercent) / (fromInt 1000)
+        voteDirection' :: VoteDirection
+        voteDirection' = voteDatum # unwrap # _.direction
 
-      voteDirection' :: VoteDirection
-      voteDirection' = voteDatum # unwrap # _.direction
+        voteAmount :: BigInt
+        voteAmount = (fromInt 1) + fungibleVoteWeight
 
-      voteAmount :: BigInt
-      voteAmount = (fromInt 1) + fungibleVoteWeight
+        voteNftToken :: Value
+        voteNftToken = singleton voteNftSymbol voteNftTokenName one
 
-      voteNftToken :: Value
-      voteNftToken = singleton voteNftSymbol voteNftTokenName one
+        fungibleToken :: Value
+        fungibleToken = singleton fungibleSymbol fungibleTokenName fungibleAmount
 
-      fungibleToken :: Value
-      fungibleToken = singleton fungibleSymbol fungibleTokenName fungibleAmount
+        burnVoteRedeemer :: Redeemer
+        burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
-      burnVoteValue :: Value
-      burnVoteValue = singleton voteSymbol voteTokenName (negate one)
+        lookups' :: Lookups.ScriptLookups
+        lookups' = -- mempty
+          mconcat
+            [ Lookups.unspentOutputs $ Map.singleton txIn txOut
+            ]
 
-      burnVoteRedeemer :: Redeemer
-      burnVoteRedeemer = Redeemer $ toData $ VoteMinterActionRedeemer'Burn
+        constraints' :: Constraints.TxConstraints
+        constraints' = mconcat
+          [ Constraints.mustSpendScriptOutputUsingScriptRef txIn
+              (Redeemer $ toData VoteActionRedeemer'Count)
+              voteValidatorScriptRef
+          , Constraints.mustPayToPubKey voteOwnerKey
+              (voteNftToken <> fungibleToken)
+          -- ^ Return the 'voteNft', and 'fungibleToken(s)' if any
+          , Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+              votePolicyHash
+              burnVoteRedeemer
+              voteTokenName
+              (negate one)
+              votePolicyScriptRef
+          ]
 
-      lookups' :: Lookups.ScriptLookups
-      lookups' = mconcat
-        [ Lookups.unspentOutputs $
-            Map.singleton txIn txOut
-        ]
-
-      constraints' :: Constraints.TxConstraints
-      constraints' = mconcat
-        [ Constraints.mustSpendScriptOutput txIn
-            (Redeemer $ toData $ VoteActionRedeemer'Count)
-        , Constraints.mustPayToPubKey voteOwnerKey
-            (voteNftToken <> fungibleToken)
-        -- ^ Return the 'voteNft', and 'fungibleToken(s)' if any
-        , Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteValue
-        ]
-
-    pure ((voteDirection' /\ voteAmount) /\ lookups' /\ constraints')
+      pure $ Just ((voteDirection' /\ voteAmount) /\ lookups' /\ constraints')
   where
   countOfToken :: CurrencySymbol -> TransactionOutputWithRefScript -> BigInt
   countOfToken symbol txOut = countOfTokenInValue symbol value
     where
     value = txOut # unwrap # _.output # unwrap # _.amount
-
-  extractOutputDatum :: TransactionOutputWithRefScript -> Maybe VoteDatum
-  extractOutputDatum (TransactionOutputWithRefScript txOut) =
-    case txOut.output # unwrap # _.datum of
-      OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-        Just (datum :: VoteDatum) -> Just datum
-        _ -> Nothing
-      _ -> Nothing
-
-  extractToken ::
-    CurrencySymbol ->
-    CurrencySymbol ->
-    TransactionOutputWithRefScript ->
-    Maybe Value
-  extractToken voteSymbol voteNftSymbol txOut =
-    let
-      value = txOut # unwrap # _.output # unwrap # _.amount
-    in
-      if
-        (any (_ == voteSymbol) $ symbols value) &&
-          (any (_ == voteNftSymbol) $ symbols value) then Just value
-      else Nothing
 
 type VoteInfo = UtxoInfo VoteDatum
 
@@ -256,7 +250,7 @@ cancelVoteUtxo voteActionRedeemer symbol userPkh proposalTokenName voteValidator
   do
     logInfo' "Entering cancelVoteUtxo contract"
     findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
-      (Redeemer $ toData $ voteActionRedeemer)
+      (Redeemer $ toData voteActionRedeemer)
       symbol
       userPkh
       proposalTokenName
@@ -273,10 +267,12 @@ spendVoteNftUtxo voteNftSymbol utxos = do
   (txIn /\ txOut'@(TransactionOutputWithRefScript txOut)) <-
     liftContractM
       "User does not hold a voteNft token (votePass) so is ineligble to vote"
-      $ head
-      $ filter (hasTokenWithSymbol voteNftSymbol)
-      $ Map.toUnfoldable
-      $ utxos
+      (filterOneOfTokenInUtxo voteNftSymbol utxos)
+
+  -- The vote 'pass' token name
+  voteNftTokenName :: TokenName <-
+    liftContractM "Could not make voteNft token name" $ mkTokenName
+      "vote_pass"
 
   let
     lookups :: Lookups.ScriptLookups
@@ -288,4 +284,53 @@ spendVoteNftUtxo voteNftSymbol utxos = do
     value :: Value
     value = txOut.output # unwrap # _.amount
 
-  pure { lookups, constraints, value }
+    voteNftValue :: Value
+    voteNftValue = singleton voteNftSymbol voteNftTokenName
+      (valueOf value voteNftSymbol voteNftTokenName)
+
+  pure { lookups, constraints, value: voteNftValue }
+
+-- | Spend fungible vote multiplier UTXO
+spendFungibleUtxo ::
+  CurrencySymbol ->
+  CurrencySymbol ->
+  TokenName ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Contract (Maybe SpendPubKeyResult)
+spendFungibleUtxo fungibleSymbol voteNftSymbol fungibleTokenName utxos = do
+  logInfo' "Entering spendFungibleUtxo contract"
+
+  case filterOneOfTokenInUtxo fungibleSymbol utxos of
+    Nothing -> pure Nothing
+    Just (txIn /\ txOutFungible@(TransactionOutputWithRefScript txOut)) -> do
+      let
+        lookups :: Lookups.ScriptLookups
+        lookups = mconcat
+          [ Lookups.unspentOutputs $ Map.singleton txIn txOutFungible ]
+
+        constraints :: Constraints.TxConstraints
+        constraints = mconcat [ Constraints.mustSpendPubKeyOutput txIn ]
+
+        value :: Value
+        value = txOut.output # unwrap # _.amount
+
+        fungibleValue :: Value
+        fungibleValue = singleton fungibleSymbol fungibleTokenName
+          (valueOf value fungibleSymbol fungibleTokenName)
+
+      pure $ Just { lookups, constraints, value: fungibleValue }
+
+filterOneOfTokenInUtxo ::
+  CurrencySymbol ->
+  Map TransactionInput TransactionOutputWithRefScript ->
+  Maybe (TransactionInput /\ TransactionOutputWithRefScript)
+filterOneOfTokenInUtxo symbol = head <<< filter (hasTokenWithSymbol symbol) <<<
+  Map.toUnfoldable
+
+inputWithScriptRefToUnspentOutputs ::
+  InputWithScriptRef ->
+  Map.Map TransactionInput TransactionOutputWithRefScript
+inputWithScriptRefToUnspentOutputs ref =
+  case ref of
+    SpendInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output
+    RefInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output

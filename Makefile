@@ -1,6 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: esbuild-bundle esbuild-serve webpack-bundle webpack-serve check-format format query-testnet-tip clean check-explicit-exports spago-build create-bundle-entrypoint create-html-entrypoint delete-bundle-entrypoint
+.PHONY: esbuild-bundle esbuild-serve webpack-bundle webpack-serve check-format format query-testnet-tip clean check-explicit-exports spago-build create-bundle-entrypoint create-html-entrypoint delete-bundle-entrypoint generate-purs-scripts
 .SHELLFLAGS := -eu -o pipefail -c
 
 ps-sources := $(shell fd --no-ignore-parent -epurs)
@@ -83,3 +83,19 @@ clean:
 	@ rm -rf node_modules || true
 	@ rm -rf output || true
 	@ rm -rf dist || true
+
+generate-purs-scripts:
+	@for script_type in Debug Optimised; do \
+		json_dir=./src/Dao/Scripts/Json/$$script_type; \
+		output_file=./src/Dao/Scripts/Serialized/$$script_type.purs; \
+		echo "Generating PureScript scripts for $$json_dir into $$output_file..."; \
+		mkdir -p $$(dirname $$output_file); \
+		> $$output_file; \
+		printf "module Dao.Scripts.Serialized.$$script_type where\n\n" >> $$output_file; \
+		for json_file in $$json_dir/*.json; do \
+			var_name=$$(basename $$json_file .json | sed 's/^\(.\)/\L\1/'); \
+			value=$$(jq -r . $$json_file); \
+			echo "$$var_name = \"$$value\"" >> $$output_file; \
+		done; \
+	done
+	@echo "All PureScript scripts generated."

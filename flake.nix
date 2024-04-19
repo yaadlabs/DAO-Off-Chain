@@ -10,14 +10,14 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "774c005ae9ebd228e9b6c31a636b3470d11064dd";
+      rev = "f2e0f90d269815448f2fb7c6741b9ad25d095d7d";
     };
 
     nixpkgs.follows = "ctl/nixpkgs";
 
     lbf.url = "github:mlabs-haskell/lambda-buffers";
 
-    dao-onchain.url = "/home/nini/dev/triphut-repos/DAO?rev=79a57cc16fec31c054afd16311f631f1aeb0b236";
+    dao-onchain.url = "github:yaadlabs/DAO";
   };
 
   outputs = { self, nixpkgs, ctl, lbf, ... }@inputs:

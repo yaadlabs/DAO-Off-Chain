@@ -56,13 +56,13 @@ import Dao.Component.Vote.Params
   ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
-import Dao.Scripts.Policy.Fungible (fungiblePolicy)
-import Dao.Scripts.Policy.Upgrade (upgradePolicy)
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
+import Dao.Scripts.Policy (fungiblePolicy)
+import Dao.Scripts.Policy (upgradePolicy)
+import Dao.Scripts.Policy (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (createConfig)
+import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -177,10 +177,10 @@ suite = do
               , indexTokenName: indexTokenName
               }
 
-          ContractResult
+          CreateConfigResult
             { txHash: createConfigTxHash
-            , symbol: configSymbol
-            , tokenName: configTokenName
+            , configSymbol
+            , configTokenName
             } <- createConfig sampleConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
@@ -196,9 +196,10 @@ suite = do
           upgradePolicy' <- upgradePolicy
           let
             upgradePolicySymbol = scriptCurrencySymbol upgradePolicy'
-            tallyStateDatum = sampleUpgradeConfigProposalTallyStateDatum
-              upgradePolicySymbol
+          tallyStateDatum <- sampleUpgradeConfigProposalTallyStateDatum
+            upgradePolicySymbol
 
+          let
             proposalParams :: CreateProposalParams
             proposalParams = CreateProposalParams
               { configSymbol
@@ -242,8 +243,7 @@ suite = do
           let
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
-              { voteTokenName: adaToken
-              , tallySymbol: proposalSymbol
+              { tallySymbol: proposalSymbol
               , configSymbol
               , configTokenName
               , proposalTokenName

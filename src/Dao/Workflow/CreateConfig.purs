@@ -3,75 +3,47 @@ Module: Dao.Workflow.CreateConfig
 Description: Contract for creating dynamic config datum
   and locking it at UTXO at config validator marked by config NFT
 -}
-module Dao.Workflow.CreateConfig (createConfig) where
+module Dao.Workflow.CreateConfig
+  ( CreateConfigResult(CreateConfigResult)
+  , createConfig
+  ) where
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Datum(Datum), toData)
-import Contract.Prelude
-  ( type (/\)
-  , bind
-  , discard
-  , mconcat
-  , one
-  , pure
-  , unwrap
-  , (#)
-  , ($)
-  , (/\)
-  )
+import Contract.Prelude (type (/\), bind, discard, mconcat, one, pure, unwrap, (#), ($), (/\))
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , ValidatorHash
-  , validatorHash
-  )
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
-  , submitTxFromConstraints
-  )
+import Contract.Scripts (MintingPolicy, ScriptHash, Validator, ValidatorHash, validatorHash)
+import Contract.Transaction (TransactionHash, TransactionInput, TransactionOutputWithRefScript, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
+import Contract.Value (CurrencySymbol, TokenName, Value, scriptCurrencySymbol)
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (CreateConfigParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
-import Dao.Scripts.Policy.Config (unappliedConfigPolicyDebug)
-import Dao.Scripts.Policy.Tally (unappliedTallyPolicyDebug)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
-import Dao.Scripts.Validator.Config
-  ( unappliedConfigValidatorDebug
-  )
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidator)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Policy (unappliedConfigPolicy, unappliedTallyPolicy, unappliedVotePolicy, voteNftPolicy)
+import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator, unappliedTreasuryValidator, unappliedVoteValidator)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
-import LambdaBuffers.ApplicationTypes.Configuration
-  ( DynamicConfigDatum(DynamicConfigDatum)
-  )
-import ScriptArguments.Types
-  ( ConfigPolicyParams(ConfigPolicyParams)
-  , TallyPolicyParams
-  , ValidatorParams(ValidatorParams)
-  )
+import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(DynamicConfigDatum))
+import ScriptArguments.Types (ConfigPolicyParams(ConfigPolicyParams), TallyPolicyParams, ValidatorParams(ValidatorParams))
+
+-- | Create config result
+newtype CreateConfigResult = CreateConfigResult
+  { txHash :: TransactionHash
+  , indexSymbol :: CurrencySymbol
+  , indexTokenName :: TokenName
+  , configSymbol :: CurrencySymbol
+  , configTokenName :: TokenName
+  , tallySymbol :: CurrencySymbol
+  }
 
 -- | Contract for creating dynamic config datum and locking
 -- | it at UTXO at config validator marked by config NFT
 createConfig ::
   CreateConfigParams ->
-  Contract ContractResult
+  Contract CreateConfigResult
 createConfig params = do
   logInfo' "Entering createConfig transaction"
 
@@ -93,19 +65,35 @@ createConfig params = do
     constraints :: Constraints.TxConstraints
     constraints = dynamicConfigInfo.constraints
 
-    symbol :: CurrencySymbol
-    symbol = dynamicConfigInfo.symbol
+    indexSymbol :: CurrencySymbol
+    indexSymbol = params # unwrap # _.indexSymbol
 
-    tokenName :: TokenName
-    tokenName = params # unwrap # _.configTokenName
+    indexTokenName :: TokenName
+    indexTokenName = params # unwrap # _.indexTokenName
+
+    configSymbol :: CurrencySymbol
+    configSymbol = dynamicConfigInfo.symbol
+
+    configTokenName :: TokenName
+    configTokenName = params # unwrap # _.configTokenName
+
+    tallySymbol :: CurrencySymbol
+    tallySymbol = dynamicConfigInfo.tallySymbol
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure $ ContractResult
-    { txHash, symbol, tokenName }
+  pure $ CreateConfigResult
+    { txHash
+    , indexSymbol
+    , indexTokenName
+    , configSymbol
+    , configTokenName
+    , tallySymbol
+    }
 
 type ConfigInfo =
   { symbol :: CurrencySymbol
+  , tallySymbol :: CurrencySymbol
   , lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
   }
@@ -126,7 +114,7 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
       configPolicyParams = ConfigPolicyParams
         { cpInitialUtxo: txInput, cpTokenName: params.configTokenName }
 
-    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicyDebug
+    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicy
       configPolicyParams
 
     let
@@ -146,20 +134,20 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         params.configTokenName
         params.indexTokenName
 
-    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+    appliedConfigValidator :: Validator <- unappliedConfigValidator
       configValidatorParams
 
     -- Make the scripts for the dynamic config datum
     appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
       configValidatorParams
-    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+    appliedTallyValidator :: Validator <- unappliedTallyValidator
       configValidatorParams
-    appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+    appliedVoteValidator :: Validator <- unappliedVoteValidator
       configValidatorParams
-    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug
+    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy
       configValidatorParams
     voteNftPolicy' :: MintingPolicy <- voteNftPolicy
-    appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicyDebug tallyConfig
+    appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
 
     let
       tallyScriptHash :: ScriptHash
@@ -248,4 +236,4 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         -- validator, marked by the 'nftConfig'
         ]
 
-    pure { symbol: configSymbol, lookups: lookups', constraints: constraints' }
+    pure { symbol: configSymbol, tallySymbol: tallyNftSymbol, lookups: lookups', constraints: constraints' }

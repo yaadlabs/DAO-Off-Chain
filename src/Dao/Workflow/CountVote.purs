@@ -4,10 +4,14 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
+
+import Prelude
+import Contract.Prelude (show)
+
 import Contract.Address (Address, scriptHashAddress)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, throwContractError)
 import Contract.Numeric.Natural as Natural
 import Contract.PlutusData
   ( Datum(Datum)
@@ -24,18 +28,22 @@ import Contract.Prelude
   , pure
   , unwrap
   , void
+  , show
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
   , (==)
+  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( MintingPolicy
+  ( MintingPolicy(PlutusMintingPolicy)
+  , PlutusScript
   , Validator
   , ValidatorHash(ValidatorHash)
+  , mintingPolicyHash
   , validatorHash
   )
 import Contract.Time (POSIXTime(POSIXTime))
@@ -53,11 +61,14 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
-import Dao.Scripts.Policy.Vote (unappliedVotePolicyDebug)
-import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
-import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
-import Dao.Scripts.Validator.Vote (unappliedVoteValidatorDebug)
+import Dao.Scripts.Policy (unappliedVotePolicy)
+import Dao.Scripts.Validator
+  ( unappliedConfigValidator
+  , unappliedTallyValidator
+  , unappliedVoteValidator
+  )
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
+import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
 import JS.BigInt (BigInt, fromInt)
@@ -74,17 +85,27 @@ countVote params' = do
 
   let params = params' # unwrap
 
+  logInfo' $ "countVoteParams:\n" <> show params
+
   -- Make the scripts
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
+  appliedConfigValidator :: Validator <- unappliedConfigValidator
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
+  appliedTallyValidator :: Validator <- unappliedTallyValidator
     validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidatorDebug
+  appliedVoteValidator :: Validator <- unappliedVoteValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicyDebug validatorConfig
+  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
+
+  tallyValidatorRef <- retrieveReferenceScript $ unwrap appliedTallyValidator
+  voteValidatorRef <- retrieveReferenceScript $ unwrap appliedVoteValidator
+
+  votePolicyScript <- getPlutusScript appliedVotePolicy
+  votePolicyRef <- retrieveReferenceScript votePolicyScript
+
+  let votePolicyHash = mintingPolicyHash appliedVotePolicy
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -92,6 +113,7 @@ countVote params' = do
   tallyInfo :: TallyInfo <- spendTallyUtxo params.tallySymbol
     params.proposalTokenName
     appliedTallyValidator
+    tallyValidatorRef
 
   let
     -- The main config referenced at the config UTXO
@@ -108,6 +130,7 @@ countVote params' = do
   -- Get the UTXOs at the vote validator
   voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
     voteValidatorAddress
+  logInfo' $ "voteUtxos: " <> show voteUtxos
 
   -- Extract the config values
   let
@@ -151,7 +174,12 @@ countVote params' = do
       params.proposalTokenName
       voteTokenName
       fungiblePercent
+      votePolicyHash
+      voteValidatorRef
+      votePolicyRef
       voteUtxos
+
+  logInfo' $ "voteConstraints: " <> show voteDirectionsConstraintsAndLookups
 
   -- Make on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
@@ -198,8 +226,6 @@ countVote params' = do
       [ voteLookups
       , tallyInfo.lookups
       , configInfo.lookups
-      , Lookups.validator appliedVoteValidator
-      , Lookups.mintingPolicy appliedVotePolicy
       ]
 
     constraints :: Constraints.TxConstraints
@@ -207,7 +233,7 @@ countVote params' = do
       mconcat
         [ Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData $ tallyDatumWithUpdatedVoteCount)
+            (Datum $ toData tallyDatumWithUpdatedVoteCount)
             Constraints.DatumInline
             tallyInfo.value
         , voteConstraints
@@ -232,3 +258,7 @@ countVote params' = do
     op ((voteDirection /\ voteAmount) /\ _ /\ _) (for /\ against)
       | voteDirection == VoteDirection'For = ((for + voteAmount) /\ against)
       | otherwise = (for /\ (against + voteAmount))
+
+  getPlutusScript :: MintingPolicy -> Contract PlutusScript
+  getPlutusScript (PlutusMintingPolicy script) = pure script
+  getPlutusScript _ = throwContractError "Wrong script type"
