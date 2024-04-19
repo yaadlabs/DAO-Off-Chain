@@ -1,262 +1,99 @@
 module Dao.Web.Api
-  ( cancelVote
-  , countVote
-  , createConfig
-  , createFungible
+  ( createConfig
   , createIndex
-  , createIndexConfig
   , createProposal
-  , createTreasuryFund
-  , createVotePass
-  , deployAllReferenceScripts
-  , deployReferenceScriptsOne
-  , deployReferenceScriptsThree
-  , deployReferenceScriptsTwo
-  , finalize
-  , getAllActiveProposals
-  , getAllExpiredProposals
-  , getAllGeneralProposals
-  , getAllProposals
-  , getAllSuccessfulProposals
-  , getAllTripProposals
-  , getAllUpgradeProposals
-  , getProposalByTokenName
-  , getWalletAddressBech32
-  , initialize
-  , module WebTypes
+  , voteOnProposal
+  , upgradeConfig
+  , countVote
+  , cancelVote
   , treasuryGeneral
   , treasuryTrip
-  , upgradeConfig
-  , voteOnProposal
-  )
-  where
+  , createVotePass
+  , createFungible
+  ) where
 
-import Prelude
-
-import Contract.Address (addressWithNetworkTagToBech32)
-import Contract.Chain (waitNSlots) as Ctl
-import Contract.Config (NetworkId(TestnetId, MainnetId), emptyHooks, defaultSynchronizationParams, defaultTimeParams) as Ctl
-import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS) as Ctl
-import Contract.Monad (ContractEnv, liftContractM) as Ctl
-import Contract.Numeric.Natural (fromInt') as Natural
-import Contract.Transaction (awaitTxConfirmedWithTimeout) as Ctl
-import Contract.Value (adaToken, scriptCurrencySymbol) as Value
-import Contract.Wallet (getWalletAddressWithNetworkTag) as Ctl
+import Contract.Monad (ContractEnv)
 import Control.Promise (Promise)
-import Ctl.Internal.Contract.QueryBackend (mkBlockfrostBackendParams) as Ctl
-import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), mkValidatorConfig) as Component
-import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy) as Scripts
-import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
-import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
-import Dao.Utils.Value (mkTokenName) as Utils
-import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)
-import Dao.Web.Types (Address, CancelVoteParams, ContractResult, CountVoteParams, CreateConfigParams, CreateConfigResult, CreateFungibleParams, CreateProposalParams, CreateTreasuryFundParams, CtlConfig(CtlConfig), JsMaybe, QueryProposalParams, QueryResult, TokenName, TransactionHash, TreasuryParams, UpgradeConfigParams, ValidatorParams, VoteOnProposalParams, VoteOnProposalResult)
-import Dao.Web.Types (ProposalType(..), VoteDirection(..)) as WebTypes
+import Dao.Web.Call (contractCallOneArg)
+import Dao.Web.Types
+  ( CancelVoteParams
+  , ContractResult
+  , CountVoteParams
+  , CreateConfigParams
+  , CreateFungibleParams
+  , CreateProposalParams
+  , PaymentPubKeyHash
+  , TokenName
+  , TransactionHash
+  , TreasuryParams
+  , UpgradeConfigParams
+  , VoteOnProposalParams
+  , VoteOnProposalResult
+  )
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
 import Dao.Workflow.CreateConfig (createConfig) as Dao
 import Dao.Workflow.CreateFungible (createFungible) as Dao
 import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
-import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
-import Dao.Workflow.QueryProposal (getAllActiveProposals, getAllExpiredProposals, getAllGeneralProposals, getAllProposals, getAllSuccessfulProposals, getAllTripProposals, getAllUpgradeProposals, getProposalByTokenName) as Dao
-import Dao.Workflow.ReferenceScripts (deployReferenceScriptsOne, deployReferenceScriptsTwo, deployReferenceScriptsThree) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
 import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
-import Data.Function.Uncurried (Fn1, Fn2, Fn3)
-import Data.Log.Level (LogLevel(Trace))
-import Data.Maybe (Maybe(Just, Nothing))
-import Data.Time.Duration (Seconds(Seconds))
-import Data.UInt as UInt
-import JS.BigInt (fromInt) as BigInt
-import ScriptArguments.Types (ValidatorParams(ValidatorParams)) as ScriptArguments
+import Effect.Aff.Compat (EffectFn1)
 
-initialize :: CtlConfig -> (Promise Ctl.ContractEnv)
-initialize = Ctl.mkContractEnvJS <<< mkContractParams
-  where
-    mkContractParams (CtlConfig config) =
-      let
-        networkId = case config.network of
-          "preview" -> Ctl.TestnetId
-          "preprod" -> Ctl.TestnetId
-          "mainnet" -> Ctl.MainnetId
-          _ -> Ctl.TestnetId
-        blockfrostConfig =
-          { port: UInt.fromInt 443
-          , host: "cardano-" <> config.network <> ".blockfrost.io"
-          , secure: true
-          , path: Just "/api/v0"
-          }
-        backendParams = Ctl.mkBlockfrostBackendParams 
-          { blockfrostConfig: blockfrostConfig
-          , blockfrostApiKey: Just config.blockfrostApiKey
-          , confirmTxDelay: Nothing
-          }
-      in
-        { backendParams
-        , networkId
-        , logLevel: Trace
-        , walletSpec: Just Ctl.ConnectToNami
-        , customLogger: Nothing
-        , suppressLogs: false
-        , hooks: Ctl.emptyHooks
-        , synchronizationParams: Ctl.defaultSynchronizationParams
-        , timeParams: Ctl.defaultTimeParams
-        }
+createConfig ::
+  ContractEnv ->
+  EffectFn1 CreateConfigParams (Promise ContractResult)
+createConfig env = contractCallOneArg env Dao.createConfig
 
-finalize :: Fn1 Ctl.ContractEnv (Promise Unit)
-finalize = Ctl.stopContractEnvJS
+createIndex ::
+  ContractEnv ->
+  EffectFn1 TokenName (Promise ContractResult)
+createIndex env = contractCallOneArg env Dao.createIndex
 
-getWalletAddressBech32 :: Fn1 Ctl.ContractEnv (Promise String)
-getWalletAddressBech32 = mkContractCall1 $ do
-  addressWithNetworkTag <- Ctl.getWalletAddressWithNetworkTag
-  case addressWithNetworkTag of
-    Nothing -> pure ""
-    Just addressWithNetworkTag ->
-      pure $ addressWithNetworkTagToBech32 addressWithNetworkTag
+createProposal ::
+  ContractEnv ->
+  EffectFn1 CreateProposalParams (Promise ContractResult)
+createProposal env = contractCallOneArg env Dao.createProposal
 
+voteOnProposal ::
+  ContractEnv ->
+  EffectFn1 VoteOnProposalParams (Promise VoteOnProposalResult)
+voteOnProposal env = contractCallOneArg env Dao.voteOnProposal
 
-createIndex :: Fn2 Ctl.ContractEnv TokenName (Promise ContractResult)
-createIndex = mkContractCall2 Dao.createIndex
+upgradeConfig ::
+  ContractEnv ->
+  EffectFn1 UpgradeConfigParams (Promise TransactionHash)
+upgradeConfig env = contractCallOneArg env Dao.upgradeConfig
 
-createConfig :: Fn2 Ctl.ContractEnv CreateConfigParams (Promise CreateConfigResult)
-createConfig = mkContractCall2 Dao.createConfig
+countVote ::
+  ContractEnv ->
+  EffectFn1 CountVoteParams (Promise TransactionHash)
+countVote env = contractCallOneArg env Dao.countVote
 
--- | Create both the index and config with default config params
-createIndexConfig :: Fn1 Ctl.ContractEnv (Promise CreateConfigResult)
-createIndexConfig = mkContractCall1 createIndexConfig'
-  where 
-    createIndexConfig' = do
-      indexTokenName <-
-        Ctl.liftContractM "Could not make index token name" $ Utils.mkTokenName "index1"
-      Utils.ContractResult
-        { txHash: createIndexTxHash
-        , symbol: indexSymbol
-        , tokenName: indexTokenName'
-        } <- Dao.createIndex indexTokenName
+cancelVote ::
+  ContractEnv ->
+  EffectFn1 CancelVoteParams (Promise TransactionHash)
+cancelVote env = contractCallOneArg env Dao.cancelVote
 
-      void $ Ctl.awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
-      void $ Ctl.waitNSlots (Natural.fromInt' 3)
-        
-      voteNftPolicy <- Scripts.voteNftPolicy
-      fungiblePolicy <- Scripts.fungiblePolicy
-      voteFungibleTokenName <-
-        Ctl.liftContractM "Could not make voteNft token name" $ Utils.mkTokenName "vote_fungible"
+treasuryGeneral ::
+  ContractEnv ->
+  EffectFn1 TreasuryParams (Promise TransactionHash)
+treasuryGeneral env = contractCallOneArg env Dao.treasuryGeneral
 
-      let 
-        voteNftSymbol = Value.scriptCurrencySymbol voteNftPolicy
-        voteFungibleCurrencySymbol = Value.scriptCurrencySymbol fungiblePolicy
-        params = Component.CreateConfigParams 
-          { configTokenName: Value.adaToken
-          , upgradeMajorityPercent: BigInt.fromInt 0
-          , upgradeRelativeMajorityPercent: BigInt.fromInt 0
-          , generalMajorityPercent: BigInt.fromInt 0
-          , generalRelativeMajorityPercent: BigInt.fromInt 0
-          , tripMajorityPercent: BigInt.fromInt 0
-          , tripRelativeMajorityPercent: BigInt.fromInt 0
-          , totalVotes: BigInt.fromInt 1
-          , maxGeneralDisbursement: BigInt.fromInt 200_000_000
-          , maxTripDisbursement: BigInt.fromInt 0
-          , agentDisbursementPercent: BigInt.fromInt 0
-          , proposalTallyEndOffset: BigInt.fromInt 0
-          , voteTokenName: Value.adaToken
-          , voteFungibleCurrencySymbol
-          , voteFungibleTokenName
-          , voteNftSymbol
-          , fungibleVotePercent: BigInt.fromInt 10
-          -- Index needed for making tallyNft
-          , indexSymbol: indexSymbol
-          , indexTokenName: indexTokenName'
-          }
-          
-      Dao.createConfig params
+createVotePass ::
+  ContractEnv ->
+  EffectFn1 PaymentPubKeyHash (Promise ContractResult)
+createVotePass env = contractCallOneArg env Dao.createVotePass
 
-upgradeConfig :: Fn2 Ctl.ContractEnv UpgradeConfigParams (Promise TransactionHash)
-upgradeConfig = mkContractCall2 Dao.upgradeConfig
+createFungible ::
+  ContractEnv ->
+  EffectFn1 CreateFungibleParams (Promise ContractResult)
+createFungible env = contractCallOneArg env Dao.createFungible
 
-createTreasuryFund :: Fn2 Ctl.ContractEnv CreateTreasuryFundParams (Promise ContractResult)
-createTreasuryFund = mkContractCall2 Dao.createTreasuryFund
-
-deployReferenceScriptsOne :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
-deployReferenceScriptsOne = 
-  mkContractCall2
-    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
-      Dao.deployReferenceScriptsOne (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
-
-deployReferenceScriptsTwo :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
-deployReferenceScriptsTwo = 
-  mkContractCall2
-    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
-      Dao.deployReferenceScriptsTwo (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
-
-deployReferenceScriptsThree :: Fn2 Ctl.ContractEnv ValidatorParams (Promise TransactionHash)
-deployReferenceScriptsThree = 
-  mkContractCall2
-    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) ->
-      Dao.deployReferenceScriptsThree (Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName)
-
-deployAllReferenceScripts :: Fn2 Ctl.ContractEnv ValidatorParams (Promise (Array TransactionHash))
-deployAllReferenceScripts = 
-  mkContractCall2
-    \(ScriptArguments.ValidatorParams { vpConfigSymbol, vpConfigTokenName }) -> do
-      let 
-        validatorConfig = Component.mkValidatorConfig vpConfigSymbol vpConfigTokenName
-      txId1 <- Dao.deployReferenceScriptsOne validatorConfig
-      txId2 <- Dao.deployReferenceScriptsTwo validatorConfig
-      txid3 <- Dao.deployReferenceScriptsThree validatorConfig
-      pure [txId1, txId2, txid3]
-
-createVotePass :: Fn2 Ctl.ContractEnv Address (Promise ContractResult)
-createVotePass = mkContractCall2 $ \address -> do
-  pkh <- Ctl.liftContractM "Could not convert address to key" $
-    Utils.addressToPaymentPubKeyHash address
-  Dao.createVotePass pkh
-
-createFungible :: Fn2 Ctl.ContractEnv CreateFungibleParams (Promise ContractResult)
-createFungible = mkContractCall2 Dao.createFungible
-
-createProposal :: Fn2 Ctl.ContractEnv CreateProposalParams (Promise ContractResult)
-createProposal = mkContractCall2 Dao.createProposal
-
-voteOnProposal :: Fn2 Ctl.ContractEnv VoteOnProposalParams (Promise VoteOnProposalResult)
-voteOnProposal = mkContractCall2 Dao.voteOnProposal
-
-countVote :: Fn2 Ctl.ContractEnv CountVoteParams (Promise TransactionHash)
-countVote = mkContractCall2 Dao.countVote
-
-cancelVote :: Fn2 Ctl.ContractEnv CancelVoteParams (Promise TransactionHash)
-cancelVote = mkContractCall2 Dao.cancelVote
-
-treasuryGeneral :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
-treasuryGeneral = mkContractCall2 Dao.treasuryGeneral
-
-treasuryTrip :: Fn2 Ctl.ContractEnv TreasuryParams (Promise TransactionHash)
-treasuryTrip = mkContractCall2 Dao.treasuryTrip
-
-getAllProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllProposals = mkContractCall2 Dao.getAllProposals
-
-getAllGeneralProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllGeneralProposals = mkContractCall2 Dao.getAllGeneralProposals
-
-getAllTripProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllTripProposals = mkContractCall2 Dao.getAllTripProposals
-
-getAllUpgradeProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllUpgradeProposals = mkContractCall2 Dao.getAllUpgradeProposals
-
-getAllActiveProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllActiveProposals = mkContractCall2 Dao.getAllActiveProposals
-
-getAllExpiredProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllExpiredProposals = mkContractCall2 Dao.getAllExpiredProposals
-
-getAllSuccessfulProposals :: Fn2 Ctl.ContractEnv QueryProposalParams (Promise (Array QueryResult))
-getAllSuccessfulProposals = mkContractCall2 Dao.getAllSuccessfulProposals
-
-getProposalByTokenName :: Fn3 Ctl.ContractEnv QueryProposalParams TokenName (Promise (JsMaybe QueryResult))
-getProposalByTokenName = mkContractCall3 Dao.getProposalByTokenName
+treasuryTrip ::
+  ContractEnv ->
+  EffectFn1 TreasuryParams (Promise TransactionHash)
+treasuryTrip env = contractCallOneArg env Dao.treasuryTrip

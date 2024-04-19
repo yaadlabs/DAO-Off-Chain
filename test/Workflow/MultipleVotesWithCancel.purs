@@ -37,10 +37,7 @@ import Contract.Test.Plutip
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Value (TokenName, adaSymbol, adaToken, scriptCurrencySymbol)
 import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
-import Dao.Component.Config.Params
-  ( CreateConfigParams(CreateConfigParams)
-  , mkValidatorConfig
-  )
+import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
 import Dao.Component.Fungible.Params
   ( CreateFungibleParams(CreateFungibleParams)
   )
@@ -53,13 +50,14 @@ import Dao.Component.Vote.Params
   , CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
-import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
+import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -236,10 +234,10 @@ suite = do
                   }
 
               -- Create the UTXO that holds the 'DynamicConfigDatum'
-              CreateConfigResult
+              ContractResult
                 { txHash: createConfigTxHash
-                , configSymbol
-                , configTokenName
+                , symbol: configSymbol
+                , tokenName: configTokenName
                 } <- createConfig sampleConfigParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
@@ -248,13 +246,13 @@ suite = do
 
               -- ************************** --
               -- Create the first proposal  --
-              -- The 'TallyStateDatum' to be sent to the proposal UTXO
-              -- The proposal type for this proposal will be a 'General' one
-              -- The payment address is the address of 'walletTwo'
-              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
-                userTwoWalletAddress
-
               let
+                -- The 'TallyStateDatum' to be sent to the proposal UTXO
+                -- The proposal type for this proposal will be a 'General' one
+                -- The payment address is the address of 'walletTwo'
+                tallyStateDatum = sampleGeneralProposalTallyStateDatum
+                  userTwoWalletAddress
+
                 -- The params needed for creating the first proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams
@@ -278,13 +276,13 @@ suite = do
 
               -- ************************** --
               -- Create the second proposal --
-              -- The 'TallyStateDatum' to be sent to the proposal UTXO
-              -- The proposal type for this proposal will be a 'General' one
-              -- The payment address is the address of 'walletSix'
-              tallyStateDatum <- sampleGeneralProposalTallyStateDatum
-                userSixWalletAddress
-
               let
+                -- The 'TallyStateDatum' to be sent to the proposal UTXO
+                -- The proposal type for this proposal will be a 'General' one
+                -- The payment address is the address of 'walletSix'
+                tallyStateDatum = sampleGeneralProposalTallyStateDatum
+                  userSixWalletAddress
+
                 -- The params needed for creating the proposal
                 proposalParams :: CreateProposalParams
                 proposalParams = CreateProposalParams
@@ -418,9 +416,9 @@ suite = do
                     /\ proposalTwoTokenName
                 )
 
-            -- *************************************** --
-            -- *************************************** --
-            -- * User one creates the treasury fund  * --
+            -- ************************************************************ --
+            -- ************************************************************ --
+            -- * User one creates a proposal on which the others can vote * --
             treasuryFundSymbol <- withKeyWallet walletOne do
 
               logInfo' "Running in wallet one - creating treasury fund"
@@ -431,10 +429,8 @@ suite = do
                   , configTokenName: configTokenName
                   }
 
-              ContractResult
-                { txHash: treasuryFundTxHash
-                , symbol: treasuryFundSymbol
-                } <- createTreasuryFund treasuryFundParams
+              (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
+                treasuryFundParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 treasuryFundTxHash
@@ -568,7 +564,8 @@ suite = do
               let
                 countVoteParams :: CountVoteParams
                 countVoteParams = CountVoteParams
-                  { configSymbol
+                  { voteTokenName: adaToken
+                  , configSymbol
                   , configTokenName
                   , tallySymbol: proposalOneSymbol
                   , proposalTokenName: proposalOneTokenName
@@ -722,7 +719,8 @@ suite = do
               let
                 countVoteParams :: CountVoteParams
                 countVoteParams = CountVoteParams
-                  { configSymbol
+                  { voteTokenName: adaToken
+                  , configSymbol
                   , configTokenName
                   , tallySymbol: proposalOneSymbol
                   , proposalTokenName: proposalTwoTokenName

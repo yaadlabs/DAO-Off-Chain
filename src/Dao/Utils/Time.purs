@@ -9,7 +9,6 @@ module Dao.Utils.Time
   , mkTimeRangeWithinSummary
   , oneMinute
   , mkPosixTime
-  , getCurrentTime
   ) where
 
 import Contract.Prelude
@@ -25,7 +24,6 @@ import Contract.Time
   , ToOnChainPosixTimeRangeError
   , getEraSummaries
   , getSystemStart
-  , slotToPosixTime
   , toOnchainPosixTimeRange
   )
 import Ctl.Internal.Types.EraSummaries (EraSummary)
@@ -125,19 +123,6 @@ mkOnchainTimeRange'' pTime = do
   eraSummaries <- getEraSummaries
   sysStart <- getSystemStart
   liftEffect $ pure $ toOnchainPosixTimeRange eraSummaries sysStart pTime
-
--- | Get the current on-chain time
-getCurrentTime :: Contract POSIXTime
-getCurrentTime = do
-  era <- getEraSummaries
-  start <- getSystemStart
-  slot <-
-    getTip
-      >>= (getSlot >>> liftContractM "getSlot failed")
-  liftEffect $ slotToPosixTime era start slot # fromRightEff
-  where
-  getSlot (Tip (ChainTip { slot })) = Just slot
-  getSlot _ = Nothing
 
 oneMinute :: Int
 oneMinute = 1000 * 60

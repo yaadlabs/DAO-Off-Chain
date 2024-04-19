@@ -51,11 +51,12 @@ import Dao.Component.Vote.Params
   ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
-import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
+import Dao.Workflow.CreateConfig (createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -175,10 +176,10 @@ suite = do
               , indexTokenName: indexTokenName
               }
 
-          CreateConfigResult
+          ContractResult
             { txHash: createConfigTxHash
-            , configSymbol
-            , configTokenName
+            , symbol: configSymbol
+            , tokenName: configTokenName
             } <- createConfig sampleConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
@@ -191,19 +192,17 @@ suite = do
               , configTokenName: configTokenName
               }
 
-          ContractResult
-            { txHash: treasuryFundTxHash
-            , symbol: treasuryFundSymbol
-            } <- createTreasuryFund treasuryFundParams
+          (treasuryFundTxHash /\ treasuryFundSymbol) <- createTreasuryFund
+            treasuryFundParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryFundTxHash
           void $ waitNSlots (Natural.fromInt' 3)
 
-          tallyStateDatum <- sampleTripProposalTallyStateDatum
-            walletTwoAddress
-            walletThreeAddress
-
           let
+            tallyStateDatum = sampleTripProposalTallyStateDatum
+              walletTwoAddress
+              walletThreeAddress
+
             proposalParams :: CreateProposalParams
             proposalParams = CreateProposalParams
               { configSymbol
@@ -247,7 +246,8 @@ suite = do
           let
             countVoteParams :: CountVoteParams
             countVoteParams = CountVoteParams
-              { configSymbol
+              { voteTokenName: adaToken
+              , configSymbol
               , configTokenName
               , tallySymbol: proposalSymbol
               , proposalTokenName

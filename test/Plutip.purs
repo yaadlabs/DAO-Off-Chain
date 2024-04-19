@@ -25,8 +25,6 @@ import Effect.Aff
   )
 import Test.Spec.Runner (defaultConfig)
 import Test.Workflow.MultipleVotesWithCancel as MultipleVotesWithCancel
-import Test.Workflow.QueryProposals as QueryProposals
-import Test.Workflow.ReferenceScripts as ReferenceScripts
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
@@ -34,10 +32,7 @@ main = interruptOnSignal SIGINT =<< launchAff do
     interpretWithConfig
       defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
       testPlutipContracts plutipConfig do
-        ReferenceScripts.suite
-
--- QueryProposals.suite
--- MultipleVotesWithCancel.suite
+        MultipleVotesWithCancel.suite
 
 plutipConfig :: PlutipConfig
 plutipConfig =
@@ -63,7 +58,7 @@ plutipConfig =
   , clusterConfig:
       { slotLength: Seconds 0.1
       , epochSize: Nothing
-      , maxTxSize: Just $ UInt.fromInt 16000
-      , raiseExUnitsToMax: false
+      , maxTxSize: Just $ UInt.fromInt 80000
+      , raiseExUnitsToMax: true
       }
   }

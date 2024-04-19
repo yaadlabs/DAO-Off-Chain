@@ -35,7 +35,7 @@ import Contract.Value
   )
 import Contract.Value (singleton) as Value
 import Dao.Component.Fungible.Params (CreateFungibleParams)
-import Dao.Scripts.Policy (fungiblePolicy)
+import Dao.Scripts.Policy.Fungible (fungiblePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)

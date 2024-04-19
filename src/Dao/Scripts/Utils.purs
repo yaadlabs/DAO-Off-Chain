@@ -1,10 +1,7 @@
 module Dao.Scripts.Utils
   ( mkUnappliedPolicy
-  , mkUnappliedPolicy'
   , mkUnappliedValidator
-  , mkUnappliedValidator'
   , mkScript
-  , mkScript'
   ) where
 
 import Contract.Prelude
@@ -39,13 +36,6 @@ mkUnappliedPolicy filePath param = do
     [ toData param ]
   pure $ PlutusMintingPolicy appliedPolicy
 
-mkUnappliedPolicy' ::
-  forall param. ToData param => String -> param -> Contract MintingPolicy
-mkUnappliedPolicy' scriptString param = do
-  appliedPolicy <- liftContractE $ mkScript' scriptString `applyArgs`
-    [ toData param ]
-  pure $ PlutusMintingPolicy appliedPolicy
-
 mkUnappliedValidator ::
   forall param. ToData param => String -> param -> Contract Validator
 mkUnappliedValidator filePath param = do
@@ -53,21 +43,8 @@ mkUnappliedValidator filePath param = do
     [ toData param ]
   pure $ Validator appliedValidator
 
-
-mkUnappliedValidator' ::
-  forall param. ToData param => String -> param -> Contract Validator
-mkUnappliedValidator' scriptString param = do
-  appliedValidator <- liftContractE $ mkScript' scriptString `applyArgs`
-    [ toData param ]
-  pure $ Validator appliedValidator
-
--- | Makes a PlutusScript from a JSON file containing a single string
 mkScript :: String -> PlutusScript
 mkScript = plutusV2Script <<< lbBytesToByteArray <<< scriptToBytesFromFile
-
--- | Makes a PlutusScript from a string
-mkScript' :: String -> PlutusScript
-mkScript' = plutusV2Script <<< lbBytesToByteArray <<< scriptStringToBytes'
 
 scriptToBytesFromFile :: String -> Bytes
 scriptToBytesFromFile = scriptStringToBytes <<< unsafeReadFile
@@ -81,13 +58,6 @@ scriptStringToBytes scriptString =
     (\_ -> error' $ "Error config validator: fromJsonString: " <> scriptString)
     identity
     (fromJsonString scriptString)
-
-scriptStringToBytes' :: String -> Bytes
-scriptStringToBytes' scriptString =
-  either
-    (\_ -> error' $ "Error config validator: fromJsonString: " <> scriptString)
-    identity
-    (fromJsonString $ "\"" <> scriptString <> "\"")
 
 unsafeReadFile :: String -> String
 unsafeReadFile = unsafePerformEffect <<< NodeFS.readTextFile UTF8

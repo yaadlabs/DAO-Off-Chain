@@ -36,11 +36,10 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Treasury.Params (TreasuryFundParams)
-import Dao.Utils.Contract (ContractResult(ContractResult))
+import Dao.Scripts.Policy.Treasury (unappliedTreasuryPolicyDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
-import Dao.Scripts.Policy (unappliedTreasuryPolicy)
-import Dao.Scripts.Validator (unappliedTreasuryValidator)
 import Data.Array (head)
 import Data.Map as Map
 import JS.BigInt (fromInt)
@@ -49,7 +48,7 @@ import JS.BigInt (fromInt)
 -- | This token acts as a multiplier of a user's voting weight
 createTreasuryFund ::
   TreasuryFundParams ->
-  Contract ContractResult
+  Contract (TransactionHash /\ CurrencySymbol)
 createTreasuryFund params = do
   logInfo' "Entering createTreasuryFund transaction"
 
@@ -66,8 +65,8 @@ createTreasuryFund params = do
     $ head
     $ Map.toUnfoldable userUtxos
 
-  appliedTreasuryPolicy :: MintingPolicy <- unappliedTreasuryPolicy txIn
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryPolicy :: MintingPolicy <- unappliedTreasuryPolicyDebug txIn
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
 
   let
@@ -102,4 +101,4 @@ createTreasuryFund params = do
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure $ ContractResult { txHash, symbol: treasurySymbol, tokenName: adaToken }
+  pure (txHash /\ treasurySymbol)

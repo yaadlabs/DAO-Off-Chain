@@ -4,7 +4,7 @@ import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, unwrap, (#), ($))
 import Contract.Scripts (ScriptHash, validatorHash)
 import Contract.Value (adaSymbol, adaToken)
-import Dao.Scripts.Validator (alwaysSucceedsValidatorScript)
+import Dao.Scripts.Validator.AlwaysSucceeds (alwaysSucceedsValidatorScript)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)

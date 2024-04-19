@@ -30,7 +30,7 @@ import Contract.Value
   , scriptCurrencySymbol
   )
 import Contract.Value (singleton) as Value
-import Dao.Scripts.Policy (voteNftPolicy)
+import Dao.Scripts.Policy.VoteNft (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 

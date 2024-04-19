@@ -4,8 +4,10 @@ Description: Contract for upgrading the dynamic config based on an upgrade propo
 -}
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
+import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
+import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
   ( bind
@@ -14,6 +16,7 @@ import Contract.Prelude
   , one
   , pure
   , unwrap
+  , void
   , (#)
   , ($)
   , (*)
@@ -38,14 +41,12 @@ import Contract.Value
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
-import Dao.Scripts.Policy (upgradePolicy)
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  )
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Policy.Upgrade (upgradePolicy)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
-import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
@@ -64,20 +65,17 @@ upgradeConfig params' =
     let
       validatorConfig = mkValidatorConfig params.configSymbol
         params.configTokenName
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
       validatorConfig
-    appliedConfigValidator :: Validator <- unappliedConfigValidator
+    appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
       validatorConfig
 
     -- We are updating the config datum so we need to spend the UTXO at
     -- the config validator holding the old datum, we will then create
     -- a new UTXO at the config validator holding the new config datum
     -- and also marked by the config NFT
-    configValidatorRef <- retrieveReferenceScript $ unwrap
-      appliedConfigValidator
     configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
-      configValidatorRef
     tallyInfo :: TallyInfo <- referenceTallyUtxo params.tallySymbol
       params.proposalTokenName
       appliedTallyValidator
@@ -85,6 +83,8 @@ upgradeConfig params' =
     -- Make on-chain time range
     timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
     onchainTimeRange <- mkOnchainTimeRange timeRange
+
+    void $ waitNSlots (Natural.fromInt' 10)
 
     let
       -- The new config passed by the user to replace the old one

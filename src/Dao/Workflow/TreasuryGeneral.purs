@@ -4,7 +4,7 @@ Description: Contract for disbursing treasury funds based on a general proposal
 -}
 module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
-import Contract.Address (Address, PaymentPubKeyHash, StakePubKeyHash(..))
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -42,13 +42,10 @@ import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Treasury.Params (TreasuryParams)
 import Dao.Component.Treasury.Query (TreasuryInfo, spendTreasuryUtxo)
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  , unappliedTreasuryValidator
-  )
-import Dao.Utils.Address (addressToPaymentPubKeyHash, addressToStakePubKeyHash)
-import Dao.Utils.Constraints (mustPayToPubKeyStakeAddress)
+import Dao.Scripts.Validator.Config (unappliedConfigValidatorDebug)
+import Dao.Scripts.Validator.Tally (unappliedTallyValidatorDebug)
+import Dao.Scripts.Validator.Treasury (unappliedTreasuryValidatorDebug)
+import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
 import Data.Maybe (Maybe(Nothing, Just))
@@ -72,11 +69,11 @@ treasuryGeneral params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidatorDebug
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: Validator <- unappliedTallyValidatorDebug
     validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: Validator <- unappliedConfigValidatorDebug
     validatorConfig
 
   -- Query the UTXOs
@@ -108,14 +105,10 @@ treasuryGeneral params' = do
     getPaymentAmount tallyDatum
   -- The PKH of the user
   paymentKey :: PaymentPubKeyHash <-
-    liftContractM "Could not convert address to payment key" $
+    liftContractM "Could not convert address to key" $
       addressToPaymentPubKeyHash paymentAddress
 
   let
-    -- The SKH of the user
-    paymentStakeKey :: Maybe StakePubKeyHash 
-    paymentStakeKey = addressToStakePubKeyHash paymentAddress
-
     -- The number of votes cast in favour of the proposal
     votesFor :: BigInt
     votesFor = tallyDatum # unwrap # _.for
@@ -216,7 +209,7 @@ treasuryGeneral params' = do
             Constraints.DatumInline
             amountToSendBackToTreasury
         -- ^ Send the change back to the treasury
-        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey amountToSendToPaymentAddress
+        , Constraints.mustPayToPubKey paymentKey amountToSendToPaymentAddress
         -- ^ Send the Ada to the user's key corresponding to
         -- the payment address specified in the tally datum
         , treasuryInfo.constraints
