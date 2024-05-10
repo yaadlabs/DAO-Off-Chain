@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "triphut-dao-offchain",
+  "name": "@yaadlabs/triphut-dao-offchain",
   "version": "0.1.0",
   "description": "",
   "main": "./output/Dao.Web.Api",
@@ -11,9 +11,9 @@
   "scripts": {
       "test": "spago run --main Test.Plutip",
       "dev": "make run-dev",
-      "build": "make run-build",
+      "build": "spago build",
       "start-runtime": "nix run -L .#dao-offchain-runtime",
-      "bundle": "spago bundle-module --main Dao.Web.Api --to library.js"
+      "publish": "npm run build && npm publish --access public"
   },
   "files": [
     "output",
