@@ -9,7 +9,7 @@ import Ctl.Internal.FromData as Ctl.Internal.FromData
 import Ctl.Internal.Plutus.Types.Address (Address)
 import Ctl.Internal.ToData as Ctl.Internal.ToData
 import Ctl.Internal.Types.PlutusData as Ctl.Internal.Types.PlutusData
-import Ctl.Internal.Types.TokenName (TokenName)
+import Cardano.Types (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype

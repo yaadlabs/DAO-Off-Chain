@@ -15,16 +15,16 @@ import Contract.PlutusData
   )
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
-import Ctl.Internal.Plutus.Types.DataSchema
+import Cardano.Plutus.DataSchema
   ( class HasPlutusSchema
   , type (:+)
   , type (:=)
   , type (@@)
   , I
   , PNil
+  , Z
   )
-import Ctl.Internal.Serialization.Hash (ScriptHash)
-import Ctl.Internal.TypeLevel.Nat (Z)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 
