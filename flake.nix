@@ -10,14 +10,14 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "f2e0f90d269815448f2fb7c6741b9ad25d095d7d";
+      rev = "c73bbfb259272a7d64cc18cfce85334842ea61fd";
     };
 
     nixpkgs.follows = "ctl/nixpkgs";
 
     lbf.url = "github:mlabs-haskell/lambda-buffers";
 
-    dao-onchain.url = "github:yaadlabs/DAO";
+    dao-onchain.url = "github:mlabs-haskell/yaadlabs-DAO?ref=szg251/update-deps";
   };
 
   outputs = { self, nixpkgs, ctl, lbf, ... }@inputs:
