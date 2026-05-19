@@ -99,7 +99,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       BROWSER_RUNTIME: !!process.env.BROWSER_RUNTIME,
-      WEBPACK: true,      
+      WEBPACK: true,
     }),
     new NodePolyfillPlugin(),
     new webpack.LoaderOptionsPlugin({

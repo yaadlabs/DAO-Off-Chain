@@ -1,10 +1,11 @@
 module LambdaBuffers.ApplicationTypes.Proposal (ProposalType(..)) where
 
+import Cardano.FromData (class FromData, fromData)
+import Cardano.Plutus.Types.Address (Address)
+import Cardano.ToData (class ToData, toData)
+import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
 import Contract.Value (CurrencySymbol)
-import Ctl.Internal.FromData as Ctl.Internal.FromData
-import Ctl.Internal.Plutus.Types.Address (Address)
-import Ctl.Internal.ToData as Ctl.Internal.ToData
-import Ctl.Internal.Types.TokenName (TokenName)
+import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Show as Data.Show
@@ -59,30 +60,30 @@ instance Prelude.Eq ProposalType where
         )
     )
 
-instance Ctl.Internal.ToData.ToData ProposalType where
+instance ToData ProposalType where
   toData =
     ( \x0 -> case x0 of
         ProposalType'Upgrade x1 -> LambdaBuffers.Runtime.Plutus.pdConstr
           ((JS.BigInt.fromInt 0))
-          ([ Ctl.Internal.ToData.toData (x1) ])
+          ([ toData (x1) ])
 
         ProposalType'General x2 x3 -> LambdaBuffers.Runtime.Plutus.pdConstr
           ((JS.BigInt.fromInt 1))
-          ( [ Ctl.Internal.ToData.toData (x2)
-            , Ctl.Internal.ToData.toData (x3)
+          ( [ toData (x2)
+            , toData (x3)
             ]
           )
 
         ProposalType'Trip x4 x5 x6 -> LambdaBuffers.Runtime.Plutus.pdConstr
           ((JS.BigInt.fromInt 2))
-          ( [ Ctl.Internal.ToData.toData (x4)
-            , Ctl.Internal.ToData.toData (x5)
-            , Ctl.Internal.ToData.toData (x6)
+          ( [ toData (x4)
+            , toData (x5)
+            , toData (x6)
             ]
           )
     )
 
-instance Ctl.Internal.FromData.FromData ProposalType where
+instance FromData ProposalType where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ( ( \x1 ->
@@ -90,7 +91,7 @@ instance Ctl.Internal.FromData.FromData ProposalType where
                   [ Data.Tuple.Tuple (JS.BigInt.fromInt 0)
                       ( case x2 of
                           [ x3 ] -> Prelude.(>>=)
-                            (Ctl.Internal.FromData.fromData (x3))
+                            (fromData (x3))
                             ((\x4 -> Data.Maybe.Just (ProposalType'Upgrade x4)))
                           x5 -> Data.Maybe.Nothing
                       )
@@ -99,9 +100,9 @@ instance Ctl.Internal.FromData.FromData ProposalType where
                           [ x6
                           , x7
                           ] -> Prelude.(>>=)
-                            (Ctl.Internal.FromData.fromData (x6))
+                            (fromData (x6))
                             ( ( \x8 -> Prelude.(>>=)
-                                  (Ctl.Internal.FromData.fromData (x7))
+                                  (fromData (x7))
                                   ( ( \x9 -> Data.Maybe.Just
                                         (ProposalType'General x8 x9)
                                     )
@@ -116,11 +117,11 @@ instance Ctl.Internal.FromData.FromData ProposalType where
                           , x12
                           , x13
                           ] -> Prelude.(>>=)
-                            (Ctl.Internal.FromData.fromData (x11))
+                            (fromData (x11))
                             ( ( \x14 -> Prelude.(>>=)
-                                  (Ctl.Internal.FromData.fromData (x12))
+                                  (fromData (x12))
                                   ( ( \x15 -> Prelude.(>>=)
-                                        (Ctl.Internal.FromData.fromData (x13))
+                                        (fromData (x13))
                                         ( ( \x16 -> Data.Maybe.Just
                                               (ProposalType'Trip x14 x15 x16)
                                           )

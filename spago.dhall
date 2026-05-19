@@ -1,8 +1,4 @@
-{-
-Welcome to a Spago project!
-You can edit this file as you like.
--}
-{ name = "ctl-package-example"
+{ name = "triphut-dao-offchain"
 , dependencies =
   [ "aeson"
   , "aff"
@@ -51,8 +47,8 @@ You can edit this file as you like.
   [ "src/**/*.purs"
   , "exe/**/*.purs"
   , "test/**/*.purs"
-  , ".spago/lambda-buffers/617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a/runtimes/purescript/lbr-prelude/src/**/*.purs"
-  , ".spago/lambda-buffers/617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a/runtimes/purescript/lbr-plutus/**/*.purs"
+  , ".spago/lambda-buffers/v2.0.0/runtimes/purescript/lbr-prelude/src/**/*.purs"
+  , ".spago/lambda-buffers/v2.0.0/runtimes/purescript/lbr-plutus/src/**/*.purs"
   , "types/LambdaBuffers/**/*.purs"
   , "types/ScriptArguments/**/*.purs"
   ]

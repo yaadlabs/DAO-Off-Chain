@@ -34,8 +34,7 @@ module Dao.Web.Types
   , nullF
   , toJsMaybe
   , toJsMaybe'
-  )
-  where
+  ) where
 
 import Contract.Prelude
 
@@ -53,7 +52,7 @@ import JS.BigInt (BigInt)
 newtype CtlConfig = CtlConfig
   { blockfrostApiKey :: String
   , network :: String
-  } 
+  }
 
 -- | TokenName represented as a wrapped String
 newtype TokenName = TokenName String

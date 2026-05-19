@@ -7,10 +7,6 @@ module Test.Plutip (main) where
 import Contract.Prelude
 
 import Contract.Test.Mote (interpretWithConfig)
-import Contract.Test.Plutip
-  ( PlutipConfig
-  , testPlutipContracts
-  )
 import Contract.Test.Utils (exitCode, interruptOnSignal)
 import Ctl.Internal.Contract.Hooks (emptyHooks)
 import Data.Maybe (Maybe(Just))

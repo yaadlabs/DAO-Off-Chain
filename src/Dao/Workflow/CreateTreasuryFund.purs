@@ -36,11 +36,11 @@ import Contract.Value
 import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Treasury.Params (TreasuryFundParams)
+import Dao.Scripts.Policy (unappliedTreasuryPolicy)
+import Dao.Scripts.Validator (unappliedTreasuryValidator)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
-import Dao.Scripts.Policy (unappliedTreasuryPolicy)
-import Dao.Scripts.Validator (unappliedTreasuryValidator)
 import Data.Array (head)
 import Data.Map as Map
 import JS.BigInt (fromInt)

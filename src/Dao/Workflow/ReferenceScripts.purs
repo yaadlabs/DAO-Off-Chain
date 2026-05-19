@@ -45,8 +45,8 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Dao.Scripts.Policy (unappliedVotePolicy)
 import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , indexValidatorScript
+  ( indexValidatorScript
+  , unappliedConfigValidator
   , unappliedTallyValidator
   , unappliedTreasuryValidator
   , unappliedVoteValidator

@@ -7,36 +7,37 @@ module Dao.Scripts.Validator
   , unappliedTallyValidator
   , unappliedTreasuryValidator
   , unappliedVoteValidator
-  )
-  where
+  ) where
 
+import Cardano.Types (PlutusScript)
 import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Prelude (pure, ($))
-import Contract.Scripts (Validator(Validator))
 import Dao.Scripts.Serialized.Debug as Debug
 import Dao.Scripts.Serialized.Optimised as Optimised
-import Dao.Scripts.Utils (mkUnappliedValidator')
 import Dao.Scripts.Utils (mkScript')
+import Dao.Scripts.Utils (mkUnappliedValidator')
 import ScriptArguments.Types (ValidatorParams)
 
-alwaysFailsValidatorScript :: Contract Validator
-alwaysFailsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysFailsValidator
+alwaysFailsValidatorScript :: Contract PlutusScript
+alwaysFailsValidatorScript = pure $ mkScript'
+  Optimised.alwaysFailsValidator
 
-alwaysSucceedsValidatorScript :: Contract Validator
-alwaysSucceedsValidatorScript = pure $ Validator $ mkScript' Optimised.alwaysSucceedsValidator
+alwaysSucceedsValidatorScript :: Contract PlutusScript
+alwaysSucceedsValidatorScript = pure $ mkScript'
+  Optimised.alwaysSucceedsValidator
 
-unappliedConfigValidator :: ValidatorParams -> Contract Validator
+unappliedConfigValidator :: ValidatorParams -> Contract PlutusScript
 unappliedConfigValidator = mkUnappliedValidator' Optimised.configValidator
 
-indexValidatorScript :: Contract Validator
-indexValidatorScript = pure $ Validator $ mkScript' Optimised.indexValidator
+indexValidatorScript :: Contract PlutusScript
+indexValidatorScript = pure $ mkScript' Optimised.indexValidator
 
-unappliedTallyValidator :: ValidatorParams -> Contract Validator
+unappliedTallyValidator :: ValidatorParams -> Contract PlutusScript
 unappliedTallyValidator = mkUnappliedValidator' Optimised.tallyValidator
 
-unappliedTreasuryValidator :: ValidatorParams -> Contract Validator
+unappliedTreasuryValidator :: ValidatorParams -> Contract PlutusScript
 unappliedTreasuryValidator = mkUnappliedValidator' Debug.treasuryValidator
 
-unappliedVoteValidator :: ValidatorParams -> Contract Validator
+unappliedVoteValidator :: ValidatorParams -> Contract PlutusScript
 unappliedVoteValidator = mkUnappliedValidator' Optimised.voteValidator

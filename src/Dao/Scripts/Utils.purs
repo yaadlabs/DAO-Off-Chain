@@ -9,17 +9,13 @@ module Dao.Scripts.Utils
 
 import Contract.Prelude
 
+import Cardano.Plutus.ApplyArgs (applyArgs)
+import Cardano.Types (PlutusScript, RawBytes)
+import Cardano.Types.PlutusScript (plutusV2Script)
 import Contract.Monad (Contract, liftContractE)
 import Contract.PlutusData (class ToData, toData)
 import Contract.Prim.ByteArray (ByteArray(ByteArray))
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , PlutusScript
-  , Validator(Validator)
-  , applyArgs
-  )
-import Ctl.Internal.Types.Scripts (plutusV2Script)
-import Data.Newtype (unwrap)
+import Data.Newtype (unwrap, wrap)
 import Data.TextEncoder (encodeUtf8)
 import Effect.Exception (throw)
 import Effect.Unsafe (unsafePerformEffect)
@@ -33,33 +29,32 @@ import Node.Encoding (Encoding(UTF8))
 import Node.FS.Sync as NodeFS
 
 mkUnappliedPolicy ::
-  forall param. ToData param => String -> param -> Contract MintingPolicy
+  forall param. ToData param => String -> param -> Contract PlutusScript
 mkUnappliedPolicy filePath param = do
   appliedPolicy <- liftContractE $ mkScript filePath `applyArgs`
     [ toData param ]
-  pure $ PlutusMintingPolicy appliedPolicy
+  pure appliedPolicy
 
 mkUnappliedPolicy' ::
-  forall param. ToData param => String -> param -> Contract MintingPolicy
+  forall param. ToData param => String -> param -> Contract PlutusScript
 mkUnappliedPolicy' scriptString param = do
   appliedPolicy <- liftContractE $ mkScript' scriptString `applyArgs`
     [ toData param ]
-  pure $ PlutusMintingPolicy appliedPolicy
+  pure appliedPolicy
 
 mkUnappliedValidator ::
-  forall param. ToData param => String -> param -> Contract Validator
+  forall param. ToData param => String -> param -> Contract PlutusScript
 mkUnappliedValidator filePath param = do
   appliedValidator <- liftContractE $ mkScript filePath `applyArgs`
     [ toData param ]
-  pure $ Validator appliedValidator
-
+  pure appliedValidator
 
 mkUnappliedValidator' ::
-  forall param. ToData param => String -> param -> Contract Validator
+  forall param. ToData param => String -> param -> Contract PlutusScript
 mkUnappliedValidator' scriptString param = do
   appliedValidator <- liftContractE $ mkScript' scriptString `applyArgs`
     [ toData param ]
-  pure $ Validator appliedValidator
+  pure appliedValidator
 
 -- | Makes a PlutusScript from a JSON file containing a single string
 mkScript :: String -> PlutusScript
@@ -72,8 +67,8 @@ mkScript' = plutusV2Script <<< lbBytesToByteArray <<< scriptStringToBytes'
 scriptToBytesFromFile :: String -> Bytes
 scriptToBytesFromFile = scriptStringToBytes <<< unsafeReadFile
 
-lbBytesToByteArray :: Bytes -> ByteArray
-lbBytesToByteArray (Bytes uint8Array) = ByteArray uint8Array
+lbBytesToByteArray :: Bytes -> RawBytes
+lbBytesToByteArray (Bytes uint8Array) = wrap $ ByteArray uint8Array
 
 scriptStringToBytes :: Json String => String -> Bytes
 scriptStringToBytes scriptString =

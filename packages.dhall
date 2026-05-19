@@ -1,211 +1,12 @@
-{-
-Welcome to your new Dhall package-set!
-
-Below are instructions for how to edit this file for most use
-cases, so that you don't need to know Dhall to use it.
-
-## Warning: Don't Move This Top-Level Comment!
-
-Due to how `dhall format` currently works, this comment's
-instructions cannot appear near corresponding sections below
-because `dhall format` will delete the comment. However,
-it will not delete a top-level comment like this one.
-
-## Use Cases
-
-Most will want to do one or both of these options:
-1. Override/Patch a package's dependency
-2. Add a package not already in the default package set
-
-This file will continue to work whether you use one or both options.
-Instructions for each option are explained below.
-
-### Overriding/Patching a package
-
-Purpose:
-- Change a package's dependency to a newer/older release than the
-    default package set's release
-- Use your own modified version of some dependency that may
-    include new API, changed API, removed API by
-    using your custom git repo of the library rather than
-    the package set's repo
-
-Syntax:
-where `entityName` is one of the following:
-- dependencies
-- repo
-- version
--------------------------------
-let upstream = --
-in  upstream
-  with packageName.entityName = "new value"
--------------------------------
-
-Example:
--------------------------------
-let upstream = --
-in  upstream
-  with halogen.version = "master"
-  with halogen.repo = "https://example.com/path/to/git/repo.git"
-
-  with halogen-vdom.version = "v4.0.0"
--------------------------------
-
-### Additions
-
-Purpose:
-- Add packages that aren't already included in the default package set
-
-Syntax:
-where `<version>` is:
-- a tag (i.e. "v4.0.0")
-- a branch (i.e. "master")
-- commit hash (i.e. "701f3e44aafb1a6459281714858fadf2c4c2a977")
--------------------------------
-let upstream = --
-in  upstream
-  with new-package-name =
-    { dependencies =
-       [ "dependency1"
-       , "dependency2"
-       ]
-    , repo =
-       "https://example.com/path/to/git/repo.git"
-    , version =
-        "<version>"
-    }
--------------------------------
-
-Example:
--------------------------------
-let upstream = --
-in  upstream
-  with benchotron =
-      { dependencies =
-          [ "arrays"
-          , "exists"
-          , "profunctor"
-          , "strings"
-          , "quickcheck"
-          , "lcg"
-          , "transformers"
-          , "foldable-traversable"
-          , "exceptions"
-          , "node-fs"
-          , "node-buffer"
-          , "node-readline"
-          , "datetime"
-          , "now"
-          ]
-      , repo =
-          "https://github.com/hdgarrood/purescript-benchotron.git"
-      , version =
-          "v7.0.0"
-      }
--------------------------------
--}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.4-20230105/packages.dhall
-        sha256:3e9fbc9ba03e9a1fcfd895f65e2d50ee2f5e86c4cd273f3d5c841b655a0e1bda
+    -- https://github.com/mlabs-haskell/purescript-cardano-package-set
+      https://raw.githubusercontent.com/mlabs-haskell/purescript-cardano-package-set/v4.0.1/packages.dhall
+        sha256:738a4057532f0dc140978b02964432d281011514e7ab9482053adaef4e4e7027
 
 let additions =
-      { aeson =
+      { cardano-transaction-lib =
         { dependencies =
-          [ "aff"
-          , "argonaut"
-          , "argonaut-codecs"
-          , "argonaut-core"
-          , "arrays"
-          , "bifunctors"
-          , "const"
-          , "control"
-          , "effect"
-          , "either"
-          , "exceptions"
-          , "foldable-traversable"
-          , "foreign-object"
-          , "integers"
-          , "js-bigints"
-          , "lists"
-          , "maybe"
-          , "mote"
-          , "numbers"
-          , "ordered-collections"
-          , "partial"
-          , "prelude"
-          , "quickcheck"
-          , "record"
-          , "spec"
-          , "strings"
-          , "tuples"
-          , "typelevel"
-          , "typelevel-prelude"
-          , "uint"
-          , "untagged-union"
-          ]
-        , repo = "https://github.com/mlabs-haskell/purescript-aeson.git"
-        , version = "v2.0.0"
-        }
-      , bignumber =
-        { dependencies =
-          [ "console"
-          , "effect"
-          , "either"
-          , "exceptions"
-          , "functions"
-          , "integers"
-          , "partial"
-          , "prelude"
-          , "tuples"
-          ]
-        , repo = "https://github.com/mlabs-haskell/purescript-bignumber"
-        , version = "760d11b41ece31b8cdd3c53349c5c2fd48d3ff89"
-        }
-      , properties =
-        { dependencies = [ "prelude", "console" ]
-        , repo = "https://github.com/Risto-Stevcev/purescript-properties.git"
-        , version = "v0.2.0"
-        }
-      , lattice =
-        { dependencies = [ "prelude", "console", "properties" ]
-        , repo = "https://github.com/Risto-Stevcev/purescript-lattice.git"
-        , version = "v0.3.0"
-        }
-      , mote =
-        { dependencies = [ "these", "transformers", "arrays" ]
-        , repo = "https://github.com/garyb/purescript-mote"
-        , version = "v1.1.0"
-        }
-      , toppokki =
-        { dependencies =
-          [ "prelude"
-          , "record"
-          , "functions"
-          , "node-http"
-          , "aff-promise"
-          , "node-buffer"
-          , "node-fs-aff"
-          ]
-        , repo = "https://github.com/mlabs-haskell/purescript-toppokki"
-        , version = "5992e93396a734c980ef61c74df5b6ab46108920"
-        }
-      , noble-secp256k1 =
-        { dependencies =
-          [ "aff"
-          , "aff-promise"
-          , "effect"
-          , "prelude"
-          , "spec"
-          , "tuples"
-          , "unsafe-coerce"
-          ]
-        , repo =
-            "https://github.com/mlabs-haskell/purescript-noble-secp256k1.git"
-        , version = "a3c0f67e9fdb0086016d7aebfad35d09a08b4ecd"
-        }
-      , cardano-transaction-lib =
-        { dependencies =
-           [ "aeson"
+          [ "aeson"
           , "aff"
           , "aff-promise"
           , "aff-retry"
@@ -213,15 +14,28 @@ let additions =
           , "ansi"
           , "argonaut"
           , "argonaut-codecs"
-          , "arraybuffer-types"
           , "arrays"
           , "avar"
           , "bifunctors"
-          , "js-bigints"
-          , "bignumber"
+          , "bytearrays"
+          , "cardano-blockfrost-provider"
+          , "cardano-data-lite"
+          , "cardano-hd-wallet"
+          , "cardano-key-wallet"
+          , "cardano-kupmios-provider"
+          , "cardano-message-signing"
+          , "cardano-ogmios-mempool"
+          , "cardano-plutus-data-schema"
+          , "cardano-provider"
+          , "cardano-transaction-balancer"
+          , "cardano-transaction-builder"
+          , "cardano-types"
           , "checked-exceptions"
           , "cip30"
+          , "cip30-mock"
           , "cip30-typesafe"
+          , "cip95"
+          , "cip95-typesafe"
           , "console"
           , "control"
           , "crypto"
@@ -229,26 +43,24 @@ let additions =
           , "debug"
           , "effect"
           , "either"
-          , "encoding"
           , "enums"
           , "exceptions"
           , "foldable-traversable"
           , "foreign"
           , "foreign-object"
-          , "formatters"
           , "functions"
-          , "gen"
-          , "heterogeneous"
           , "http-methods"
           , "identity"
           , "integers"
+          , "js-bigints"
           , "js-date"
           , "lattice"
           , "lists"
+          , "literals"
           , "maybe"
-          , "media-types"
           , "monad-logger"
           , "mote"
+          , "mote-testplan"
           , "newtype"
           , "noble-secp256k1"
           , "node-buffer"
@@ -259,126 +71,87 @@ let additions =
           , "node-process"
           , "node-readline"
           , "node-streams"
+          , "node-streams-aff"
           , "nonempty"
           , "now"
+          , "nullable"
           , "numbers"
           , "optparse"
           , "ordered-collections"
           , "orders"
           , "parallel"
+          , "parsing"
           , "partial"
+          , "plutus-types"
           , "posix-types"
           , "prelude"
           , "profunctor"
           , "profunctor-lenses"
-          , "toppokki"
           , "quickcheck"
           , "quickcheck-combinators"
-          , "quickcheck-laws"
           , "random"
-          , "rationals"
           , "record"
           , "refs"
           , "safe-coerce"
+          , "safely"
           , "spec"
           , "spec-quickcheck"
           , "strings"
           , "stringutils"
           , "tailrec"
-          , "these"
+          , "toppokki"
           , "transformers"
           , "tuples"
-          , "typelevel"
           , "typelevel-prelude"
           , "uint"
           , "unfoldable"
-          , "untagged-union"
+          , "unsafe-coerce"
+          , "uplc-apply-args"
           , "variant"
           , "web-html"
           , "web-storage"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "f2e0f90d269815448f2fb7c6741b9ad25d095d7d"
-        }
-      , js-bigints =
-        { dependencies = [ "integers", "maybe", "prelude" ]
-        , repo = "https://github.com/purescript-contrib/purescript-js-bigints"
-        , version = "36a7d8ac75a7230043ae511f3145f9ed130954a9"
-        }
-
-      , cip30 =
-        { dependencies =
-          [ "aff"
-          , "aff-promise"
-          , "arrays"
-          , "console"
-          , "effect"
-          , "literals"
-          , "maybe"
-          , "newtype"
-          , "nullable"
-          , "prelude"
-          , "untagged-union"
-          ]
-        , repo = "https://github.com/mlabs-haskell/purescript-cip30"
-        , version = "8f1b34b48825fcec5e9c67f33e255770b1e0bc45"
-        }
-      , cip30-typesafe =
-        { dependencies =
-          [ "aff"
-          , "bifunctors"
-          , "cip30"
-          , "control"
-          , "effect"
-          , "either"
-          , "exceptions"
-          , "maybe"
-          , "prelude"
-          , "spec"
-          , "transformers"
-          , "variant"
-          ]
-        , repo = "https://github.com/mlabs-haskell/purescript-cip30-typesafe"
-        , version = "d72e51fbc0255eb3246c9132d295de7f65e16a99"
+        , version = "3a515ad3c3ab9a9fb876602289084afd77279a5c"
         }
       , lambda-buffers =
         { dependencies = 
-            [ "aeson"
-            , "aff"
-            , "arraybuffer"
-            , "arraybuffer-types"
-            , "arrays"
-            , "b64"
-            , "effect"
-            , "either"
-            , "encoding"
-            , "enums"
-            , "foldable-traversable"
-            , "foreign-object"
-            , "gen"
-            , "js-bigints"
-            , "maybe"
-            , "newtype"
-            , "ordered-collections"
-            , "cardano-transaction-lib"
-            , "control"
-            , "effect"
-            , "foldable-traversable"
-            , "maybe"
-            , "newtype"
-            , "partial"
-            , "prelude"
-            , "quickcheck"
-            , "quickcheck-utf8"
-            , "spec"
-            , "strings"
-            , "tuples"
-            , "uint"
-            , "unfoldable"
-            ]
-        , repo = "https://github.com/mlabs-haskell/lambda-buffers.git"
-        , version = "617ac9202cd9e3bc67ff85bdc3d7e2fd6ec2d13a"
-        }
+          [ "aeson"
+          , "aff"
+          , "arraybuffer"
+          , "arraybuffer-types"
+          , "arrays"
+          , "b64"
+          , "effect"
+          , "either"
+          , "encoding"
+          , "enums"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "gen"
+          , "js-bigints"
+          , "maybe"
+          , "newtype"
+          , "ordered-collections"
+          , "cardano-transaction-lib"
+          , "control"
+          , "effect"
+          , "foldable-traversable"
+          , "maybe"
+          , "newtype"
+          , "partial"
+          , "prelude"
+          , "quickcheck"
+          , "quickcheck-utf8"
+          , "spec"
+          , "strings"
+          , "tuples"
+          , "uint"
+          , "unfoldable"
+          ]
+      , repo = "https://github.com/mlabs-haskell/lambda-buffers.git"
+      , version = "v2.0.0"
       }
+    }
 
-in  upstream // additions
+in (upstream // additions)

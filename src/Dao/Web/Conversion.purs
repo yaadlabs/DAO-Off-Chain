@@ -38,13 +38,6 @@ import Contract.Value
   , mkTokenName
   ) as Ctl
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
-import Ctl.Internal.Serialization.Hash (ScriptHash) as Ctl
-import Ctl.Internal.Serialization.Hash
-  ( ed25519KeyHashFromBytes
-  , ed25519KeyHashToBytes
-  , scriptHashFromBytes
-  , scriptHashToBytes
-  )
 import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
   , UpgradeConfigParams(UpgradeConfigParams)
@@ -60,8 +53,8 @@ import Dao.Component.Proposal.Query
   ( QueryResult(QueryResult)
   ) as DaoApi
 import Dao.Component.Treasury.Params
-  ( TreasuryParams(TreasuryParams)
-  , TreasuryFundParams
+  ( TreasuryFundParams
+  , TreasuryParams(TreasuryParams)
   ) as DaoApi
 import Dao.Component.Vote.Params
   ( CancelVoteParams(CancelVoteParams)

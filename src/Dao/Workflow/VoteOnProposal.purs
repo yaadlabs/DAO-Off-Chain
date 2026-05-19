@@ -11,7 +11,6 @@ import Contract.Address (Address)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedM)
-import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prelude
   ( type (/\)

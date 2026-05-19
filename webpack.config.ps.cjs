@@ -47,21 +47,21 @@ module.exports = {
         test: /\.purs$/,
         use: [
           {
-            loader: 'purs-loader',
+            loader: "purs-loader",
             options: {
               src: [
-                path.join('src', '**', '*.purs'),
-                path.join('types', '**', '*.purs'),
+                path.join("src", "**", "*.purs"),
+                path.join("types", "**", "*.purs"),
               ],
               bundle: false,
-              psc: 'psa',
+              psc: "psa",
               pscIde: false,
-              spago: true
-            }
-          }
-        ]
+              spago: true,
+            },
+          },
+        ],
       },
-    ]
+    ],
   },
 
   resolveLoader: {
@@ -90,7 +90,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       BROWSER_RUNTIME: !!process.env.BROWSER_RUNTIME,
-      WEBPACK: true,      
+      WEBPACK: true,
     }),
     new NodePolyfillPlugin(),
     new webpack.LoaderOptionsPlugin({

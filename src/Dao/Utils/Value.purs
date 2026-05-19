@@ -7,10 +7,12 @@ module Dao.Utils.Value
   , valueSubtraction
   , normaliseValue
   , allPositive
-  , countOfTokenInValue
   ) where
 
-import Contract.AssocMap as AssocMap
+import Cardano.Types (AssetName, BigNum, ScriptHash, Value)
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.BigNum (sub, zero) as BigNum
+import Cardano.Types.Value (flatten, isPositive, unflatten, unionWith) as Value
 import Contract.Prelude
   ( class Foldable
   , type (/\)
@@ -28,49 +30,35 @@ import Contract.Prelude
   , (>=)
   )
 import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , flattenValue
-  , getValue
-  , getValue
-  , singleton
-  , unionWith
-  )
-import Contract.Value
-  ( mkTokenName
-  ) as Value
 import Data.Array (filter) as Array
-import Data.Maybe (Maybe, fromMaybe)
+import Data.Maybe (Maybe, fromJust, fromMaybe)
+import Data.Tuple (Tuple(Tuple))
 import JS.BigInt (BigInt)
+import Partial.Unsafe (unsafePartial)
 
-mkTokenName :: String -> Maybe TokenName
-mkTokenName = Value.mkTokenName <=< byteArrayFromAscii
+mkTokenName :: String -> Maybe AssetName
+mkTokenName = mkAssetName <=< byteArrayFromAscii
 
 allPositive :: Value -> Boolean
-allPositive = all (all (_ >= zero)) <<< getValue
+allPositive = Value.isPositive
 
-valueSubtraction :: Value -> Value -> Value
-valueSubtraction = unionWith sub
+valueSubtraction :: Value -> Value -> Maybe Value
+valueSubtraction = Value.unionWith BigNum.sub
 
 normaliseValue :: Value -> Value
-normaliseValue = go $ Array.filter \(_ /\ _ /\ amount) -> amount /= zero
-  where
-  go op = unflattenValue <<< op <<< flattenValue
+normaliseValue =
+  unsafePartial fromJust
+    <<< Value.unflatten
+    <<< Array.filter (\(Tuple _ amount) -> amount /= BigNum.zero)
+    <<< Value.flatten
 
-unflattenValue ::
-  forall f.
-  Foldable f =>
-  f (CurrencySymbol /\ TokenName /\ BigInt) ->
-  Value
-unflattenValue = foldMap $
-  \(symbol /\ tokenName /\ amount) -> singleton symbol tokenName amount
-
-countOfTokenInValue :: CurrencySymbol -> Value -> BigInt
-countOfTokenInValue symbol value =
+-- FIXME
+{-
+countOfTokenInValue :: ScriptHash -> Value -> BigNum
+countOfTokenInValue symbol value
   let
     maybeTotal = sum <$> AssocMap.elems <$> AssocMap.lookup symbol
       (getValue value)
   in
     fromMaybe zero maybeTotal
+-}

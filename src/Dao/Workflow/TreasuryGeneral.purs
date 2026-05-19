@@ -113,7 +113,7 @@ treasuryGeneral params' = do
 
   let
     -- The SKH of the user
-    paymentStakeKey :: Maybe StakePubKeyHash 
+    paymentStakeKey :: Maybe StakePubKeyHash
     paymentStakeKey = addressToStakePubKeyHash paymentAddress
 
     -- The number of votes cast in favour of the proposal
@@ -216,7 +216,8 @@ treasuryGeneral params' = do
             Constraints.DatumInline
             amountToSendBackToTreasury
         -- ^ Send the change back to the treasury
-        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey amountToSendToPaymentAddress
+        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey
+            amountToSendToPaymentAddress
         -- ^ Send the Ada to the user's key corresponding to
         -- the payment address specified in the tally datum
         , treasuryInfo.constraints

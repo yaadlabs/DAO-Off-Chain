@@ -32,11 +32,11 @@ import Contract.Prelude
   , (*)
   , (+)
   , (/)
+  , (/=)
   , (/\)
+  , (<$>)
   , (<<<)
   , (<>)
-  , (<$>)
-  , (/=)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicyHash, Validator)
@@ -135,10 +135,10 @@ mkVoteUtxoConstraintsAndLookups ::
   InputWithScriptRef ->
   (TransactionInput /\ TransactionOutputWithRefScript) ->
   Contract
-    ( Maybe 
-      ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
-          Constraints.TxConstraints
-      )
+    ( Maybe
+        ( (VoteDirection /\ BigInt) /\ Lookups.ScriptLookups /\
+            Constraints.TxConstraints
+        )
     )
 mkVoteUtxoConstraintsAndLookups
   voteNftSymbol
@@ -167,7 +167,8 @@ mkVoteUtxoConstraintsAndLookups
       voteProposalTokenName = voteDatum # unwrap # _.proposalTokenName
 
     -- Only include votes for the specified proposal
-    if (voteProposalTokenName /= proposalTokenName) then pure Nothing else do
+    if (voteProposalTokenName /= proposalTokenName) then pure Nothing
+    else do
 
       voteOwnerKey :: PaymentPubKeyHash <-
         liftContractM "Cannot get pkh" $ addressToPaymentPubKeyHash $ voteDatum
@@ -200,13 +201,15 @@ mkVoteUtxoConstraintsAndLookups
         voteNftToken = singleton voteNftSymbol voteNftTokenName one
 
         fungibleToken :: Value
-        fungibleToken = singleton fungibleSymbol fungibleTokenName fungibleAmount
+        fungibleToken = singleton fungibleSymbol fungibleTokenName
+          fungibleAmount
 
         burnVoteRedeemer :: Redeemer
         burnVoteRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Burn
 
         lookups' :: Lookups.ScriptLookups
         lookups' = -- mempty
+
           mconcat
             [ Lookups.unspentOutputs $ Map.singleton txIn txOut
             ]

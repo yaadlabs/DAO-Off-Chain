@@ -10,10 +10,6 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.Value (CurrencySymbol, TokenName, getValue)
-import Ctl.Internal.Plutus.Types.AssocMap
-  ( Map(Map)
-  , lookup
-  ) as Plutus.Map
 import Dao.Utils.Datum (extractOutputDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))

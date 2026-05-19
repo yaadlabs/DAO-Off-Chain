@@ -41,8 +41,8 @@ import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
 import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , indexValidatorScript
+  ( indexValidatorScript
+  , unappliedConfigValidator
   )
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)

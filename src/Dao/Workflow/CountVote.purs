@@ -4,15 +4,12 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
-
 import Prelude
-import Contract.Prelude (show)
 
 import Contract.Address (Address, scriptHashAddress)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, throwContractError)
-import Contract.Numeric.Natural as Natural
 import Contract.PlutusData
   ( Datum(Datum)
   , toData
@@ -26,17 +23,18 @@ import Contract.Prelude
   , mconcat
   , otherwise
   , pure
+  , show
   , unwrap
   , void
-  , show
   , (#)
   , ($)
   , (*)
   , (+)
   , (/\)
-  , (==)
   , (<>)
+  , (==)
   )
+import Contract.Prelude (show)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy(PlutusMintingPolicy)

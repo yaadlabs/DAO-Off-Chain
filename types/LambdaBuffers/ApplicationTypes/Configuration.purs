@@ -1,11 +1,13 @@
 module LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(..)) where
 
+import Cardano.FromData (class FromData, fromData)
+import Cardano.Plutus.Types.Address (Address)
+import Cardano.ToData (class ToData, toData)
+import Cardano.Types (ScriptHash)
+import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
 import Contract.Value (CurrencySymbol)
-import Ctl.Internal.FromData as Ctl.Internal.FromData
-import Ctl.Internal.Serialization.Hash (ScriptHash)
-import Ctl.Internal.ToData as Ctl.Internal.ToData
-import Ctl.Internal.Types.PlutusData as Ctl.Internal.Types.PlutusData
-import Ctl.Internal.Types.TokenName (TokenName)
+import Contract.Value (CurrencySymbol)
+import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype
@@ -257,52 +259,52 @@ instance Prelude.Eq DynamicConfigDatum where
         )
     )
 
-instance Ctl.Internal.ToData.ToData DynamicConfigDatum where
+instance ToData DynamicConfigDatum where
   toData =
-    ( \x0 -> Ctl.Internal.Types.PlutusData.List
-        ( [ Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).tallyValidator)
-          , Ctl.Internal.ToData.toData
+    ( \x0 -> PlutusData.List
+        ( [ toData ((Data.Newtype.unwrap x0).tallyValidator)
+          , toData
               ((Data.Newtype.unwrap x0).treasuryValidator)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).configurationValidator)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).voteValidator)
-          , Ctl.Internal.ToData.toData
+          , toData ((Data.Newtype.unwrap x0).voteValidator)
+          , toData
               ((Data.Newtype.unwrap x0).upgradeMajorityPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).upgradeRelativeMajorityPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).generalMajorityPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).generalRelativeMajorityPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).tripMajorityPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).tripRelativeMajorityPercent)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).totalVotes)
-          , Ctl.Internal.ToData.toData
+          , toData ((Data.Newtype.unwrap x0).totalVotes)
+          , toData
               ((Data.Newtype.unwrap x0).maxGeneralDisbursement)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).maxTripDisbursement)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).agentDisbursementPercent)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).proposalTallyEndOffset)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).tallyNft)
-          , Ctl.Internal.ToData.toData
+          , toData ((Data.Newtype.unwrap x0).tallyNft)
+          , toData
               ((Data.Newtype.unwrap x0).voteCurrencySymbol)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).voteTokenName)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).voteNft)
-          , Ctl.Internal.ToData.toData
+          , toData ((Data.Newtype.unwrap x0).voteTokenName)
+          , toData ((Data.Newtype.unwrap x0).voteNft)
+          , toData
               ((Data.Newtype.unwrap x0).voteFungibleCurrencySymbol)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).voteFungibleTokenName)
-          , Ctl.Internal.ToData.toData
+          , toData
               ((Data.Newtype.unwrap x0).fungibleVotePercent)
           ]
         )
     )
 
-instance Ctl.Internal.FromData.FromData DynamicConfigDatum where
+instance FromData DynamicConfigDatum where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ((\x1 -> (\x2 -> Data.Maybe.Nothing)))
@@ -329,106 +331,106 @@ instance Ctl.Internal.FromData.FromData DynamicConfigDatum where
               , x23
               , x24
               , x25
-              ] -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x4))
-                ( ( \x26 -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x5))
+              ] -> Prelude.(>>=) (fromData (x4))
+                ( ( \x26 -> Prelude.(>>=) (fromData (x5))
                       ( ( \x27 -> Prelude.(>>=)
-                            (Ctl.Internal.FromData.fromData (x6))
+                            (fromData (x6))
                             ( ( \x28 -> Prelude.(>>=)
-                                  (Ctl.Internal.FromData.fromData (x7))
+                                  (fromData (x7))
                                   ( ( \x29 -> Prelude.(>>=)
-                                        (Ctl.Internal.FromData.fromData (x8))
+                                        (fromData (x8))
                                         ( ( \x30 -> Prelude.(>>=)
-                                              ( Ctl.Internal.FromData.fromData
+                                              ( fromData
                                                   (x9)
                                               )
                                               ( ( \x31 -> Prelude.(>>=)
-                                                    ( Ctl.Internal.FromData.fromData
+                                                    ( fromData
                                                         (x10)
                                                     )
                                                     ( ( \x32 -> Prelude.(>>=)
-                                                          ( Ctl.Internal.FromData.fromData
+                                                          ( fromData
                                                               (x11)
                                                           )
                                                           ( ( \x33 ->
                                                                 Prelude.(>>=)
-                                                                  ( Ctl.Internal.FromData.fromData
+                                                                  ( fromData
                                                                       (x12)
                                                                   )
                                                                   ( ( \x34 ->
                                                                         Prelude.(>>=)
-                                                                          ( Ctl.Internal.FromData.fromData
+                                                                          ( fromData
                                                                               ( x13
                                                                               )
                                                                           )
                                                                           ( ( \x35 ->
                                                                                 Prelude.(>>=)
-                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                  ( fromData
                                                                                       ( x14
                                                                                       )
                                                                                   )
                                                                                   ( ( \x36 ->
                                                                                         Prelude.(>>=)
-                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                          ( fromData
                                                                                               ( x15
                                                                                               )
                                                                                           )
                                                                                           ( ( \x37 ->
                                                                                                 Prelude.(>>=)
-                                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                                  ( fromData
                                                                                                       ( x16
                                                                                                       )
                                                                                                   )
                                                                                                   ( ( \x38 ->
                                                                                                         Prelude.(>>=)
-                                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                                          ( fromData
                                                                                                               ( x17
                                                                                                               )
                                                                                                           )
                                                                                                           ( ( \x39 ->
                                                                                                                 Prelude.(>>=)
-                                                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                                                  ( fromData
                                                                                                                       ( x18
                                                                                                                       )
                                                                                                                   )
                                                                                                                   ( ( \x40 ->
                                                                                                                         Prelude.(>>=)
-                                                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                                                          ( fromData
                                                                                                                               ( x19
                                                                                                                               )
                                                                                                                           )
                                                                                                                           ( ( \x41 ->
                                                                                                                                 Prelude.(>>=)
-                                                                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                                                                  ( fromData
                                                                                                                                       ( x20
                                                                                                                                       )
                                                                                                                                   )
                                                                                                                                   ( ( \x42 ->
                                                                                                                                         Prelude.(>>=)
-                                                                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                                                                          ( fromData
                                                                                                                                               ( x21
                                                                                                                                               )
                                                                                                                                           )
                                                                                                                                           ( ( \x43 ->
                                                                                                                                                 Prelude.(>>=)
-                                                                                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                                                                                  ( fromData
                                                                                                                                                       ( x22
                                                                                                                                                       )
                                                                                                                                                   )
                                                                                                                                                   ( ( \x44 ->
                                                                                                                                                         Prelude.(>>=)
-                                                                                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                                                                                          ( fromData
                                                                                                                                                               ( x23
                                                                                                                                                               )
                                                                                                                                                           )
                                                                                                                                                           ( ( \x45 ->
                                                                                                                                                                 Prelude.(>>=)
-                                                                                                                                                                  ( Ctl.Internal.FromData.fromData
+                                                                                                                                                                  ( fromData
                                                                                                                                                                       ( x24
                                                                                                                                                                       )
                                                                                                                                                                   )
                                                                                                                                                                   ( ( \x46 ->
                                                                                                                                                                         Prelude.(>>=)
-                                                                                                                                                                          ( Ctl.Internal.FromData.fromData
+                                                                                                                                                                          ( fromData
                                                                                                                                                                               ( x25
                                                                                                                                                                               )
                                                                                                                                                                           )

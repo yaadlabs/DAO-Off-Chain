@@ -1,7 +1,11 @@
 module LambdaBuffers.ApplicationTypes.Index (IndexDatum(..)) where
 
-import Ctl.Internal.FromData as Ctl.Internal.FromData
-import Ctl.Internal.ToData as Ctl.Internal.ToData
+import Cardano.FromData (class FromData, fromData)
+import Cardano.Plutus.Types.Address (Address)
+import Cardano.ToData (class ToData, toData)
+import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
+import Contract.Value (CurrencySymbol)
+import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype
@@ -25,11 +29,11 @@ instance Prelude.Eq IndexDatum where
         )
     )
 
-instance Ctl.Internal.ToData.ToData IndexDatum where
-  toData = (\x0 -> Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).index))
+instance ToData IndexDatum where
+  toData = (\x0 -> toData ((Data.Newtype.unwrap x0).index))
 
-instance Ctl.Internal.FromData.FromData IndexDatum where
+instance FromData IndexDatum where
   fromData =
-    ( \x0 -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x0))
+    ( \x0 -> Prelude.(>>=) (fromData (x0))
         ((\x1 -> Data.Maybe.Just (IndexDatum { index: x1 })))
     )

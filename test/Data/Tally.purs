@@ -4,7 +4,7 @@ module Test.Data.Tally
   , sampleUpgradeConfigProposalTallyStateDatum
   ) where
 
-import Contract.Address (Address)
+import Cardano.Plutus.Types.Address (Address)
 import Contract.Monad (Contract)
 import Contract.Prelude (bind, pure, ($))
 import Contract.Prelude ((*), (+))

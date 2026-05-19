@@ -9,10 +9,10 @@ import Data.Maybe (Maybe(Just, Nothing))
 
 -- | Borrowed from Ctl.Examples.Helpers
 mustPayToPubKeyStakeAddress ::
-    PaymentPubKeyHash
-  -> Maybe StakePubKeyHash
-  -> Value
-  -> Constraints.TxConstraints
+  PaymentPubKeyHash ->
+  Maybe StakePubKeyHash ->
+  Value ->
+  Constraints.TxConstraints
 mustPayToPubKeyStakeAddress pkh Nothing =
   Constraints.mustPayToPubKey pkh
 mustPayToPubKeyStakeAddress pkh (Just skh) =

@@ -15,7 +15,7 @@ import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Transaction (TransactionInput)
 import Dao.Scripts.Serialized.Debug as Debug
 import Dao.Scripts.Serialized.Optimised as Optimised
-import Dao.Scripts.Utils (mkUnappliedPolicy', mkScript')
+import Dao.Scripts.Utils (mkScript', mkUnappliedPolicy')
 import ScriptArguments.Types
   ( ConfigPolicyParams
   , IndexPolicyParams

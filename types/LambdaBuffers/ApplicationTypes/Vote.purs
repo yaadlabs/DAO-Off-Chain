@@ -5,11 +5,11 @@ module LambdaBuffers.ApplicationTypes.Vote
   , VoteMinterActionRedeemer(..)
   ) where
 
-import Ctl.Internal.FromData as Ctl.Internal.FromData
-import Ctl.Internal.Plutus.Types.Address (Address)
-import Ctl.Internal.ToData as Ctl.Internal.ToData
-import Ctl.Internal.Types.PlutusData as Ctl.Internal.Types.PlutusData
-import Ctl.Internal.Types.TokenName (TokenName)
+import Cardano.FromData (class FromData, fromData)
+import Cardano.Plutus.Types.Address (Address)
+import Cardano.ToData (class ToData, toData)
+import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
+import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype
@@ -71,17 +71,17 @@ instance Prelude.Eq VoteDirection where
         )
     )
 
-instance Ctl.Internal.ToData.ToData VoteDirection where
+instance ToData VoteDirection where
   toData =
     ( \x0 -> case x0 of
-        VoteDirection'For -> Ctl.Internal.Types.PlutusData.Integer
+        VoteDirection'For -> PlutusData.Integer
           ((JS.BigInt.fromInt 0))
 
-        VoteDirection'Against -> Ctl.Internal.Types.PlutusData.Integer
+        VoteDirection'Against -> PlutusData.Integer
           ((JS.BigInt.fromInt 1))
     )
 
-instance Ctl.Internal.FromData.FromData VoteDirection where
+instance FromData VoteDirection where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ( ( \x1 ->
@@ -129,19 +129,19 @@ instance Prelude.Eq VoteDatum where
         )
     )
 
-instance Ctl.Internal.ToData.ToData VoteDatum where
+instance ToData VoteDatum where
   toData =
-    ( \x0 -> Ctl.Internal.Types.PlutusData.List
-        ( [ Ctl.Internal.ToData.toData
+    ( \x0 -> PlutusData.List
+        ( [ toData
               ((Data.Newtype.unwrap x0).proposalTokenName)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).direction)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).voteOwner)
-          , Ctl.Internal.ToData.toData ((Data.Newtype.unwrap x0).returnAda)
+          , toData ((Data.Newtype.unwrap x0).direction)
+          , toData ((Data.Newtype.unwrap x0).voteOwner)
+          , toData ((Data.Newtype.unwrap x0).returnAda)
           ]
         )
     )
 
-instance Ctl.Internal.FromData.FromData VoteDatum where
+instance FromData VoteDatum where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ((\x1 -> (\x2 -> Data.Maybe.Nothing)))
@@ -150,12 +150,12 @@ instance Ctl.Internal.FromData.FromData VoteDatum where
               , x5
               , x6
               , x7
-              ] -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x4))
-                ( ( \x8 -> Prelude.(>>=) (Ctl.Internal.FromData.fromData (x5))
+              ] -> Prelude.(>>=) (fromData (x4))
+                ( ( \x8 -> Prelude.(>>=) (fromData (x5))
                       ( ( \x9 -> Prelude.(>>=)
-                            (Ctl.Internal.FromData.fromData (x6))
+                            (fromData (x6))
                             ( ( \x10 -> Prelude.(>>=)
-                                  (Ctl.Internal.FromData.fromData (x7))
+                                  (fromData (x7))
                                   ( ( \x11 -> Data.Maybe.Just
                                         ( VoteDatum
                                             { proposalTokenName: x8
@@ -197,17 +197,17 @@ instance Prelude.Eq VoteMinterActionRedeemer where
         )
     )
 
-instance Ctl.Internal.ToData.ToData VoteMinterActionRedeemer where
+instance ToData VoteMinterActionRedeemer where
   toData =
     ( \x0 -> case x0 of
-        VoteMinterActionRedeemer'Mint -> Ctl.Internal.Types.PlutusData.Integer
+        VoteMinterActionRedeemer'Mint -> PlutusData.Integer
           ((JS.BigInt.fromInt 0))
 
-        VoteMinterActionRedeemer'Burn -> Ctl.Internal.Types.PlutusData.Integer
+        VoteMinterActionRedeemer'Burn -> PlutusData.Integer
           ((JS.BigInt.fromInt 1))
     )
 
-instance Ctl.Internal.FromData.FromData VoteMinterActionRedeemer where
+instance FromData VoteMinterActionRedeemer where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ( ( \x1 ->
@@ -249,17 +249,17 @@ instance Prelude.Eq VoteActionRedeemer where
         )
     )
 
-instance Ctl.Internal.ToData.ToData VoteActionRedeemer where
+instance ToData VoteActionRedeemer where
   toData =
     ( \x0 -> case x0 of
-        VoteActionRedeemer'Count -> Ctl.Internal.Types.PlutusData.Integer
+        VoteActionRedeemer'Count -> PlutusData.Integer
           ((JS.BigInt.fromInt 0))
 
-        VoteActionRedeemer'Cancel -> Ctl.Internal.Types.PlutusData.Integer
+        VoteActionRedeemer'Cancel -> PlutusData.Integer
           ((JS.BigInt.fromInt 1))
     )
 
-instance Ctl.Internal.FromData.FromData VoteActionRedeemer where
+instance FromData VoteActionRedeemer where
   fromData =
     ( \x0 -> LambdaBuffers.Runtime.Plutus.casePlutusData
         ( ( \x1 ->
