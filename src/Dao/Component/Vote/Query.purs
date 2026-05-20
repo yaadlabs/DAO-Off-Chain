@@ -11,28 +11,70 @@ module Dao.Component.Vote.Query
   ) where
 
 import Cardano.ToData (toData)
-import Cardano.Types (Asset(Asset), AssetName, BigNum, PlutusScript, RedeemerDatum(RedeemerDatum), ScriptHash, TransactionInput, TransactionOutput(TransactionOutput))
+import Cardano.Types
+  ( Asset(Asset)
+  , AssetName
+  , BigNum
+  , PlutusScript
+  , RedeemerDatum(RedeemerDatum)
+  , ScriptHash
+  , TransactionInput
+  , TransactionOutput(TransactionOutput)
+  )
 import Cardano.Types.BigNum (fromBigInt, one, toBigInt) as BigNum
 import Cardano.Types.Int (negate, one) as CTInt
 import Cardano.Types.Value (singleton) as Value
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.Prelude (type (/\), bind, discard, mconcat, negate, one, pure, traverse, unwrap, (#), ($), (*), (+), (/), (/=), (/\), (<$>), (<<<), (<>))
+import Contract.Prelude
+  ( type (/\)
+  , bind
+  , discard
+  , mconcat
+  , negate
+  , one
+  , pure
+  , traverse
+  , unwrap
+  , (#)
+  , ($)
+  , (*)
+  , (+)
+  , (/)
+  , (/=)
+  , (/\)
+  , (<$>)
+  , (<<<)
+  , (<>)
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints (InputWithScriptRef(SpendInput, RefInput))
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value, singleton, valueOf)
-import Dao.Utils.Address (addressToPaymentPubKeyHash, plutusAddressToPaymentPubKeyHash)
+import Dao.Utils.Address
+  ( addressToPaymentPubKeyHash
+  , plutusAddressToPaymentPubKeyHash
+  )
 import Dao.Utils.Datum (extractOutputDatum)
-import Dao.Utils.Query (SpendPubKeyResult, UtxoInfo, findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum, hasTokenWithSymbol)
+import Dao.Utils.Query
+  ( SpendPubKeyResult
+  , UtxoInfo
+  , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
+  , hasTokenWithSymbol
+  )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Array (catMaybes, filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing), fromJust)
 import JS.BigInt (BigInt, fromInt)
-import LambdaBuffers.ApplicationTypes.Vote (VoteActionRedeemer(VoteActionRedeemer'Count), VoteDatum, VoteDirection, VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteActionRedeemer(VoteActionRedeemer'Count)
+  , VoteDatum
+  , VoteDirection
+  , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
+  )
 import Partial.Unsafe (unsafePartial)
 import Type.Proxy (Proxy(Proxy))
 
@@ -132,7 +174,8 @@ mkVoteUtxoConstraintsAndLookups
     else do
 
       voteOwnerKey :: PaymentPubKeyHash <-
-        liftContractM "Cannot get pkh" $ plutusAddressToPaymentPubKeyHash $ voteDatum
+        liftContractM "Cannot get pkh" $ plutusAddressToPaymentPubKeyHash
+          $ voteDatum
           # unwrap
           # _.voteOwner
 

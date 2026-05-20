@@ -15,7 +15,15 @@ module Dao.Workflow.QueryProposal
 
 import Contract.Prelude
 
-import Cardano.Types (Address, AssetName, Credential(ScriptHashCredential), PlutusScript, ScriptHash, TransactionInput, TransactionOutput)
+import Cardano.Types
+  ( Address
+  , AssetName
+  , Credential(ScriptHashCredential)
+  , PlutusScript
+  , ScriptHash
+  , TransactionInput
+  , TransactionOutput
+  )
 import Cardano.Types.Address (mkPaymentAddress)
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (getNetworkId)
@@ -26,7 +34,10 @@ import Contract.Utxos (utxosAt)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Proposal.Params (QueryProposalParams)
-import Dao.Component.Proposal.Query (QueryResult(QueryResult), getTokenNameAndDatumFromOutput)
+import Dao.Component.Proposal.Query
+  ( QueryResult(QueryResult)
+  , getTokenNameAndDatumFromOutput
+  )
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
@@ -37,7 +48,9 @@ import Data.Array (filter, mapMaybe)
 import Data.Map as Map
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade))
+import LambdaBuffers.ApplicationTypes.Proposal
+  ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
+  )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 

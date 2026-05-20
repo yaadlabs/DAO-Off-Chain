@@ -7,7 +7,16 @@ module Dao.Workflow.CountVote (countVote) where
 import Prelude
 
 import Cardano.ToData (toData)
-import Cardano.Types (Address, AssetName, Credential(ScriptHashCredential), PlutusScript, ScriptHash, TransactionHash, TransactionInput, TransactionOutput)
+import Cardano.Types
+  ( Address
+  , AssetName
+  , Credential(ScriptHashCredential)
+  , PlutusScript
+  , ScriptHash
+  , TransactionHash
+  , TransactionInput
+  , TransactionOutput
+  )
 import Cardano.Types.Address (mkPaymentAddress)
 import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
@@ -15,8 +24,27 @@ import Contract.Address (getNetworkId)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, throwContractError)
+import Contract.Prelude
+  ( type (/\)
+  , bind
+  , discard
+  , foldMap
+  , foldr
+  , mconcat
+  , otherwise
+  , pure
+  , show
+  , unwrap
+  , void
+  , (#)
+  , ($)
+  , (*)
+  , (+)
+  , (/\)
+  , (<>)
+  , (==)
+  )
 import Contract.Prelude (show)
-import Contract.Prelude (type (/\), bind, discard, foldMap, foldr, mconcat, otherwise, pure, show, unwrap, void, (#), ($), (*), (+), (/\), (<>), (==))
 import Contract.ScriptLookups as Lookups
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction (submitTxFromConstraints)
@@ -28,7 +56,11 @@ import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
 import Dao.Component.Vote.Params (CountVoteParams)
 import Dao.Component.Vote.Query (mkAllVoteConstraintsAndLookups)
 import Dao.Scripts.Policy (unappliedVotePolicy)
-import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator, unappliedVoteValidator)
+import Dao.Scripts.Validator
+  ( unappliedConfigValidator
+  , unappliedTallyValidator
+  , unappliedVoteValidator
+  )
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Map (Map)

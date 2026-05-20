@@ -10,7 +10,14 @@ module Dao.Workflow.VoteOnProposal
 import Cardano.Plutus.Types.Address (Address(..)) as Plutus
 import Cardano.Plutus.Types.Address (pubKeyHashAddress)
 import Cardano.ToData (toData)
-import Cardano.Types (AssetName, PlutusScript, RedeemerDatum, ScriptHash, TransactionHash, Value)
+import Cardano.Types
+  ( AssetName
+  , PlutusScript
+  , RedeemerDatum
+  , ScriptHash
+  , TransactionHash
+  , Value
+  )
 import Cardano.Types.BigNum (fromInt, one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.Value (getMultiAsset, singleton) as Value
@@ -18,7 +25,23 @@ import Contract.Address (Address, getNetworkId)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedM)
-import Contract.Prelude (type (/\), bind, discard, mconcat, mempty, one, pure, show, unwrap, void, (#), ($), (*), (/\), (<>))
+import Contract.Prelude
+  ( type (/\)
+  , bind
+  , discard
+  , mconcat
+  , mempty
+  , one
+  , pure
+  , show
+  , unwrap
+  , void
+  , (#)
+  , ($)
+  , (*)
+  , (/\)
+  , (<>)
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction (submitTxFromConstraints)
@@ -37,7 +60,10 @@ import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (wrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum), VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteDatum(VoteDatum)
+  , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
+  )
 import Partial.Unsafe (unsafePartial)
 import ScriptArguments.Types (ValidatorParams(ValidatorParams))
 
@@ -118,7 +144,8 @@ voteOnProposal params' = do
     -- The 'voteOwner' field of the 'VoteDatum' must correspond to the
     -- address of the wallet executing this transaction
     ownerAddress :: Plutus.Address
-    ownerAddress = pubKeyHashAddress (wrap $ wrap $ unwrap ownPaymentPkh) Nothing
+    ownerAddress = pubKeyHashAddress (wrap $ wrap $ unwrap ownPaymentPkh)
+      Nothing
 
     -- The datum includes the user's key, the type of proposal
     -- and whether the user is voting for or against the proposal

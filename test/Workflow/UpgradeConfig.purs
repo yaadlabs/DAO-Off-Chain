@@ -12,29 +12,62 @@ import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
-import Contract.Prelude (type (/\), Unit, bind, discard, pure, show, show, unit, void, ($), (/\), (<>))
+import Contract.Prelude
+  ( type (/\)
+  , Unit
+  , bind
+  , discard
+  , pure
+  , show
+  , show
+  , unit
+  , void
+  , ($)
+  , (/\)
+  , (<>)
+  )
 import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Wallet (getWalletAddress, getWalletCollateral, ownPaymentPubKeyHash)
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), UpgradeConfigParams(UpgradeConfigParams))
-import Dao.Component.Fungible.Params (CreateFungibleParams(CreateFungibleParams))
-import Dao.Component.Proposal.Params (CreateProposalParams(CreateProposalParams))
-import Dao.Component.Vote.Params (CountVoteParams(CountVoteParams), VoteOnProposalParams(VoteOnProposalParams))
+import Contract.Wallet
+  ( getWalletAddress
+  , getWalletCollateral
+  , ownPaymentPubKeyHash
+  )
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , UpgradeConfigParams(UpgradeConfigParams)
+  )
+import Dao.Component.Fungible.Params
+  ( CreateFungibleParams(CreateFungibleParams)
+  )
+import Dao.Component.Proposal.Params
+  ( CreateProposalParams(CreateProposalParams)
+  )
+import Dao.Component.Vote.Params
+  ( CountVoteParams(CountVoteParams)
+  , VoteOnProposalParams(VoteOnProposalParams)
+  )
 import Dao.Scripts.Policy (fungiblePolicy)
 import Dao.Scripts.Policy (upgradePolicy)
 import Dao.Scripts.Policy (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
+import Dao.Workflow.CreateConfig
+  ( CreateConfigResult(CreateConfigResult)
+  , createConfig
+  )
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.UpgradeConfig (upgradeConfig)
-import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult), voteOnProposal)
+import Dao.Workflow.VoteOnProposal
+  ( VoteOnProposalResult(VoteOnProposalResult)
+  , voteOnProposal
+  )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)

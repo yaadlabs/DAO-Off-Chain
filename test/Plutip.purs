@@ -14,7 +14,12 @@ import Data.Maybe (Maybe(Just))
 import Data.Posix.Signal (Signal(SIGINT))
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
-import Effect.Aff (Milliseconds(Milliseconds), cancelWith, effectCanceler, launchAff)
+import Effect.Aff
+  ( Milliseconds(Milliseconds)
+  , cancelWith
+  , effectCanceler
+  , launchAff
+  )
 import Test.Spec.Runner (defaultConfig)
 import Test.Workflow.MultipleVotesWithCancel as MultipleVotesWithCancel
 import Test.Workflow.QueryProposals as QueryProposals

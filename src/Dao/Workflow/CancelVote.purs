@@ -5,7 +5,16 @@ Description: Contract for cancelling a vote on a proposal
 module Dao.Workflow.CancelVote (cancelVote) where
 
 import Cardano.ToData (toData)
-import Cardano.Types (AssetName, BigNum, Mint, PlutusScript, RedeemerDatum, ScriptHash, TransactionHash, Value)
+import Cardano.Types
+  ( AssetName
+  , BigNum
+  , Mint
+  , PlutusScript
+  , RedeemerDatum
+  , ScriptHash
+  , TransactionHash
+  , Value
+  )
 import Cardano.Types.BigNum (one, zero) as BigNum
 import Cardano.Types.Int (negate, one) as CTInt
 import Cardano.Types.Mint (singleton) as Mint
@@ -13,7 +22,21 @@ import Cardano.Types.Value (empty, singleton) as Value
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.Prelude (bind, discard, mconcat, mempty, negate, one, otherwise, pure, zero, (#), ($), (<>), (==))
+import Contract.Prelude
+  ( bind
+  , discard
+  , mconcat
+  , mempty
+  , negate
+  , one
+  , otherwise
+  , pure
+  , zero
+  , (#)
+  , ($)
+  , (<>)
+  , (==)
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
@@ -24,12 +47,18 @@ import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, cancelVoteUtxo)
 import Dao.Scripts.Policy (unappliedVotePolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedVoteValidator)
-import Dao.Utils.Address (addressToPaymentPubKeyHash, plutusAddressToPaymentPubKeyHash)
+import Dao.Utils.Address
+  ( addressToPaymentPubKeyHash
+  , plutusAddressToPaymentPubKeyHash
+  )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Newtype (unwrap, wrap)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Vote (VoteActionRedeemer(VoteActionRedeemer'Cancel), VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn))
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
+  , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
+  )
 import Partial.Unsafe (unsafePartial)
 
 -- | Contract for cancelling a vote
@@ -150,8 +179,9 @@ cancelVote params' = do
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
         -- ^ The script requires the tx to be signed by the vote owner
-        , Constraints.mustPayToPubKey voteOwnerKey $ unsafePartial -- FIXME: unsafe
-            (voteNftPass <> fungibleToken)
+        , Constraints.mustPayToPubKey voteOwnerKey $
+            unsafePartial -- FIXME: unsafe
+              (voteNftPass <> fungibleToken)
         -- ^ Pay the vote 'pass' back to the owner, and the fungibleTokens if any
         , configInfo.constraints
         , voteInfo.constraints

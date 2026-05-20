@@ -12,18 +12,43 @@ import Cardano.Types.Address (fromBech32, toBech32) as Ctl.Address
 import Cardano.Types.AssetName (mkAssetName, unAssetName) as Ctl
 import Contract.Address (Address, PaymentPubKeyHash(PaymentPubKeyHash)) as Ctl
 import Contract.CborBytes (cborBytesToHex)
-import Contract.Prelude (bind, pure, show, traverse, unwrap, ($), (<<<), (<>), (>>=))
+import Contract.Prelude
+  ( bind
+  , pure
+  , show
+  , traverse
+  , unwrap
+  , ($)
+  , (<<<)
+  , (<>)
+  , (>>=)
+  )
 import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
 import Contract.Prim.ByteArray (rawBytesToHex)
 import Contract.Transaction (TransactionHash(TransactionHash)) as Ctl
 import Contract.Value (CurrencySymbol, ScriptHash, TokenName) as Ctl
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), UpgradeConfigParams(UpgradeConfigParams)) as DaoApi
-import Dao.Component.Fungible.Params (CreateFungibleParams(CreateFungibleParams)) as DaoApi
-import Dao.Component.Proposal.Params (CreateProposalParams(CreateProposalParams), QueryProposalParams(QueryProposalParams)) as DaoApi
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , UpgradeConfigParams(UpgradeConfigParams)
+  ) as DaoApi
+import Dao.Component.Fungible.Params
+  ( CreateFungibleParams(CreateFungibleParams)
+  ) as DaoApi
+import Dao.Component.Proposal.Params
+  ( CreateProposalParams(CreateProposalParams)
+  , QueryProposalParams(QueryProposalParams)
+  ) as DaoApi
 import Dao.Component.Proposal.Query (QueryResult(QueryResult)) as DaoApi
-import Dao.Component.Treasury.Params (TreasuryFundParams, TreasuryParams(TreasuryParams)) as DaoApi
-import Dao.Component.Vote.Params (CancelVoteParams(CancelVoteParams), CountVoteParams(CountVoteParams), VoteOnProposalParams(VoteOnProposalParams)) as DaoApi
+import Dao.Component.Treasury.Params
+  ( TreasuryFundParams
+  , TreasuryParams(TreasuryParams)
+  ) as DaoApi
+import Dao.Component.Vote.Params
+  ( CancelVoteParams(CancelVoteParams)
+  , CountVoteParams(CountVoteParams)
+  , VoteOnProposalParams(VoteOnProposalParams)
+  ) as DaoApi
 import Dao.Utils.Contract (ContractResult(ContractResult)) as DaoApi
 import Dao.Web.Types as WebApi
 import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult)) as DaoApi
@@ -31,10 +56,16 @@ import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult)) 
 import Data.Either (Either(Left))
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (wrap)
-import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(DynamicConfigDatum)) as DaoApi
-import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)) as DaoApi
+import LambdaBuffers.ApplicationTypes.Configuration
+  ( DynamicConfigDatum(DynamicConfigDatum)
+  ) as DaoApi
+import LambdaBuffers.ApplicationTypes.Proposal
+  ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
+  ) as DaoApi
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum)) as DaoApi
-import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For, VoteDirection'Against)) as DaoApi
+import LambdaBuffers.ApplicationTypes.Vote
+  ( VoteDirection(VoteDirection'For, VoteDirection'Against)
+  ) as DaoApi
 import ScriptArguments.Types (ValidatorParams(ValidatorParams)) as DaoApi
 
 type Conversion a = ReaderT Ctl.NetworkId (Either String) a
@@ -729,10 +760,10 @@ instance ConvertJsToPs WebApi.ProposalType DaoApi.ProposalType where
 
 instance ConvertPsToJs WebApi.Address Plutus.Address where
   convertPsToJs paddr = do
-    network <- ask 
+    network <- ask
     addr <- note ("Invalid address: " <> show paddr) $ Plutus.Address.toCardano
       network
-      paddr 
+      paddr
     pure $ WebApi.Address $ Ctl.Address.toBech32 addr
 
 instance ConvertJsToPs WebApi.Address Plutus.Address where

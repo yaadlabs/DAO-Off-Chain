@@ -38,21 +38,56 @@ import Cardano.Types.Address (toBech32) as Address
 import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Chain (waitNSlots) as Ctl
-import Contract.Config (KnownWallet(Eternl), mkBlockfrostBackendParams, walletName)
-import Contract.Config (defaultSynchronizationParams, defaultTimeParams, emptyHooks) as Ctl
+import Contract.Config
+  ( KnownWallet(Eternl)
+  , mkBlockfrostBackendParams
+  , walletName
+  )
+import Contract.Config
+  ( defaultSynchronizationParams
+  , defaultTimeParams
+  , emptyHooks
+  ) as Ctl
 import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS) as Ctl
 import Contract.Monad (ContractEnv, liftContractM) as Ctl
 import Contract.Transaction (awaitTxConfirmedWithTimeout) as Ctl
 import Contract.Wallet (getWalletAddress)
 import Control.Promise (Promise)
 import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToGenericCip30)) as Ctl
-import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), mkValidatorConfig) as Component
+import Dao.Component.Config.Params
+  ( CreateConfigParams(CreateConfigParams)
+  , mkValidatorConfig
+  ) as Component
 import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy) as Scripts
-import Dao.Utils.Address (addressToPaymentPubKeyHash, plutusAddressToPaymentPubKeyHash) as Utils
+import Dao.Utils.Address
+  ( addressToPaymentPubKeyHash
+  , plutusAddressToPaymentPubKeyHash
+  ) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
 import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)
-import Dao.Web.Types (Address, CancelVoteParams, ContractResult, CountVoteParams, CreateConfigParams, CreateConfigResult, CreateFungibleParams, CreateProposalParams, CreateTreasuryFundParams, CtlConfig(CtlConfig), JsMaybe, QueryProposalParams, QueryResult, TokenName, TransactionHash, TreasuryParams, UpgradeConfigParams, ValidatorParams, VoteOnProposalParams, VoteOnProposalResult)
+import Dao.Web.Types
+  ( Address
+  , CancelVoteParams
+  , ContractResult
+  , CountVoteParams
+  , CreateConfigParams
+  , CreateConfigResult
+  , CreateFungibleParams
+  , CreateProposalParams
+  , CreateTreasuryFundParams
+  , CtlConfig(CtlConfig)
+  , JsMaybe
+  , QueryProposalParams
+  , QueryResult
+  , TokenName
+  , TransactionHash
+  , TreasuryParams
+  , UpgradeConfigParams
+  , ValidatorParams
+  , VoteOnProposalParams
+  , VoteOnProposalResult
+  )
 import Dao.Web.Types (ProposalType(..), VoteDirection(..)) as WebTypes
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
@@ -62,8 +97,21 @@ import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
-import Dao.Workflow.QueryProposal (getAllActiveProposals, getAllExpiredProposals, getAllGeneralProposals, getAllProposals, getAllSuccessfulProposals, getAllTripProposals, getAllUpgradeProposals, getProposalByTokenName) as Dao
-import Dao.Workflow.ReferenceScripts (deployReferenceScriptsOne, deployReferenceScriptsThree, deployReferenceScriptsTwo) as Dao
+import Dao.Workflow.QueryProposal
+  ( getAllActiveProposals
+  , getAllExpiredProposals
+  , getAllGeneralProposals
+  , getAllProposals
+  , getAllSuccessfulProposals
+  , getAllTripProposals
+  , getAllUpgradeProposals
+  , getProposalByTokenName
+  ) as Dao
+import Dao.Workflow.ReferenceScripts
+  ( deployReferenceScriptsOne
+  , deployReferenceScriptsThree
+  , deployReferenceScriptsTwo
+  ) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -102,7 +150,8 @@ initialize = Ctl.mkContractEnvJS <<< mkContractParams
       { backendParams
       , networkId
       , logLevel: Trace
-      , walletSpec: Just $ Ctl.ConnectToGenericCip30 (walletName Eternl) { cip95: false } 
+      , walletSpec: Just $ Ctl.ConnectToGenericCip30 (walletName Eternl)
+          { cip95: false }
       , customLogger: Nothing
       , suppressLogs: false
       , hooks: Ctl.emptyHooks

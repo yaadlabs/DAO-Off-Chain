@@ -7,8 +7,20 @@ module Dao.Utils.Address
 
 import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Credential (Credential(PubKeyCredential)) as Plutus
-import Cardano.Types (Address, Credential(PubKeyHashCredential), NetworkId, PaymentCredential(PaymentCredential), PaymentPubKeyHash, StakeCredential(StakeCredential), StakePubKeyHash)
-import Cardano.Types.Address (getPaymentCredential, getStakeCredential, mkPaymentAddress)
+import Cardano.Types
+  ( Address
+  , Credential(PubKeyHashCredential)
+  , NetworkId
+  , PaymentCredential(PaymentCredential)
+  , PaymentPubKeyHash
+  , StakeCredential(StakeCredential)
+  , StakePubKeyHash
+  )
+import Cardano.Types.Address
+  ( getPaymentCredential
+  , getStakeCredential
+  , mkPaymentAddress
+  )
 import Contract.Prelude (($))
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap, wrap)

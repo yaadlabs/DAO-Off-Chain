@@ -5,7 +5,12 @@ module Dao.Component.Proposal.Query
 
 import Contract.Prelude
 
-import Cardano.Types (AssetName, ScriptHash, TransactionInput, TransactionOutput(TransactionOutput))
+import Cardano.Types
+  ( AssetName
+  , ScriptHash
+  , TransactionInput
+  , TransactionOutput(TransactionOutput)
+  )
 import Cardano.Types.Value (getMultiAsset) as Value
 import Dao.Utils.Datum (extractOutputDatum)
 import Data.Map (lookup, toUnfoldable) as Map
