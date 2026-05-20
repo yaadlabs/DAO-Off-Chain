@@ -35,13 +35,12 @@ import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Proposal.Params (QueryProposalParams)
 import Dao.Component.Proposal.Query
-  ( QueryResult(QueryResult)
+  ( QueryResult
   , getTokenNameAndDatumFromOutput
   )
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
-import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Dao.Utils.Time (getCurrentTime)
 import Data.Array (filter, mapMaybe)
@@ -52,7 +51,6 @@ import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Type.Proxy (Proxy(Proxy))
 
 -- | Retrieve an individual proposal by its token name
 getProposalByTokenName ::

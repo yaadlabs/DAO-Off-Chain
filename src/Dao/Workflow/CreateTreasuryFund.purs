@@ -5,7 +5,7 @@ Description: Contract for creating fund UTXO at treasury validator
 module Dao.Workflow.CreateTreasuryFund (createTreasuryFund) where
 
 import Cardano.Plutus.Types.TokenName (adaToken)
-import Cardano.Types (PlutusScript, ScriptHash, Value(..))
+import Cardano.Types (PlutusScript, ScriptHash, Value)
 import Cardano.Types.BigNum (fromBigInt, one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
@@ -15,11 +15,9 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
   , pure
   , ($)
   , (/\)
@@ -27,7 +25,7 @@ import Contract.Prelude
   , (>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction (TransactionHash, submitTxFromConstraints)
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Treasury.Params (TreasuryFundParams)

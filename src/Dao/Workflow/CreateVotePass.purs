@@ -5,23 +5,20 @@ Description: Contract for creating token corresponding to the 'voteNft' field of
 module Dao.Workflow.CreateVotePass (createVotePass) where
 
 import Cardano.Types.BigNum (one) as BigNum
-import Cardano.Types.Mint (fromMultiAsset, singleton) as Mint
+import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
   , pure
   , ($)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction (TransactionHash, submitTxFromConstraints)
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value (getMultiAsset, singleton) as Value

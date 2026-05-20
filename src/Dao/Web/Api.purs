@@ -59,10 +59,7 @@ import Dao.Component.Config.Params
   , mkValidatorConfig
   ) as Component
 import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy) as Scripts
-import Dao.Utils.Address
-  ( addressToPaymentPubKeyHash
-  , plutusAddressToPaymentPubKeyHash
-  ) as Utils
+import Dao.Utils.Address (plutusAddressToPaymentPubKeyHash) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
 import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)

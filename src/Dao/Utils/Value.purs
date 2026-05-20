@@ -20,31 +20,14 @@ import Cardano.Types.Value
   , unflatten
   , unionWith
   ) as Value
-import Contract.Prelude
-  ( class Foldable
-  , type (/\)
-  , all
-  , foldMap
-  , sub
-  , sum
-  , zero
-  , ($)
-  , (/=)
-  , (/\)
-  , (<$>)
-  , (<<<)
-  , (<=<)
-  , (=<<)
-  , (>=)
-  )
-import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
+import Contract.Prelude (($), (/=), (<<<), (<=<), (=<<))
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Data.Array (filter) as Array
 import Data.Foldable (foldl)
 import Data.Map (lookup, values) as Map
-import Data.Maybe (Maybe(Just), fromJust, fromMaybe, maybe)
+import Data.Maybe (Maybe(Just), fromJust, fromMaybe)
 import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(Tuple))
-import JS.BigInt (BigInt)
 import Partial.Unsafe (unsafePartial)
 
 mkTokenName :: String -> Maybe AssetName

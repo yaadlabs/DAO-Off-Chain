@@ -4,10 +4,10 @@ Description: Workflow for testing proposal querying functionality
 -}
 module Test.Workflow.QueryProposals (suite) where
 
-import Cardano.Plutus.Types.Address (Address(..)) as Plutus
+import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Address (fromCardano) as Plutus.Address
 import Cardano.Plutus.Types.TokenName (adaToken)
-import Cardano.Types (AssetName(..), BigNum(..))
+import Cardano.Types (AssetName, BigNum)
 import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
@@ -22,8 +22,6 @@ import Contract.Prelude
   , mconcat
   , pure
   , show
-  , show
-  , unit
   , void
   , (#)
   , ($)
@@ -33,7 +31,7 @@ import Contract.Prelude
 import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletAddress)
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
 import Dao.Component.Fungible.Params
   ( CreateFungibleParams(CreateFungibleParams)
@@ -79,7 +77,6 @@ import Dao.Workflow.VoteOnProposal
   )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDirection(VoteDirection'For, VoteDirection'Against)

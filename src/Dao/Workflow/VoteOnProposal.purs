@@ -7,7 +7,7 @@ module Dao.Workflow.VoteOnProposal
   , voteOnProposal
   ) where
 
-import Cardano.Plutus.Types.Address (Address(..)) as Plutus
+import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Address (pubKeyHashAddress)
 import Cardano.ToData (toData)
 import Cardano.Types
@@ -21,17 +21,14 @@ import Cardano.Types
 import Cardano.Types.BigNum (fromInt, one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.Value (getMultiAsset, singleton) as Value
-import Contract.Address (Address, getNetworkId)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , mempty
-  , one
   , pure
   , show
   , unwrap
@@ -39,7 +36,6 @@ import Contract.Prelude
   , (#)
   , ($)
   , (*)
-  , (/\)
   , (<>)
   )
 import Contract.ScriptLookups as Lookups
@@ -53,7 +49,6 @@ import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
 import Dao.Scripts.Policy (unappliedVotePolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
-import Dao.Utils.Address (paymentPubKeyHashToAddress)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Just, Nothing))

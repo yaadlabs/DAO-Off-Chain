@@ -4,37 +4,30 @@ Description: Contract for creating token corresponding to the 'voteFungibleCurre
 -}
 module Dao.Workflow.CreateFungible (createFungible) where
 
-import Cardano.Types (AssetName, PlutusScript, ScriptHash(..), Value(..))
+import Cardano.Types (AssetName, PlutusScript, ScriptHash, Value)
 import Cardano.Types.BigNum (fromBigInt) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Cardano.Types.Value (getMultiAsset, singleton) as Value
-import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , pure
   , unwrap
   , (#)
   , ($)
-  , (/\)
-  , (<)
-  , (>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction (TransactionHash, submitTxFromConstraints)
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Dao.Component.Fungible.Params (CreateFungibleParams)
 import Dao.Scripts.Policy (fungiblePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
-import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)
 import Data.Maybe (fromJust)
-import JS.BigInt (BigInt, fromInt)
 import Partial.Unsafe (unsafePartial)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config

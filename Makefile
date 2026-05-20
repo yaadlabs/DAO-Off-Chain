@@ -25,8 +25,10 @@ preview-node-ipc = $(shell docker volume inspect store_node-preview-ipc | jq -r 
 preprod-node-ipc = $(shell docker volume inspect store_node-preprod-ipc | jq -r '.[0].Mountpoint')
 serve-port := 4008
 
+purs-args := "--stash --censor-lib --censor-codes=ImplicitImport,ImplicitQualifiedImport,ImplicitQualifiedImportReExport,UserDefinedWarning,UnusedName,ShadowedName,MissingTypeDeclaration"
+
 build:
-	@spago build
+	@spago build --purs-args ${purs-args}
 
 create-bundle-entrypoint:
 	@mkdir -p dist/

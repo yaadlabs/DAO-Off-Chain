@@ -24,15 +24,13 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
-  , one
   , pure
   , ($)
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
+  ( TransactionInput
   , submitTxFromConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -43,7 +41,6 @@ import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
-import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Index (IndexDatum(IndexDatum))
 import ScriptArguments.Types (IndexPolicyParams(IndexPolicyParams))

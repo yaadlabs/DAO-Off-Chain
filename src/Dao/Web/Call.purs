@@ -11,7 +11,7 @@ import Contract.Monad
   , liftContractE
   , runContractInEnv
   ) as Ctl
-import Contract.Prelude (Effect, bind, ($))
+import Contract.Prelude (bind, ($))
 import Control.Promise (Promise, fromAff)
 import Dao.Web.Conversion
   ( class ConvertJsToPs
@@ -20,7 +20,6 @@ import Dao.Web.Conversion
   , runConvertPsToJs
   )
 import Data.Function.Uncurried (Fn1, Fn2, Fn3, mkFn1, mkFn2, mkFn3)
-import Effect.Aff.Compat (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 
 -- | Create a function that calls a contract with only the ContractEnv as an argument.
@@ -62,6 +61,7 @@ mkContractCall3 contractCall = mkFn3 \env arg1Js arg2Js -> do
     res <- contractCall arg1Purs arg2Purs
     convertPsToJsContract res
 
+{-
 contractCallTwoArgs ::
   forall resJs resPurs arg1Js arg1Purs arg2Js arg2Purs.
   ConvertPsToJs resJs resPurs =>
@@ -77,6 +77,7 @@ contractCallTwoArgs env contractCall =
       arg2Purs <- convertJsToPsContract arg2Js
       res <- contractCall arg1Purs arg2Purs
       convertPsToJsContract res
+-}
 
 convertPsToJsContract ::
   forall js ps. (ConvertPsToJs js ps) => ps -> Ctl.Contract js

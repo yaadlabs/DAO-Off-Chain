@@ -16,14 +16,13 @@ module Dao.Utils.Query
   ) where
 
 import Cardano.Types
-  ( Asset(Asset)
-  , Credential(ScriptHashCredential)
+  ( Credential(ScriptHashCredential)
   , TransactionOutput(TransactionOutput)
   )
 import Cardano.Types.Address (mkPaymentAddress)
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.BigNum (one) as BigNum
-import Cardano.Types.Value (flatten, getCoin)
+import Cardano.Types.Value (flatten)
 import Contract.Address (PaymentPubKeyHash, getNetworkId)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
@@ -40,7 +39,6 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
-  , one
   , pure
   , show
   , (#)
@@ -64,7 +62,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (unwrap, wrap)
 import Data.Tuple (fst)
-import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum))
+import LambdaBuffers.ApplicationTypes.Vote (VoteDatum)
 import Type.Proxy (Proxy(Proxy))
 
 -- | Result of querying UTXO

@@ -10,28 +10,19 @@ import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
-import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
 import Contract.Prelude
-  ( type (/\)
-  , Unit
+  ( Unit
   , bind
   , discard
-  , pure
-  , show
-  , show
-  , unit
   , void
   , ($)
-  , (/\)
-  , (<>)
   )
 import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Wallet
   ( getWalletAddress
-  , getWalletCollateral
   , ownPaymentPubKeyHash
   )
 import Dao.Component.Config.Params
@@ -48,9 +39,7 @@ import Dao.Component.Vote.Params
   ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
-import Dao.Scripts.Policy (fungiblePolicy)
-import Dao.Scripts.Policy (upgradePolicy)
-import Dao.Scripts.Policy (voteNftPolicy)
+import Dao.Scripts.Policy (fungiblePolicy, upgradePolicy, voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
@@ -61,7 +50,6 @@ import Dao.Workflow.CreateConfig
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
-import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.UpgradeConfig (upgradeConfig)
 import Dao.Workflow.VoteOnProposal
@@ -70,11 +58,9 @@ import Dao.Workflow.VoteOnProposal
   )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Test.Data.Address (dummyAddress)
 import Test.Data.Config (dummyNewConfig)
 import Test.Data.Tally (sampleUpgradeConfigProposalTallyStateDatum)
 

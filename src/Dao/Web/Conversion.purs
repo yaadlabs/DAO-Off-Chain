@@ -5,12 +5,12 @@ Description: For conversions between JavaScript and PureScript
 module Dao.Web.Conversion where
 
 import Cardano.AsCbor (decodeCbor, encodeCbor)
-import Cardano.Plutus.Types.Address (Address(..)) as Plutus
+import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Address (fromCardano, toCardano) as Plutus.Address
 import Cardano.Types (NetworkId) as Ctl
 import Cardano.Types.Address (fromBech32, toBech32) as Ctl.Address
 import Cardano.Types.AssetName (mkAssetName, unAssetName) as Ctl
-import Contract.Address (Address, PaymentPubKeyHash(PaymentPubKeyHash)) as Ctl
+import Contract.Address (PaymentPubKeyHash(PaymentPubKeyHash)) as Ctl
 import Contract.CborBytes (cborBytesToHex)
 import Contract.Prelude
   ( bind
@@ -24,8 +24,7 @@ import Contract.Prelude
   , (>>=)
   )
 import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
-import Contract.Prim.ByteArray (rawBytesToHex)
-import Contract.Transaction (TransactionHash(TransactionHash)) as Ctl
+import Contract.Transaction (TransactionHash) as Ctl
 import Contract.Value (CurrencySymbol, ScriptHash, TokenName) as Ctl
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
 import Dao.Component.Config.Params

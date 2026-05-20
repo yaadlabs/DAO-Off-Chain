@@ -5,13 +5,13 @@ Description: Contract for creating a proposal
 module Dao.Workflow.CreateProposal (createProposal) where
 
 import Cardano.ToData (toData)
-import Cardano.Types (AssetName, PlutusScript(..), ScriptHash(..), Value(..))
+import Cardano.Types (AssetName, PlutusScript, ScriptHash, Value)
 import Cardano.Types.BigNum (one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.Prelude (bind, discard, mconcat, one, pure, show, (#), ($), (+))
+import Contract.Prelude (bind, discard, mconcat, pure, show, (#), ($), (+))
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints

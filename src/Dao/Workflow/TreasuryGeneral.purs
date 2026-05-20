@@ -11,7 +11,7 @@ import Cardano.Types.Value (lovelaceValueOf)
 import Contract.Address
   ( Address
   , PaymentPubKeyHash
-  , StakePubKeyHash(..)
+  , StakePubKeyHash
   , getNetworkId
   )
 import Contract.Log (logInfo')
@@ -37,7 +37,7 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value (Value, singleton)
+import Contract.Value (Value)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)

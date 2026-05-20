@@ -5,11 +5,11 @@ Description: Workflow that includes multiple votes and one user cancelling their
 -}
 module Test.Workflow.ReferenceScripts (suite) where
 
-import Cardano.Plutus.Types.Address (Address(..)) as Plutus
+import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Address (fromCardano) as Plutus.Address
 import Cardano.Plutus.Types.TokenName (adaToken)
-import Cardano.Types (AssetName(..))
-import Cardano.Types.BigNum (BigNum(..))
+import Cardano.Types (AssetName)
+import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
@@ -23,19 +23,14 @@ import Contract.Prelude
   , discard
   , mconcat
   , pure
-  , show
-  , show
-  , unit
   , void
-  , (#)
   , ($)
   , (/\)
-  , (<>)
   )
-import Contract.Test (ContractTest(..), withKeyWallet, withWallets)
+import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletAddress)
 import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
   , mkValidatorConfig
@@ -48,15 +43,13 @@ import Dao.Component.Proposal.Params
   )
 import Dao.Component.Treasury.Params (TreasuryParams(TreasuryParams))
 import Dao.Component.Vote.Params
-  ( CancelVoteParams(CancelVoteParams)
-  , CountVoteParams(CountVoteParams)
+  ( CountVoteParams(CountVoteParams)
   , VoteOnProposalParams(VoteOnProposalParams)
   )
 import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy)
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
-import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CountVote (countVote)
 import Dao.Workflow.CreateConfig
   ( CreateConfigResult(CreateConfigResult)
@@ -79,7 +72,6 @@ import Dao.Workflow.VoteOnProposal
   )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)

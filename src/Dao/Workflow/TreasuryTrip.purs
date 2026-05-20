@@ -6,7 +6,6 @@ module Dao.Workflow.TreasuryTrip (treasuryTrip) where
 
 import Cardano.Plutus.Types.Address (Address) as Plutus
 import Cardano.Plutus.Types.Address (toCardano) as Plutus.Address
-import Cardano.Types (BigNum)
 import Cardano.Types.BigNum (fromBigInt) as BigNum
 import Cardano.Types.Value (lovelaceValueOf)
 import Contract.Address (Address, PaymentPubKeyHash, getNetworkId)
@@ -32,7 +31,7 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName, Value, singleton)
+import Contract.Value (Value)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)

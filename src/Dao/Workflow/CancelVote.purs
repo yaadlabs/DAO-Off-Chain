@@ -26,12 +26,8 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
-  , mempty
-  , negate
-  , one
   , otherwise
   , pure
-  , zero
   , (#)
   , ($)
   , (<>)
@@ -47,13 +43,9 @@ import Dao.Component.Vote.Params (CancelVoteParams)
 import Dao.Component.Vote.Query (VoteInfo, cancelVoteUtxo)
 import Dao.Scripts.Policy (unappliedVotePolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedVoteValidator)
-import Dao.Utils.Address
-  ( addressToPaymentPubKeyHash
-  , plutusAddressToPaymentPubKeyHash
-  )
+import Dao.Utils.Address (plutusAddressToPaymentPubKeyHash)
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Newtype (unwrap, wrap)
-import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)

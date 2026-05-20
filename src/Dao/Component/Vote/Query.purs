@@ -32,8 +32,6 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
-  , negate
-  , one
   , pure
   , traverse
   , unwrap
@@ -49,13 +47,10 @@ import Contract.Prelude
   , (<>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.TxConstraints (InputWithScriptRef(SpendInput, RefInput))
+import Contract.TxConstraints (InputWithScriptRef)
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value, singleton, valueOf)
-import Dao.Utils.Address
-  ( addressToPaymentPubKeyHash
-  , plutusAddressToPaymentPubKeyHash
-  )
+import Dao.Utils.Address (plutusAddressToPaymentPubKeyHash)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query
   ( SpendPubKeyResult
@@ -337,6 +332,7 @@ filterOneOfTokenInUtxo ::
 filterOneOfTokenInUtxo symbol = head <<< filter (hasTokenWithSymbol symbol) <<<
   Map.toUnfoldable
 
+{-
 inputWithScriptRefToUnspentOutputs ::
   InputWithScriptRef ->
   Map.Map TransactionInput TransactionOutput
@@ -344,3 +340,4 @@ inputWithScriptRefToUnspentOutputs ref =
   case ref of
     SpendInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output
     RefInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output
+-}

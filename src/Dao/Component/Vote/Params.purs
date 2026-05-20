@@ -9,7 +9,6 @@ module Dao.Component.Vote.Params
   ) where
 
 import Cardano.Types (AssetName, ScriptHash)
-import Contract.Address (Address)
 import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection)

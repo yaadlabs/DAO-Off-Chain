@@ -1,11 +1,7 @@
 module LambdaBuffers.ApplicationTypes.Index (IndexDatum(..)) where
 
 import Cardano.FromData (class FromData, fromData)
-import Cardano.Plutus.Types.Address (Address)
 import Cardano.ToData (class ToData, toData)
-import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
-import Contract.Value (CurrencySymbol)
-import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype

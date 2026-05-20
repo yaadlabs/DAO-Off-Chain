@@ -13,7 +13,6 @@ import Cardano.Types (PlutusScript)
 import Contract.Monad (Contract)
 import Contract.Prelude (pure, ($))
 import Contract.Transaction (TransactionInput)
-import Dao.Scripts.Serialized.Debug as Debug
 import Dao.Scripts.Serialized.Optimised as Optimised
 import Dao.Scripts.Utils (mkScript', mkUnappliedPolicy')
 import ScriptArguments.Types

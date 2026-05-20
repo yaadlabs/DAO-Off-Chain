@@ -5,11 +5,10 @@ Description: Contract for upgrading the dynamic config based on an upgrade propo
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
 import Cardano.Plutus.Types.TokenName (adaToken)
-import Cardano.Types (Mint, PlutusData, Value)
+import Cardano.Types (Mint, PlutusData)
 import Cardano.Types.Int (one) as CTInt
 import Cardano.Types.Mint (singleton) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
-import Cardano.Types.Value (singleton) as Value
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
@@ -17,7 +16,6 @@ import Contract.Prelude
   ( bind
   , discard
   , mconcat
-  , one
   , pure
   , unwrap
   , (#)

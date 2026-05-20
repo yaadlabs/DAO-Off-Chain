@@ -1,9 +1,8 @@
 module Test.Data.Config (dummyNewConfig) where
 
-import Cardano.Plutus.Types.CurrencySymbol (adaSymbol)
 import Cardano.Plutus.Types.TokenName (adaToken)
 import Contract.Monad (Contract)
-import Contract.Prelude (bind, pure, unwrap, (#), ($))
+import Contract.Prelude (bind, pure, unwrap, ($))
 import Contract.Scripts (ScriptHash, validatorHash)
 import Dao.Scripts.Validator (alwaysSucceedsValidatorScript)
 import JS.BigInt as BigInt

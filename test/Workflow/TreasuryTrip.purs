@@ -6,30 +6,26 @@ module Test.Workflow.TreasuryTrip (suite) where
 
 import Cardano.Plutus.Types.Address (fromCardano) as Plutus.Address
 import Cardano.Plutus.Types.TokenName (adaToken)
-import Cardano.Types (AssetName(..), BigNum)
+import Cardano.Types (AssetName, BigNum)
 import Cardano.Types.BigNum (fromInt) as BigNum
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
-import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
 import Contract.Prelude
   ( type (/\)
   , Unit
   , bind
   , discard
-  , pure
   , void
   , ($)
   , (/\)
-  , (<>)
   )
 import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
 import Contract.Wallet
   ( getWalletAddress
-  , getWalletCollateral
   , ownPaymentPubKeyHash
   )
 import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams))
@@ -64,11 +60,9 @@ import Dao.Workflow.VoteOnProposal
   )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
-import Test.Data.Address (dummyAddress)
 import Test.Data.Tally (sampleTripProposalTallyStateDatum)
 
 suite :: TestPlanM ContractTest Unit

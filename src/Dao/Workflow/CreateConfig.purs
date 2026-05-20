@@ -8,7 +8,6 @@ module Dao.Workflow.CreateConfig
   , createConfig
   ) where
 
-import Cardano.Plutus.Types.CurrencySymbol (fromScriptHash)
 import Cardano.ToData (toData)
 import Cardano.Types
   ( AssetName
@@ -31,7 +30,6 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
-  , one
   , pure
   , unwrap
   , (#)
@@ -55,7 +53,6 @@ import Dao.Scripts.Validator
   , unappliedTreasuryValidator
   , unappliedVoteValidator
   )
-import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map

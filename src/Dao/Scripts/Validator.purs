@@ -11,12 +11,10 @@ module Dao.Scripts.Validator
 
 import Cardano.Types (PlutusScript)
 import Contract.Monad (Contract)
-import Contract.PlutusData (toData)
 import Contract.Prelude (pure, ($))
 import Dao.Scripts.Serialized.Debug as Debug
 import Dao.Scripts.Serialized.Optimised as Optimised
-import Dao.Scripts.Utils (mkScript')
-import Dao.Scripts.Utils (mkUnappliedValidator')
+import Dao.Scripts.Utils (mkScript', mkUnappliedValidator')
 import ScriptArguments.Types (ValidatorParams)
 
 alwaysFailsValidatorScript :: Contract PlutusScript

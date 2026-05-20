@@ -9,7 +9,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "spago run --main Test.Plutip",
+    "test": "spago run --main Test.Localnet",
     "dev": "make run-dev",
     "build": "spago build",
     "start-runtime": "nix run -L .#dao-offchain-runtime",

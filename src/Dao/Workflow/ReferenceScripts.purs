@@ -5,7 +5,7 @@ module Dao.Workflow.ReferenceScripts
   , retrieveReferenceScript
   ) where
 
-import Cardano.Types (Credential(ScriptHashCredential), PlutusScript(..))
+import Cardano.Types (Credential(ScriptHashCredential), PlutusScript)
 import Cardano.Types.Address (mkPaymentAddress)
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Cardano.Types.Value (empty) as Value
@@ -15,10 +15,8 @@ import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
 import Contract.Prelude
   ( Maybe(Just, Nothing)
-  , Unit
   , bind
   , discard
-  , foldMap
   , mconcat
   , mempty
   , pure

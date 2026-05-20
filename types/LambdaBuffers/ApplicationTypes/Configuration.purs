@@ -1,12 +1,9 @@
 module LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(..)) where
 
 import Cardano.FromData (class FromData, fromData)
-import Cardano.Plutus.Types.Address (Address)
-import Cardano.Plutus.Types.CurrencySymbol (CurrencySymbol) as Plutus
 import Cardano.ToData (class ToData, toData)
 import Cardano.Types (AssetName, ScriptHash)
-import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
-import Contract.Value (TokenName)
+import Cardano.Types.PlutusData (PlutusData(List)) as PlutusData
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
 import Data.Newtype as Data.Newtype

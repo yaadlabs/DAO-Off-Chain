@@ -15,15 +15,13 @@ import Cardano.Types.PlutusScript (plutusV2Script)
 import Contract.Monad (Contract, liftContractE)
 import Contract.PlutusData (class ToData, toData)
 import Contract.Prim.ByteArray (ByteArray(ByteArray))
-import Data.Newtype (unwrap, wrap)
-import Data.TextEncoder (encodeUtf8)
+import Data.Newtype (wrap)
 import Effect.Exception (throw)
 import Effect.Unsafe (unsafePerformEffect)
 import LambdaBuffers.Runtime.Prelude
   ( class Json
   , Bytes(Bytes)
   , fromJsonString
-  , toJsonString
   )
 import Node.Encoding (Encoding(UTF8))
 import Node.FS.Sync as NodeFS

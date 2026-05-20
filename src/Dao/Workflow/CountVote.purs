@@ -23,28 +23,15 @@ import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (getNetworkId)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, throwContractError)
+import Contract.Monad (Contract)
 import Contract.Prelude
   ( type (/\)
-  , bind
-  , discard
   , foldMap
   , foldr
   , mconcat
-  , otherwise
-  , pure
-  , show
   , unwrap
-  , void
-  , (#)
-  , ($)
-  , (*)
-  , (+)
   , (/\)
-  , (<>)
-  , (==)
   )
-import Contract.Prelude (show)
 import Contract.ScriptLookups as Lookups
 import Contract.Time (POSIXTime(POSIXTime))
 import Contract.Transaction (submitTxFromConstraints)
