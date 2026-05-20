@@ -3,7 +3,8 @@ Module: Dao.Utils.Value
 Description: Value related helpers
 -}
 module Dao.Utils.Value
-  ( mkTokenName
+  ( countOfTokenInValue
+  , mkTokenName
   , valueSubtraction
   , normaliseValue
   , allPositive
@@ -11,8 +12,14 @@ module Dao.Utils.Value
 
 import Cardano.Types (AssetName, BigNum, ScriptHash, Value)
 import Cardano.Types.AssetName (mkAssetName)
-import Cardano.Types.BigNum (sub, zero) as BigNum
-import Cardano.Types.Value (flatten, isPositive, unflatten, unionWith) as Value
+import Cardano.Types.BigNum (add, sub, zero) as BigNum
+import Cardano.Types.Value
+  ( flatten
+  , getMultiAsset
+  , isPositive
+  , unflatten
+  , unionWith
+  ) as Value
 import Contract.Prelude
   ( class Foldable
   , type (/\)
@@ -27,11 +34,15 @@ import Contract.Prelude
   , (<$>)
   , (<<<)
   , (<=<)
+  , (=<<)
   , (>=)
   )
 import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
 import Data.Array (filter) as Array
-import Data.Maybe (Maybe, fromJust, fromMaybe)
+import Data.Foldable (foldl)
+import Data.Map (lookup, values) as Map
+import Data.Maybe (Maybe(Just), fromJust, fromMaybe, maybe)
+import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(Tuple))
 import JS.BigInt (BigInt)
 import Partial.Unsafe (unsafePartial)
@@ -52,13 +63,9 @@ normaliseValue =
     <<< Array.filter (\(Tuple _ amount) -> amount /= BigNum.zero)
     <<< Value.flatten
 
--- FIXME
-{-
 countOfTokenInValue :: ScriptHash -> Value -> BigNum
-countOfTokenInValue symbol value
-  let
-    maybeTotal = sum <$> AssocMap.elems <$> AssocMap.lookup symbol
-      (getValue value)
-  in
-    fromMaybe zero maybeTotal
--}
+countOfTokenInValue symbol val =
+  fromMaybe BigNum.zero
+    ( (foldl (\acc x -> BigNum.add x =<< acc) (Just BigNum.zero) <<< Map.values)
+        =<< Map.lookup symbol (unwrap $ Value.getMultiAsset val)
+    )

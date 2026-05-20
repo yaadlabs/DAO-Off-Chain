@@ -4,46 +4,25 @@ Description: Contract for creating a proposal
 -}
 module Dao.Workflow.CreateProposal (createProposal) where
 
+import Cardano.ToData (toData)
+import Cardano.Types (AssetName, PlutusScript(..), ScriptHash(..), Value(..))
+import Cardano.Types.BigNum (one) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.PlutusData (Datum(Datum), toData)
-import Contract.Prelude
-  ( bind
-  , discard
-  , mconcat
-  , one
-  , pure
-  , show
-  , (#)
-  , ($)
-  , (+)
-  )
+import Contract.Prelude (bind, discard, mconcat, one, pure, show, (#), ($), (+))
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash(ValidatorHash)
-  , validatorHash
-  )
 import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
-import Contract.Value (singleton) as Value
+import Contract.Value (getMultiAsset, singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Index.Query (IndexInfo, spendIndexUtxo)
 import Dao.Component.Proposal.Params (CreateProposalParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
-import Dao.Scripts.Validator
-  ( indexValidatorScript
-  , unappliedConfigValidator
-  )
+import Dao.Scripts.Validator (indexValidatorScript, unappliedConfigValidator)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
@@ -67,11 +46,11 @@ createProposal params' = do
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
 
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: PlutusScript <- unappliedConfigValidator
     validatorConfig
-  configValidatorRef <- retrieveReferenceScript $ unwrap appliedConfigValidator
+  configValidatorRef <- retrieveReferenceScript appliedConfigValidator
 
-  indexValidator :: Validator <- indexValidatorScript
+  indexValidator :: PlutusScript <- indexValidatorScript
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -85,7 +64,7 @@ createProposal params' = do
       params.indexSymbol
       params.configTokenName
       params.indexTokenName
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+  appliedTallyPolicy :: PlutusScript <- unappliedTallyPolicy tallyConfig
 
   let
     -- The index field of the IndexDatum must be incremented
@@ -95,7 +74,7 @@ createProposal params' = do
 
   -- The tally token name corresponds to the index field of the index datum
   -- Hence we use that to make the token here
-  tallyTokenName :: TokenName <-
+  tallyTokenName :: AssetName <-
     liftContractM "Could not make tally token name" $
       mkTallyTokenName indexInfo.datum
 
@@ -105,25 +84,25 @@ createProposal params' = do
     configDatum = configInfo.datum
 
     -- We need to send the tally datum to the tally validator
-    tallyValidatorHash :: ValidatorHash
-    tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
+    tallyValidatorHash :: ScriptHash
+    tallyValidatorHash = configDatum # unwrap # _.tallyValidator
 
-    tallySymbol :: CurrencySymbol
-    tallySymbol = scriptCurrencySymbol appliedTallyPolicy
+    tallySymbol :: ScriptHash
+    tallySymbol = PlutusScript.hash appliedTallyPolicy
 
     -- The token that will mark the UTXO at the tally validator
     -- containing the new tally datum passed by the user
     tallyNft :: Value
-    tallyNft = Value.singleton tallySymbol tallyTokenName one
+    tallyNft = Value.singleton tallySymbol tallyTokenName BigNum.one
 
     -- We need to send the updated index datum to the index validator
-    indexValidatorHash :: ValidatorHash
-    indexValidatorHash = validatorHash indexValidator
+    indexValidatorHash :: ScriptHash
+    indexValidatorHash = PlutusScript.hash indexValidator
 
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
-        [ Lookups.mintingPolicy appliedTallyPolicy
+        [ Lookups.plutusMintingPolicy appliedTallyPolicy
         , Lookups.validator indexValidator
         , indexInfo.lookups
         , configInfo.lookups
@@ -132,17 +111,18 @@ createProposal params' = do
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
-        [ Constraints.mustMintValue tallyNft
+        [ Constraints.mustMintValue $ Mint.fromMultiAsset $ Value.getMultiAsset
+            tallyNft
         , Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData params.tallyStateDatum)
+            (toData params.tallyStateDatum)
             Constraints.DatumInline
             tallyNft
         -- ^ We pay the newly created tally datum (passed as an argument by the user)
         -- to a UTXO at the tally validator, marked by the 'tallyNft'
         , Constraints.mustPayToScript
             indexValidatorHash
-            (Datum $ toData updatedIndexDatum)
+            (toData updatedIndexDatum)
             Constraints.DatumInline
             indexInfo.value
         -- ^ We pay the updated index datum (with its index incremented)
@@ -163,6 +143,6 @@ createProposal params' = do
 
   -- The tally token name corresponds to the
   -- 'index' field of the index datum
-  mkTallyTokenName :: IndexDatum -> Maybe TokenName
+  mkTallyTokenName :: IndexDatum -> Maybe AssetName
   mkTallyTokenName indexDatum =
     mkTokenName $ show $ indexDatum # unwrap # _.index

@@ -8,9 +8,24 @@ module Dao.Workflow.CreateConfig
   , createConfig
   ) where
 
+import Cardano.Plutus.Types.CurrencySymbol (fromScriptHash)
+import Cardano.ToData (toData)
+import Cardano.Types
+  ( AssetName
+  , PlutusData
+  , PlutusScript
+  , ScriptHash
+  , TransactionHash
+  , TransactionInput
+  , TransactionOutput
+  , Value
+  )
+import Cardano.Types.BigNum (one) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.Value (getMultiAsset, singleton) as Value
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.PlutusData (Datum(Datum), toData)
 import Contract.Prelude
   ( type (/\)
   , bind
@@ -24,22 +39,8 @@ import Contract.Prelude
   , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , ValidatorHash
-  , validatorHash
-  )
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName, Value, scriptCurrencySymbol)
-import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (CreateConfigParams)
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy
@@ -70,11 +71,11 @@ import ScriptArguments.Types
 -- | Create config result
 newtype CreateConfigResult = CreateConfigResult
   { txHash :: TransactionHash
-  , indexSymbol :: CurrencySymbol
-  , indexTokenName :: TokenName
-  , configSymbol :: CurrencySymbol
-  , configTokenName :: TokenName
-  , tallySymbol :: CurrencySymbol
+  , indexSymbol :: ScriptHash
+  , indexTokenName :: AssetName
+  , configSymbol :: ScriptHash
+  , configTokenName :: AssetName
+  , tallySymbol :: ScriptHash
   }
 
 -- | Contract for creating dynamic config datum and locking
@@ -103,19 +104,19 @@ createConfig params = do
     constraints :: Constraints.TxConstraints
     constraints = dynamicConfigInfo.constraints
 
-    indexSymbol :: CurrencySymbol
+    indexSymbol :: ScriptHash
     indexSymbol = params # unwrap # _.indexSymbol
 
-    indexTokenName :: TokenName
+    indexTokenName :: AssetName
     indexTokenName = params # unwrap # _.indexTokenName
 
-    configSymbol :: CurrencySymbol
+    configSymbol :: ScriptHash
     configSymbol = dynamicConfigInfo.symbol
 
-    configTokenName :: TokenName
+    configTokenName :: AssetName
     configTokenName = params # unwrap # _.configTokenName
 
-    tallySymbol :: CurrencySymbol
+    tallySymbol :: ScriptHash
     tallySymbol = dynamicConfigInfo.tallySymbol
 
   txHash <- submitTxFromConstraints lookups constraints
@@ -130,8 +131,8 @@ createConfig params = do
     }
 
 type ConfigInfo =
-  { symbol :: CurrencySymbol
-  , tallySymbol :: CurrencySymbol
+  { symbol :: ScriptHash
+  , tallySymbol :: ScriptHash
   , lookups :: Lookups.ScriptLookups
   , constraints :: Constraints.TxConstraints
   }
@@ -139,7 +140,7 @@ type ConfigInfo =
 -- Build the lookups and constraints for the transaction
 buildDynamicConfig ::
   CreateConfigParams ->
-  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  (TransactionInput /\ TransactionOutput) ->
   Contract ConfigInfo
 buildDynamicConfig params' (txInput /\ txInputWithScript) =
   do
@@ -152,12 +153,12 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
       configPolicyParams = ConfigPolicyParams
         { cpInitialUtxo: txInput, cpTokenName: params.configTokenName }
 
-    appliedConfigPolicy :: MintingPolicy <- unappliedConfigPolicy
+    appliedConfigPolicy :: PlutusScript <- unappliedConfigPolicy
       configPolicyParams
 
     let
-      configSymbol :: CurrencySymbol
-      configSymbol = scriptCurrencySymbol appliedConfigPolicy
+      configSymbol :: ScriptHash
+      configSymbol = PlutusScript.hash appliedConfigPolicy
 
       configValidatorParams :: ValidatorParams
       configValidatorParams =
@@ -172,42 +173,42 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
         params.configTokenName
         params.indexTokenName
 
-    appliedConfigValidator :: Validator <- unappliedConfigValidator
+    appliedConfigValidator :: PlutusScript <- unappliedConfigValidator
       configValidatorParams
 
     -- Make the scripts for the dynamic config datum
-    appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+    appliedTreasuryValidator :: PlutusScript <- unappliedTreasuryValidator
       configValidatorParams
-    appliedTallyValidator :: Validator <- unappliedTallyValidator
+    appliedTallyValidator :: PlutusScript <- unappliedTallyValidator
       configValidatorParams
-    appliedVoteValidator :: Validator <- unappliedVoteValidator
+    appliedVoteValidator :: PlutusScript <- unappliedVoteValidator
       configValidatorParams
-    appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy
+    appliedVotePolicy :: PlutusScript <- unappliedVotePolicy
       configValidatorParams
-    voteNftPolicy' :: MintingPolicy <- voteNftPolicy
-    appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+    voteNftPolicy' :: PlutusScript <- voteNftPolicy
+    appliedTallyPolicy :: PlutusScript <- unappliedTallyPolicy tallyConfig
 
     let
       tallyScriptHash :: ScriptHash
-      tallyScriptHash = unwrap $ validatorHash appliedTallyValidator
+      tallyScriptHash = PlutusScript.hash appliedTallyValidator
 
       treasuryScriptHash :: ScriptHash
-      treasuryScriptHash = unwrap $ validatorHash appliedTreasuryValidator
+      treasuryScriptHash = PlutusScript.hash appliedTreasuryValidator
 
       voteScriptHash :: ScriptHash
-      voteScriptHash = unwrap $ validatorHash appliedVoteValidator
+      voteScriptHash = PlutusScript.hash appliedVoteValidator
 
       configScriptHash :: ScriptHash
-      configScriptHash = unwrap $ validatorHash appliedConfigValidator
+      configScriptHash = PlutusScript.hash appliedConfigValidator
 
-      voteNftSymbol :: CurrencySymbol
-      voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
+      voteNftSymbol :: ScriptHash
+      voteNftSymbol = PlutusScript.hash voteNftPolicy'
 
-      voteSymbol :: CurrencySymbol
-      voteSymbol = scriptCurrencySymbol appliedVotePolicy
+      voteSymbol :: ScriptHash
+      voteSymbol = PlutusScript.hash appliedVotePolicy
 
-      tallyNftSymbol :: CurrencySymbol
-      tallyNftSymbol = scriptCurrencySymbol appliedTallyPolicy
+      tallyNftSymbol :: ScriptHash
+      tallyNftSymbol = PlutusScript.hash appliedTallyPolicy
 
       dynamicConfig :: DynamicConfigDatum
       dynamicConfig = DynamicConfigDatum
@@ -244,26 +245,27 @@ buildDynamicConfig params' (txInput /\ txInputWithScript) =
 
     let
       -- We need to pay the config to the config validator so we require its hash
-      configValidatorHash :: ValidatorHash
-      configValidatorHash = validatorHash appliedConfigValidator
+      configValidatorHash :: ScriptHash
+      configValidatorHash = PlutusScript.hash appliedConfigValidator
 
       -- This NFT is used to mark the UTXO at the
       -- config validator containing the config
       nftConfig :: Value
-      nftConfig = Value.singleton configSymbol params.configTokenName one
+      nftConfig = Value.singleton configSymbol params.configTokenName BigNum.one
 
-      configDatum :: Datum
-      configDatum = Datum $ toData dynamicConfig
+      configDatum :: PlutusData
+      configDatum = toData dynamicConfig
 
       lookups' :: Lookups.ScriptLookups
       lookups' = mconcat
-        [ Lookups.mintingPolicy appliedConfigPolicy
+        [ Lookups.plutusMintingPolicy appliedConfigPolicy
         , Lookups.unspentOutputs $ Map.singleton txInput txInputWithScript
         ]
 
       constraints' :: Constraints.TxConstraints
       constraints' = mconcat
-        [ Constraints.mustMintValue nftConfig
+        [ Constraints.mustMintValue $ Mint.fromMultiAsset $ Value.getMultiAsset
+            nftConfig
         , Constraints.mustSpendPubKeyOutput txInput
         , Constraints.mustPayToScript
             configValidatorHash

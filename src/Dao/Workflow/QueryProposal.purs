@@ -15,30 +15,21 @@ module Dao.Workflow.QueryProposal
 
 import Contract.Prelude
 
-import Contract.Address (Address, scriptHashAddress)
+import Cardano.Types (Address, AssetName, Credential(ScriptHashCredential), PlutusScript, ScriptHash, TransactionInput, TransactionOutput)
+import Cardano.Types.Address (mkPaymentAddress)
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Contract.Address (getNetworkId)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
-import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Time (POSIXTime)
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
 import Contract.Utxos (utxosAt)
-import Contract.Value (CurrencySymbol, TokenName, scriptCurrencySymbol)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Proposal.Params (QueryProposalParams)
-import Dao.Component.Proposal.Query
-  ( QueryResult(QueryResult)
-  , getTokenNameAndDatumFromOutput
-  )
+import Dao.Component.Proposal.Query (QueryResult(QueryResult), getTokenNameAndDatumFromOutput)
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  )
+import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
 import Dao.Utils.Datum (extractOutputDatum)
 import Dao.Utils.Query (hasTokenWithSymbol)
 import Dao.Utils.Time (getCurrentTime)
@@ -46,20 +37,14 @@ import Data.Array (filter, mapMaybe)
 import Data.Map as Map
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
-import LambdaBuffers.ApplicationTypes.Proposal
-  ( ProposalType
-      ( ProposalType'General
-      , ProposalType'Trip
-      , ProposalType'Upgrade
-      )
-  )
+import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
 import Type.Proxy (Proxy(Proxy))
 
 -- | Retrieve an individual proposal by its token name
 getProposalByTokenName ::
   QueryProposalParams ->
-  TokenName ->
+  AssetName ->
   Contract (Maybe QueryResult)
 getProposalByTokenName params proposalName = do
   logInfo' "Entering getProposalByTokenName contract"
@@ -68,7 +53,7 @@ getProposalByTokenName params proposalName = do
     [ queryResult ] -> pure $ Just queryResult
     _ -> pure Nothing
   where
-  check :: TokenName -> Array QueryResult -> Array QueryResult
+  check :: AssetName -> Array QueryResult -> Array QueryResult
   check proposalName = mapMaybe op
     where
     op queryResult =
@@ -89,7 +74,7 @@ getAllProposals params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: PlutusScript <- unappliedTallyValidator
     validatorConfig
 
   -- Make the tally policy script
@@ -98,16 +83,19 @@ getAllProposals params' = do
       params.indexSymbol
       params.configTokenName
       params.indexTokenName
-  appliedTallyPolicy :: MintingPolicy <- unappliedTallyPolicy tallyConfig
+  appliedTallyPolicy :: PlutusScript <- unappliedTallyPolicy tallyConfig
 
+  network <- getNetworkId
   let
-    tallySymbol :: CurrencySymbol
-    tallySymbol = scriptCurrencySymbol appliedTallyPolicy
+    tallySymbol :: ScriptHash
+    tallySymbol = PlutusScript.hash appliedTallyPolicy
 
     tallyValidatorAddress :: Address
-    tallyValidatorAddress = scriptHashAddress
-      (validatorHash appliedTallyValidator)
-      Nothing
+    tallyValidatorAddress =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ PlutusScript.hash appliedTallyValidator)
+        Nothing
 
   tallyValidatorUtxos <- utxosAt tallyValidatorAddress
 
@@ -122,8 +110,8 @@ getAllProposals params' = do
   pure proposalUtxos
   where
   getProposalInfo ::
-    CurrencySymbol ->
-    Array (TransactionInput /\ TransactionOutputWithRefScript) ->
+    ScriptHash ->
+    Array (TransactionInput /\ TransactionOutput) ->
     Array QueryResult
   getProposalInfo symbol = mapMaybe op
     where
@@ -221,7 +209,7 @@ getAllSuccessfulProposals params = do
     params' = params # unwrap
     validatorConfig = mkValidatorConfig params'.configSymbol
       params'.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: PlutusScript <- unappliedConfigValidator
     validatorConfig
   configInfo :: ConfigInfo <- referenceConfigUtxo params'.configSymbol
     appliedConfigValidator

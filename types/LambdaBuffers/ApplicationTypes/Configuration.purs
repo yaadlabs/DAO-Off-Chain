@@ -2,11 +2,10 @@ module LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum(..)) whe
 
 import Cardano.FromData (class FromData, fromData)
 import Cardano.Plutus.Types.Address (Address)
+import Cardano.Plutus.Types.CurrencySymbol (CurrencySymbol) as Plutus
 import Cardano.ToData (class ToData, toData)
-import Cardano.Types (ScriptHash)
+import Cardano.Types (AssetName, ScriptHash)
 import Cardano.Types.PlutusData (PlutusData(Integer, List)) as PlutusData
-import Contract.Value (CurrencySymbol)
-import Contract.Value (CurrencySymbol)
 import Contract.Value (TokenName)
 import Data.Generic.Rep as Data.Generic.Rep
 import Data.Maybe as Data.Maybe
@@ -33,12 +32,12 @@ newtype DynamicConfigDatum = DynamicConfigDatum
   , maxTripDisbursement :: BigInt
   , agentDisbursementPercent :: BigInt
   , proposalTallyEndOffset :: BigInt
-  , tallyNft :: CurrencySymbol
-  , voteCurrencySymbol :: CurrencySymbol
-  , voteTokenName :: TokenName
-  , voteNft :: CurrencySymbol
-  , voteFungibleCurrencySymbol :: CurrencySymbol
-  , voteFungibleTokenName :: TokenName
+  , tallyNft :: ScriptHash
+  , voteCurrencySymbol :: ScriptHash
+  , voteTokenName :: AssetName
+  , voteNft :: ScriptHash
+  , voteFungibleCurrencySymbol :: ScriptHash
+  , voteFungibleTokenName :: AssetName
   , fungibleVotePercent :: BigInt
   }
 

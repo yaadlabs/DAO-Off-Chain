@@ -4,7 +4,12 @@ Description: Contract for disbursing treasury funds based on a trip proposal
 -}
 module Dao.Workflow.TreasuryTrip (treasuryTrip) where
 
-import Contract.Address (Address, PaymentPubKeyHash)
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (toCardano) as Plutus.Address
+import Cardano.Types (BigNum)
+import Cardano.Types.BigNum (fromBigInt) as BigNum
+import Cardano.Types.Value (lovelaceValueOf)
+import Contract.Address (Address, PaymentPubKeyHash, getNetworkId)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -25,19 +30,9 @@ import Contract.Prelude
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , adaSymbol
-  , adaToken
-  , singleton
-  )
+import Contract.Value (CurrencySymbol, TokenName, Value, singleton)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
@@ -51,11 +46,12 @@ import Dao.Scripts.Validator
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.Maybe (Maybe(Just, Nothing), fromJust)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import Partial.Unsafe (unsafePartial)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
 treasuryTrip :: TreasuryParams -> Contract TransactionHash
@@ -95,11 +91,21 @@ treasuryTrip params' = do
     tallyDatum :: TallyStateDatum
     tallyDatum = tallyInfo.datum
 
+  network <- getNetworkId
+
   -- Get the treasury payment info from the 'TallyStateDatum'
-  travelAgentAddress :: Address <- liftContractM "Not a trip proposal" $
-    getTravelAgentAddress tallyDatum
-  travellerAddress :: Address <- liftContractM "Not a trip proposal" $
-    getTravellerAddress tallyDatum
+  (travelAgentAddress :: Address) <- do
+    paddr <- liftContractM "Not a trip proposal" $ getTravelAgentAddress
+      tallyDatum
+    liftContractM "Could not convert travel agent address" $
+      Plutus.Address.toCardano network paddr
+
+  (travellerAddress :: Address) <- do
+    paddr <- liftContractM "Not a trip proposal" $ getTravellerAddress
+      tallyDatum
+    liftContractM "Could not convert traveller address" $
+      Plutus.Address.toCardano network paddr
+
   totalTravelCost :: BigInt <- liftContractM "Not a trip proposal" $
     getTravelCost tallyDatum
 
@@ -161,8 +167,10 @@ treasuryTrip params' = do
     disbursementAmount = min configMaxTripDisbursement totalTravelCost
 
     disbursementAmountLovelaces :: Value
-    disbursementAmountLovelaces = singleton adaSymbol adaToken
-      disbursementAmount
+    disbursementAmountLovelaces =
+      -- FIXME: unsafe
+      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
+        disbursementAmount
 
     -- The value held at the treasury input UTXO which
     -- must cover the disbursement amount
@@ -171,8 +179,10 @@ treasuryTrip params' = do
 
     -- The change to send back to the treasury
     amountToSendBackToTreasuryLovelaces :: Value
-    amountToSendBackToTreasuryLovelaces = normaliseValue
-      (valueSubtraction treasuryInputAmount disbursementAmountLovelaces)
+    amountToSendBackToTreasuryLovelaces =
+      -- FIXME: unsafe
+      normaliseValue $ unsafePartial fromJust $
+        valueSubtraction treasuryInputAmount disbursementAmountLovelaces
 
     -- Caluclate amount to send to the travel agent
     amountToSendToTravelAgent :: BigInt
@@ -184,12 +194,16 @@ treasuryTrip params' = do
     amountToSendToTraveller = totalTravelCost - amountToSendToTravelAgent
 
     amountToSendToTravelAgentLovelaces :: Value
-    amountToSendToTravelAgentLovelaces = singleton adaSymbol adaToken
-      amountToSendToTravelAgent
+    amountToSendToTravelAgentLovelaces =
+      -- FIXME: unsafe
+      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
+        amountToSendToTravelAgent
 
     amountToSendToTravellerLovelaces :: Value
-    amountToSendToTravellerLovelaces = singleton adaSymbol adaToken
-      amountToSendToTraveller
+    amountToSendToTravellerLovelaces =
+      -- FIXME: unsafe
+      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
+        amountToSendToTraveller
 
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive
@@ -240,7 +254,7 @@ treasuryTrip params' = do
   pure txHash
   where
   -- Get the travel agent's address from the tally datum
-  getTravelAgentAddress :: TallyStateDatum -> Maybe Address
+  getTravelAgentAddress :: TallyStateDatum -> Maybe Plutus.Address
   getTravelAgentAddress tallyDatum =
     let
       proposalType = tallyDatum # unwrap # _.proposal
@@ -250,7 +264,7 @@ treasuryTrip params' = do
         _ -> Nothing
 
   -- Get the traveller's address from the tally datum
-  getTravellerAddress :: TallyStateDatum -> Maybe Address
+  getTravellerAddress :: TallyStateDatum -> Maybe Plutus.Address
   getTravellerAddress tallyDatum =
     let
       proposalType = tallyDatum # unwrap # _.proposal

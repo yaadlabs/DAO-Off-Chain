@@ -4,7 +4,16 @@ Description: Contract for disbursing treasury funds based on a general proposal
 -}
 module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
-import Contract.Address (Address, PaymentPubKeyHash, StakePubKeyHash(..))
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (toCardano) as Plutus.Address
+import Cardano.Types.BigNum (fromBigInt) as BigNum
+import Cardano.Types.Value (lovelaceValueOf)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash
+  , StakePubKeyHash(..)
+  , getNetworkId
+  )
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -26,17 +35,9 @@ import Contract.Prelude
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( Value
-  , adaSymbol
-  , adaToken
-  , singleton
-  )
+import Contract.Value (Value, singleton)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
@@ -51,13 +52,14 @@ import Dao.Utils.Address (addressToPaymentPubKeyHash, addressToStakePubKeyHash)
 import Dao.Utils.Constraints (mustPayToPubKeyStakeAddress)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
-import Data.Maybe (Maybe(Nothing, Just))
+import Data.Maybe (Maybe(Nothing, Just), fromJust)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
+import Partial.Unsafe (unsafePartial)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
@@ -101,8 +103,13 @@ treasuryGeneral params' = do
 
   {- Get the treasury payment info from the 'TallyStateDatum' -}
   -- The address of the user that will receive the payment
-  paymentAddress :: Address <- liftContractM "Not a general proposal" $
-    getPaymentAddress tallyDatum
+  (paymentAddress :: Address) <- do
+    paddr <- liftContractM "Not a general proposal" $ getPaymentAddress
+      tallyDatum
+    network <- getNetworkId
+    liftContractM "Could not convert payment address" $
+      Plutus.Address.toCardano network paddr
+
   -- The amount of Ada the user should receive
   paymentAmount :: BigInt <- liftContractM "Not a general proposal" $
     getPaymentAmount tallyDatum
@@ -169,13 +176,17 @@ treasuryGeneral params' = do
 
     -- The Ada amount to send to the receiver
     amountToSendToPaymentAddress :: Value
-    amountToSendToPaymentAddress = singleton adaSymbol adaToken
-      disbursementAmount
+    amountToSendToPaymentAddress =
+      -- FIXME: unsafe
+      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
+        disbursementAmount
 
     -- The change to send back to the treasury
     amountToSendBackToTreasury :: Value
-    amountToSendBackToTreasury = normaliseValue
-      (valueSubtraction treasuryInputAmount amountToSendToPaymentAddress)
+    amountToSendBackToTreasury =
+      -- FIXME: unsafe
+      normaliseValue $ unsafePartial fromJust $
+        valueSubtraction treasuryInputAmount amountToSendToPaymentAddress
 
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive
@@ -230,7 +241,7 @@ treasuryGeneral params' = do
   pure txHash
   where
   -- Get the user's address
-  getPaymentAddress :: TallyStateDatum -> Maybe Address
+  getPaymentAddress :: TallyStateDatum -> Maybe Plutus.Address
   getPaymentAddress tallyDatum =
     let
       proposalType = tallyDatum # unwrap # _.proposal

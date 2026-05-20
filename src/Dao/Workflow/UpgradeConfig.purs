@@ -4,9 +4,15 @@ Description: Contract for upgrading the dynamic config based on an upgrade propo
 -}
 module Dao.Workflow.UpgradeConfig (upgradeConfig) where
 
+import Cardano.Plutus.Types.TokenName (adaToken)
+import Cardano.Types (Mint, PlutusData, Value)
+import Cardano.Types.Int (one) as CTInt
+import Cardano.Types.Mint (singleton) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.Value (singleton) as Value
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
-import Contract.PlutusData (Datum(Datum), toData)
+import Contract.PlutusData (toData)
 import Contract.Prelude
   ( bind
   , discard
@@ -24,25 +30,13 @@ import Contract.Prelude
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Time (POSIXTime(POSIXTime))
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( Value
-  , adaToken
-  , scriptCurrencySymbol
-  , singleton
-  )
 import Dao.Component.Config.Params (UpgradeConfigParams, mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, spendConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Scripts.Policy (upgradePolicy)
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  )
+import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
@@ -73,8 +67,7 @@ upgradeConfig params' =
     -- the config validator holding the old datum, we will then create
     -- a new UTXO at the config validator holding the new config datum
     -- and also marked by the config NFT
-    configValidatorRef <- retrieveReferenceScript $ unwrap
-      appliedConfigValidator
+    configValidatorRef <- retrieveReferenceScript appliedConfigValidator
     configInfo :: ConfigInfo <- spendConfigUtxo params.configSymbol
       appliedConfigValidator
       configValidatorRef
@@ -88,8 +81,8 @@ upgradeConfig params' =
 
     let
       -- The new config passed by the user to replace the old one
-      newConfigDatum :: Datum
-      newConfigDatum = Datum $ toData params.newDynamicConfigDatum
+      newConfigDatum :: PlutusData
+      newConfigDatum = toData params.newDynamicConfigDatum
 
       -- The config that was held at the UTXO we are spending
       oldDynamicConfig :: DynamicConfigDatum
@@ -151,16 +144,17 @@ upgradeConfig params' =
 
     let
       -- We use an always succeeds policy as a placeholder for this requirement
-      upgradeToken :: Value
-      upgradeToken = singleton (scriptCurrencySymbol upgradePolicy') adaToken
-        one
+      upgradeToken :: Mint
+      upgradeToken =
+        Mint.singleton (PlutusScript.hash upgradePolicy') (unwrap adaToken)
+          CTInt.one
 
       lookups :: Lookups.ScriptLookups
       lookups =
         mconcat
           [ configInfo.lookups
           , tallyInfo.lookups
-          , Lookups.mintingPolicy upgradePolicy'
+          , Lookups.plutusMintingPolicy upgradePolicy'
           ]
 
       constraints :: Constraints.TxConstraints
@@ -168,7 +162,7 @@ upgradeConfig params' =
         mconcat
           [ Constraints.mustPayToScript
               configValidatorHash
-              (Datum $ toData newConfigDatum)
+              newConfigDatum
               Constraints.DatumInline
               configInfo.value
           -- We pay the new config passed by the user to a

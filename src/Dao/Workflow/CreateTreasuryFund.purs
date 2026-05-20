@@ -4,6 +4,13 @@ Description: Contract for creating fund UTXO at treasury validator
 -}
 module Dao.Workflow.CreateTreasuryFund (createTreasuryFund) where
 
+import Cardano.Plutus.Types.TokenName (adaToken)
+import Cardano.Types (PlutusScript, ScriptHash, Value(..))
+import Cardano.Types.BigNum (fromBigInt, one) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.Value (getMultiAsset, singleton) as Value
+import Cardano.Types.Value (lovelaceValueOf)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -20,20 +27,8 @@ import Contract.Prelude
   , (>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , Value
-  , adaSymbol
-  , adaToken
-  , scriptCurrencySymbol
-  )
-import Contract.Value (singleton) as Value
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Treasury.Params (TreasuryFundParams)
 import Dao.Scripts.Policy (unappliedTreasuryPolicy)
@@ -43,7 +38,10 @@ import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
+import Data.Maybe (fromJust)
+import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
+import Partial.Unsafe (unsafePartial)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
@@ -66,40 +64,49 @@ createTreasuryFund params = do
     $ head
     $ Map.toUnfoldable userUtxos
 
-  appliedTreasuryPolicy :: MintingPolicy <- unappliedTreasuryPolicy txIn
-  appliedTreasuryValidator :: Validator <- unappliedTreasuryValidator
+  appliedTreasuryPolicy :: PlutusScript <- unappliedTreasuryPolicy txIn
+  appliedTreasuryValidator :: PlutusScript <- unappliedTreasuryValidator
     validatorConfig
 
   let
-    treasuryValidatorHash :: ValidatorHash
-    treasuryValidatorHash = validatorHash appliedTreasuryValidator
+    treasuryValidatorHash :: ScriptHash
+    treasuryValidatorHash = PlutusScript.hash appliedTreasuryValidator
 
-    treasurySymbol :: CurrencySymbol
-    treasurySymbol = scriptCurrencySymbol appliedTreasuryPolicy
+    treasurySymbol :: ScriptHash
+    treasurySymbol = PlutusScript.hash appliedTreasuryPolicy
 
     treasuryValue :: Value
-    treasuryValue = Value.singleton treasurySymbol adaToken one
+    treasuryValue = Value.singleton treasurySymbol (unwrap adaToken) BigNum.one
 
     adaValue :: Value
-    adaValue = Value.singleton adaSymbol adaToken params.adaAmount
+    adaValue =
+      -- FIXME: unsafe
+      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
+        params.adaAmount
 
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
-      [ Lookups.mintingPolicy appliedTreasuryPolicy
+      [ Lookups.plutusMintingPolicy appliedTreasuryPolicy
       , Lookups.unspentOutputs userUtxos
       ]
 
     constraints :: Constraints.TxConstraints
     constraints = mconcat
-      [ Constraints.mustMintValue treasuryValue
+      [ Constraints.mustMintValue $ Mint.fromMultiAsset $ Value.getMultiAsset
+          treasuryValue
       , Constraints.mustSpendPubKeyOutput txIn
       , Constraints.mustPayToScript
           treasuryValidatorHash
           unitDatum
           Constraints.DatumInline
-          (treasuryValue <> adaValue)
+          -- FIXME: unsafe
+          (unsafePartial $ treasuryValue <> adaValue)
       ]
 
   txHash <- submitTxFromConstraints lookups constraints
 
-  pure $ ContractResult { txHash, symbol: treasurySymbol, tokenName: adaToken }
+  pure $ ContractResult
+    { txHash
+    , symbol: treasurySymbol
+    , tokenName: unwrap adaToken
+    }

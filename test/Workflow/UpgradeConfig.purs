@@ -4,71 +4,38 @@ Description: Test the upgrade config workflow
 -}
 module Test.Workflow.UpgradeConfig (suite) where
 
+import Cardano.Plutus.Types.TokenName (adaToken)
+import Cardano.Types (AssetName, BigNum)
+import Cardano.Types.BigNum (fromInt) as BigNum
+import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
-import Contract.Prelude
-  ( type (/\)
-  , Unit
-  , bind
-  , discard
-  , pure
-  , show
-  , show
-  , unit
-  , void
-  , ($)
-  , (/\)
-  , (<>)
-  )
+import Contract.Prelude (type (/\), Unit, bind, discard, pure, show, show, unit, void, ($), (/\), (<>))
+import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value
-  ( TokenName
-  , adaSymbol
-  , adaToken
-  , scriptCurrencySymbol
-  )
-import Contract.Wallet
-  ( getWalletAddress
-  , getWalletCollateral
-  , ownPaymentPubKeyHash
-  )
-import Dao.Component.Config.Params
-  ( CreateConfigParams(CreateConfigParams)
-  , UpgradeConfigParams(UpgradeConfigParams)
-  )
-import Dao.Component.Fungible.Params
-  ( CreateFungibleParams(CreateFungibleParams)
-  )
-import Dao.Component.Proposal.Params
-  ( CreateProposalParams(CreateProposalParams)
-  )
-import Dao.Component.Vote.Params
-  ( CountVoteParams(CountVoteParams)
-  , VoteOnProposalParams(VoteOnProposalParams)
-  )
+import Contract.Wallet (getWalletAddress, getWalletCollateral, ownPaymentPubKeyHash)
+import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), UpgradeConfigParams(UpgradeConfigParams))
+import Dao.Component.Fungible.Params (CreateFungibleParams(CreateFungibleParams))
+import Dao.Component.Proposal.Params (CreateProposalParams(CreateProposalParams))
+import Dao.Component.Vote.Params (CountVoteParams(CountVoteParams), VoteOnProposalParams(VoteOnProposalParams))
 import Dao.Scripts.Policy (fungiblePolicy)
 import Dao.Scripts.Policy (upgradePolicy)
 import Dao.Scripts.Policy (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig
-  ( CreateConfigResult(CreateConfigResult)
-  , createConfig
-  )
+import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund)
 import Dao.Workflow.CreateVotePass (createVotePass)
 import Dao.Workflow.UpgradeConfig (upgradeConfig)
-import Dao.Workflow.VoteOnProposal
-  ( VoteOnProposalResult(VoteOnProposalResult)
-  , voteOnProposal
-  )
+import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult), voteOnProposal)
+import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
 import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
@@ -78,15 +45,15 @@ import Test.Data.Address (dummyAddress)
 import Test.Data.Config (dummyNewConfig)
 import Test.Data.Tally (sampleUpgradeConfigProposalTallyStateDatum)
 
-suite :: TestPlanM PlutipTest Unit
+suite :: TestPlanM ContractTest Unit
 suite = do
   group "DAO tests" do
     test "Upgrade config test" do
       let
-        distribution :: (Array BigInt)
+        distribution :: Array BigNum
         distribution =
-          [ BigInt.fromInt 2_000_000_000
-          , BigInt.fromInt 500_000_000
+          [ BigNum.fromInt 2_000_000_000
+          , BigNum.fromInt 500_000_000
           ]
 
       withWallets distribution \walletOne -> do
@@ -105,7 +72,7 @@ suite = do
             createVotePass userPkh
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) votePassTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots $ BigNum.fromInt 3
 
           let
             fungibleParams :: CreateFungibleParams
@@ -123,10 +90,10 @@ suite = do
             { txHash: createIndexTxHash
             , symbol: indexSymbol
             , tokenName: indexTokenName
-            } <- createIndex adaToken
+            } <- createIndex $ unwrap adaToken
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)
 
           -- The policy for the 'voteNft' token (vote pass)
           votePassPolicy <- voteNftPolicy
@@ -135,23 +102,23 @@ suite = do
           fungiblePolicy' <- fungiblePolicy
 
           -- The fungible token name is hardcoded to this for now
-          fungibleTokenName :: TokenName <-
+          fungibleTokenName :: AssetName <-
             liftContractM "Could not make voteNft token name" $ mkTokenName
               "vote_fungible"
           let
             -- The symbol for the 'voteNft' 
             -- This is the vote 'pass' that a user must possess
             -- in order to vote on a proposal
-            votePassSymbol = scriptCurrencySymbol votePassPolicy
+            votePassSymbol = PlutusScript.hash votePassPolicy
 
             -- The symbol for the 'fungibleSymbol'
             -- This acts as a vote multiplier for the user
             -- Without it the user's vote counts strictly for one (for or against)
-            fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+            fungibleSymbol = PlutusScript.hash fungiblePolicy'
 
             sampleConfigParams :: CreateConfigParams
             sampleConfigParams = CreateConfigParams
-              { configTokenName: adaToken
+              { configTokenName: unwrap adaToken
               , upgradeMajorityPercent: BigInt.fromInt 0
               , upgradeRelativeMajorityPercent: BigInt.fromInt 0
               , generalMajorityPercent: BigInt.fromInt 0
@@ -163,7 +130,7 @@ suite = do
               , maxTripDisbursement: BigInt.fromInt 20_000_000
               , agentDisbursementPercent: BigInt.fromInt 1
               , proposalTallyEndOffset: BigInt.fromInt 0
-              , voteTokenName: adaToken
+              , voteTokenName: unwrap adaToken
               , voteFungibleCurrencySymbol: fungibleSymbol
               , voteFungibleTokenName: fungibleTokenName
               , fungibleVotePercent: BigInt.fromInt 10
@@ -180,7 +147,7 @@ suite = do
             } <- createConfig sampleConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) createConfigTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)
 
           let
             treasuryFundParams =
@@ -191,7 +158,7 @@ suite = do
 
           upgradePolicy' <- upgradePolicy
           let
-            upgradePolicySymbol = scriptCurrencySymbol upgradePolicy'
+            upgradePolicySymbol = PlutusScript.hash upgradePolicy'
           tallyStateDatum <- sampleUpgradeConfigProposalTallyStateDatum
             upgradePolicySymbol
 
@@ -213,7 +180,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             createProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)
 
           let
             voteParams :: VoteOnProposalParams
@@ -234,7 +201,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             voteOnProposalTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)
 
           let
             countVoteParams :: CountVoteParams
@@ -249,7 +216,7 @@ suite = do
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
             countVoteTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)
 
           dummyConfig <- dummyNewConfig
           let
@@ -265,4 +232,4 @@ suite = do
           treasuryTxHash <- upgradeConfig upgradeConfigParams
 
           void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
-          void $ waitNSlots (Natural.fromInt' 3)
+          void $ waitNSlots (BigNum.fromInt 3)

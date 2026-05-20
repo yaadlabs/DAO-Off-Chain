@@ -5,7 +5,11 @@ module Dao.Workflow.ReferenceScripts
   , retrieveReferenceScript
   ) where
 
-import Contract.Address (scriptHashAddress)
+import Cardano.Types (Credential(ScriptHashCredential), PlutusScript(..))
+import Cardano.Types.Address (mkPaymentAddress)
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.Value (empty) as Value
+import Contract.Address (getNetworkId)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -24,17 +28,11 @@ import Contract.Prelude
   , (/\)
   , (==)
   )
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy, NativeMintingPolicy)
-  , PlutusScript
-  , Validator
-  , validatorHash
-  )
+import Contract.Scripts (validatorHash)
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef)
   , TransactionHash
   , awaitTxConfirmedWithTimeout
-  , mkTxUnspentOut
   , submitTxFromConstraints
   )
 import Contract.TxConstraints
@@ -53,17 +51,18 @@ import Dao.Scripts.Validator
   )
 import Data.Array (head, mapMaybe)
 import Data.Map as Map
+import Data.Newtype (wrap)
 import Data.Time.Duration (Seconds(Seconds))
 import ScriptArguments.Types (ValidatorParams)
 
 -- | TODO: Reduce duplication
 deployReferenceValidator' ::
-  Contract Validator ->
+  Contract PlutusScript ->
   Contract Constraints.TxConstraints
 deployReferenceValidator' validator' = do
   indexValidator <- indexValidatorScript
   validator <- validator'
-  let referenceScript = PlutusScriptRef $ unwrap validator
+  let referenceScript = PlutusScriptRef validator
   pure $
     mconcat
       [ Constraints.mustPayToScriptWithScriptRef
@@ -71,17 +70,17 @@ deployReferenceValidator' validator' = do
           unitDatum
           DatumInline
           referenceScript
-          mempty
+          Value.empty
       ]
 
 deployReferenceValidator ::
   ValidatorParams ->
-  (ValidatorParams -> Contract Validator) ->
+  (ValidatorParams -> Contract PlutusScript) ->
   Contract Constraints.TxConstraints
 deployReferenceValidator validatorParams validator' = do
   indexValidator <- indexValidatorScript
   validator <- validator' validatorParams
-  let referenceScript = PlutusScriptRef $ unwrap validator
+  let referenceScript = PlutusScriptRef validator
   pure $
     mconcat
       [ Constraints.mustPayToScriptWithScriptRef
@@ -89,29 +88,26 @@ deployReferenceValidator validatorParams validator' = do
           unitDatum
           DatumInline
           referenceScript
-          mempty
+          Value.empty
       ]
 
 deployReferencePolicy ::
   ValidatorParams ->
-  (ValidatorParams -> Contract MintingPolicy) ->
+  (ValidatorParams -> Contract PlutusScript) ->
   Contract Constraints.TxConstraints
 deployReferencePolicy validatorParams policy' = do
   indexValidator <- indexValidatorScript
-  policy <- policy' validatorParams
-  case policy of
-    NativeMintingPolicy _ -> mempty
-    PlutusMintingPolicy script -> do
-      let referenceScript = PlutusScriptRef script
-      pure $
-        mconcat
-          [ Constraints.mustPayToScriptWithScriptRef
-              (validatorHash indexValidator)
-              unitDatum
-              DatumInline
-              referenceScript
-              mempty
-          ]
+  script <- policy' validatorParams
+  let referenceScript = PlutusScriptRef script
+  pure $
+    mconcat
+      [ Constraints.mustPayToScriptWithScriptRef
+          (validatorHash indexValidator)
+          unitDatum
+          DatumInline
+          referenceScript
+          Value.empty
+      ]
 
 deployReferenceScriptsOne :: ValidatorParams -> Contract TransactionHash
 deployReferenceScriptsOne validatorParams = do
@@ -178,16 +174,19 @@ retrieveReferenceScript ::
   Contract InputWithScriptRef
 retrieveReferenceScript script = do
   indexValidator <- indexValidatorScript
+  network <- getNetworkId
   let
-    scriptHolderAddress = scriptHashAddress
-      (validatorHash indexValidator)
-      Nothing
+    scriptHolderAddress =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ PlutusScript.hash indexValidator)
+        Nothing
   utxos <- utxosAt scriptHolderAddress
   let
-    findUtxoWithScript (txInp /\ txOut) =
-      case (unwrap txOut).scriptRef of
+    findUtxoWithScript (input /\ output) =
+      case (unwrap output).scriptRef of
         Just (PlutusScriptRef ref) ->
-          if ref == script then Just $ RefInput $ mkTxUnspentOut txInp txOut
+          if ref == script then Just $ RefInput $ wrap { input, output }
           else Nothing
         _ -> Nothing
     utxosList = Map.toUnfoldableUnordered utxos

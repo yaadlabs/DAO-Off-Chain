@@ -32,52 +32,27 @@ module Dao.Web.Api
 
 import Prelude
 
-import Contract.Address (addressWithNetworkTagToBech32)
+import Cardano.Plutus.Types.TokenName (adaToken) as Value
+import Cardano.Types (NetworkId(TestnetId, MainnetId))
+import Cardano.Types.Address (toBech32) as Address
+import Cardano.Types.BigNum (fromInt) as BigNum
+import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Chain (waitNSlots) as Ctl
-import Contract.Config
-  ( NetworkId(TestnetId, MainnetId)
-  , defaultSynchronizationParams
-  , defaultTimeParams
-  , emptyHooks
-  ) as Ctl
+import Contract.Config (KnownWallet(Eternl), mkBlockfrostBackendParams, walletName)
+import Contract.Config (defaultSynchronizationParams, defaultTimeParams, emptyHooks) as Ctl
 import Contract.JsSdk (mkContractEnvJS, stopContractEnvJS) as Ctl
 import Contract.Monad (ContractEnv, liftContractM) as Ctl
 import Contract.Transaction (awaitTxConfirmedWithTimeout) as Ctl
-import Contract.Value (adaToken, scriptCurrencySymbol) as Value
-import Contract.Wallet (getWalletAddressWithNetworkTag) as Ctl
+import Contract.Wallet (getWalletAddress)
 import Control.Promise (Promise)
-import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToNami)) as Ctl
-import Dao.Component.Config.Params
-  ( CreateConfigParams(CreateConfigParams)
-  , mkValidatorConfig
-  ) as Component
+import Ctl.Internal.Wallet.Spec (WalletSpec(ConnectToGenericCip30)) as Ctl
+import Dao.Component.Config.Params (CreateConfigParams(CreateConfigParams), mkValidatorConfig) as Component
 import Dao.Scripts.Policy (fungiblePolicy, voteNftPolicy) as Scripts
-import Dao.Utils.Address (addressToPaymentPubKeyHash) as Utils
+import Dao.Utils.Address (addressToPaymentPubKeyHash, plutusAddressToPaymentPubKeyHash) as Utils
 import Dao.Utils.Contract (ContractResult(ContractResult)) as Utils
 import Dao.Utils.Value (mkTokenName) as Utils
 import Dao.Web.Call (mkContractCall1, mkContractCall2, mkContractCall3)
-import Dao.Web.Types
-  ( Address
-  , CancelVoteParams
-  , ContractResult
-  , CountVoteParams
-  , CreateConfigParams
-  , CreateConfigResult
-  , CreateFungibleParams
-  , CreateProposalParams
-  , CreateTreasuryFundParams
-  , CtlConfig(CtlConfig)
-  , JsMaybe
-  , QueryProposalParams
-  , QueryResult
-  , TokenName
-  , TransactionHash
-  , TreasuryParams
-  , UpgradeConfigParams
-  , ValidatorParams
-  , VoteOnProposalParams
-  , VoteOnProposalResult
-  )
+import Dao.Web.Types (Address, CancelVoteParams, ContractResult, CountVoteParams, CreateConfigParams, CreateConfigResult, CreateFungibleParams, CreateProposalParams, CreateTreasuryFundParams, CtlConfig(CtlConfig), JsMaybe, QueryProposalParams, QueryResult, TokenName, TransactionHash, TreasuryParams, UpgradeConfigParams, ValidatorParams, VoteOnProposalParams, VoteOnProposalResult)
 import Dao.Web.Types (ProposalType(..), VoteDirection(..)) as WebTypes
 import Dao.Workflow.CancelVote (cancelVote) as Dao
 import Dao.Workflow.CountVote (countVote) as Dao
@@ -87,21 +62,8 @@ import Dao.Workflow.CreateIndex (createIndex) as Dao
 import Dao.Workflow.CreateProposal (createProposal) as Dao
 import Dao.Workflow.CreateTreasuryFund (createTreasuryFund) as Dao
 import Dao.Workflow.CreateVotePass (createVotePass) as Dao
-import Dao.Workflow.QueryProposal
-  ( getAllActiveProposals
-  , getAllExpiredProposals
-  , getAllGeneralProposals
-  , getAllProposals
-  , getAllSuccessfulProposals
-  , getAllTripProposals
-  , getAllUpgradeProposals
-  , getProposalByTokenName
-  ) as Dao
-import Dao.Workflow.ReferenceScripts
-  ( deployReferenceScriptsOne
-  , deployReferenceScriptsThree
-  , deployReferenceScriptsTwo
-  ) as Dao
+import Dao.Workflow.QueryProposal (getAllActiveProposals, getAllExpiredProposals, getAllGeneralProposals, getAllProposals, getAllSuccessfulProposals, getAllTripProposals, getAllUpgradeProposals, getProposalByTokenName) as Dao
+import Dao.Workflow.ReferenceScripts (deployReferenceScriptsOne, deployReferenceScriptsThree, deployReferenceScriptsTwo) as Dao
 import Dao.Workflow.TreasuryGeneral (treasuryGeneral) as Dao
 import Dao.Workflow.TreasuryTrip (treasuryTrip) as Dao
 import Dao.Workflow.UpgradeConfig (upgradeConfig) as Dao
@@ -109,6 +71,7 @@ import Dao.Workflow.VoteOnProposal (voteOnProposal) as Dao
 import Data.Function.Uncurried (Fn1, Fn2, Fn3)
 import Data.Log.Level (LogLevel(Trace))
 import Data.Maybe (Maybe(Just, Nothing))
+import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
 import JS.BigInt (fromInt) as BigInt
@@ -120,17 +83,17 @@ initialize = Ctl.mkContractEnvJS <<< mkContractParams
   mkContractParams (CtlConfig config) =
     let
       networkId = case config.network of
-        "preview" -> Ctl.TestnetId
-        "preprod" -> Ctl.TestnetId
-        "mainnet" -> Ctl.MainnetId
-        _ -> Ctl.TestnetId
+        "preview" -> TestnetId
+        "preprod" -> TestnetId
+        "mainnet" -> MainnetId
+        _ -> TestnetId
       blockfrostConfig =
         { port: UInt.fromInt 443
         , host: "cardano-" <> config.network <> ".blockfrost.io"
         , secure: true
         , path: Just "/api/v0"
         }
-      backendParams = Ctl.mkBlockfrostBackendParams
+      backendParams = mkBlockfrostBackendParams
         { blockfrostConfig: blockfrostConfig
         , blockfrostApiKey: Just config.blockfrostApiKey
         , confirmTxDelay: Nothing
@@ -139,7 +102,7 @@ initialize = Ctl.mkContractEnvJS <<< mkContractParams
       { backendParams
       , networkId
       , logLevel: Trace
-      , walletSpec: Just Ctl.ConnectToNami
+      , walletSpec: Just $ Ctl.ConnectToGenericCip30 (walletName Eternl) { cip95: false } 
       , customLogger: Nothing
       , suppressLogs: false
       , hooks: Ctl.emptyHooks
@@ -152,11 +115,11 @@ finalize = Ctl.stopContractEnvJS
 
 getWalletAddressBech32 :: Fn1 Ctl.ContractEnv (Promise String)
 getWalletAddressBech32 = mkContractCall1 $ do
-  addressWithNetworkTag <- Ctl.getWalletAddressWithNetworkTag
-  case addressWithNetworkTag of
+  addr <- getWalletAddress
+  case addr of
     Nothing -> pure ""
-    Just addressWithNetworkTag ->
-      pure $ addressWithNetworkTagToBech32 addressWithNetworkTag
+    Just addr' ->
+      pure $ Address.toBech32 addr'
 
 createIndex :: Fn2 Ctl.ContractEnv TokenName (Promise ContractResult)
 createIndex = mkContractCall2 Dao.createIndex
@@ -180,7 +143,7 @@ createIndexConfig = mkContractCall1 createIndexConfig'
       } <- Dao.createIndex indexTokenName
 
     void $ Ctl.awaitTxConfirmedWithTimeout (Seconds 600.0) createIndexTxHash
-    void $ Ctl.waitNSlots (Natural.fromInt' 3)
+    void $ Ctl.waitNSlots (BigNum.fromInt 3)
 
     voteNftPolicy <- Scripts.voteNftPolicy
     fungiblePolicy <- Scripts.fungiblePolicy
@@ -189,10 +152,10 @@ createIndexConfig = mkContractCall1 createIndexConfig'
         "vote_fungible"
 
     let
-      voteNftSymbol = Value.scriptCurrencySymbol voteNftPolicy
-      voteFungibleCurrencySymbol = Value.scriptCurrencySymbol fungiblePolicy
+      voteNftSymbol = PlutusScript.hash voteNftPolicy
+      voteFungibleCurrencySymbol = PlutusScript.hash fungiblePolicy
       params = Component.CreateConfigParams
-        { configTokenName: Value.adaToken
+        { configTokenName: unwrap Value.adaToken
         , upgradeMajorityPercent: BigInt.fromInt 0
         , upgradeRelativeMajorityPercent: BigInt.fromInt 0
         , generalMajorityPercent: BigInt.fromInt 0
@@ -204,7 +167,7 @@ createIndexConfig = mkContractCall1 createIndexConfig'
         , maxTripDisbursement: BigInt.fromInt 0
         , agentDisbursementPercent: BigInt.fromInt 0
         , proposalTallyEndOffset: BigInt.fromInt 0
-        , voteTokenName: Value.adaToken
+        , voteTokenName: unwrap Value.adaToken
         , voteFungibleCurrencySymbol
         , voteFungibleTokenName
         , voteNftSymbol
@@ -265,7 +228,7 @@ deployAllReferenceScripts =
 createVotePass :: Fn2 Ctl.ContractEnv Address (Promise ContractResult)
 createVotePass = mkContractCall2 $ \address -> do
   pkh <- Ctl.liftContractM "Could not convert address to key" $
-    Utils.addressToPaymentPubKeyHash address
+    Utils.plutusAddressToPaymentPubKeyHash address
   Dao.createVotePass pkh
 
 createFungible ::
