@@ -1,6 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: build esbuild-bundle esbuild-serve webpack-bundle webpack-serve check-format format query-testnet-tip clean check-explicit-exports create-bundle-entrypoint create-html-entrypoint delete-bundle-entrypoint generate-purs-scripts
+.PHONY: build test esbuild-bundle esbuild-serve webpack-bundle webpack-serve check-format format query-testnet-tip clean check-explicit-exports create-bundle-entrypoint create-html-entrypoint delete-bundle-entrypoint generate-purs-scripts
 .SHELLFLAGS := -eu -o pipefail -c
 
 ps-sources := $(shell fd --no-ignore-parent -epurs)
@@ -28,7 +28,10 @@ serve-port := 4008
 purs-args := "--stash --censor-lib --censor-codes=ImplicitImport,ImplicitQualifiedImport,ImplicitQualifiedImportReExport,UserDefinedWarning,UnusedName,ShadowedName,MissingTypeDeclaration"
 
 build:
-	@spago build --purs-args ${purs-args}
+	spago build --purs-args ${purs-args}
+
+test:
+	spago run --main Test.Localnet
 
 create-bundle-entrypoint:
 	@mkdir -p dist/

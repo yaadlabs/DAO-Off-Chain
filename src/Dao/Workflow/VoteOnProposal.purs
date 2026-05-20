@@ -53,6 +53,7 @@ import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Newtype (wrap)
+import Debug (traceM)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Vote
@@ -117,6 +118,9 @@ voteOnProposal params' = do
   -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
+  traceM $ "PROPOSAL END TIME: " <> show
+    (unwrap tallyInfo.datum).proposalEndTime
+  traceM $ " TX VALID RANGE: " <> show onchainTimeRange
 
   -- Hack to work around Ogmios submitted too early error (in Plutip test)
   -- TODO: Find better solution

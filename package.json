@@ -9,9 +9,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "spago run --main Test.Localnet",
+    "test": "make test",
     "dev": "make run-dev",
-    "build": "spago build",
+    "build": "make build",
     "start-runtime": "nix run -L .#dao-offchain-runtime",
     "publish": "npm run build && npm publish --access public"
   },

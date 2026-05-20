@@ -58,4 +58,6 @@ sampleUpgradeConfigProposalTallyStateDatum symbol = do
 -- proposalEndTimeWayInFuture = mkPosixTime "1795941991500"
 
 offsetPosixTime :: POSIXTime
-offsetPosixTime = mkPosixTime "0000000040000"
+offsetPosixTime = mkPosixTime "0000000600000" -- 10 min
+
+-- mkPosixTime "0000000040000"

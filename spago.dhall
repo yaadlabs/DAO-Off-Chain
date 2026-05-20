@@ -12,6 +12,7 @@
   , "cardano-types"
   , "control"
   , "datetime"
+  , "debug"
   , "effect"
   , "either"
   , "encoding"
