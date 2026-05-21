@@ -6,11 +6,11 @@ First, enter the Nix shell by running `nix develop`.
 
 ## Testing
 
-To execute the Plutip tests, run `npm run test`.
+To execute the `cardano-testnet`-based integration tests, run `make test`.
 
 ## Building
 
-The project can be built by running `spago build`.
+The project can be built by running `make build`.
 
 ## Updating On-Chain Scripts
 

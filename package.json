@@ -1,26 +1,21 @@
 {
-  "type": "module",
   "name": "@yaadlabs/triphut-dao-offchain",
-  "version": "0.1.0",
-  "description": "",
-  "main": "./output/Dao.Web.Api",
-  "types": "./index.d.ts",
-  "directories": {
-    "test": "test"
-  },
+  "version": "0.2.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "index.d.ts",
+  "files": [
+    "dist/index.js",
+    "index.d.ts"
+  ],
   "scripts": {
-    "test": "make test",
-    "dev": "make run-dev",
     "build": "make build",
+    "bundle": "make bundle", 
+    "test": "make test",
     "start-runtime": "nix run -L .#dao-offchain-runtime",
     "publish": "npm run build && npm publish --access public"
   },
-  "files": [
-    "output",
-    "index.d.ts"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@mlabs-haskell/ctl-npm-meta": "2.0.0"
   },
@@ -28,12 +23,7 @@
     "buffer": "6.0.3",
     "esbuild": "0.18.11",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "esbuild-plugin-wasm": "^1.1.0",
-    "ts-loader": "^9.3.1",
-    "node-polyfill-webpack-plugin": "2.0.1",
-    "webpack": "5.88.1",
-    "webpack-cli": "5.1.4",
-    "webpack-dev-server": "4.15.1"
+    "esbuild-plugin-wasm": "^1.1.0"
   },
   "prettier": {
     "arrowParens": "avoid"

@@ -12,7 +12,7 @@ export const buildOptions = ({ entryPoint, outfile }) => {
     },
     plugins: [
       wasmLoader({
-        mode: "deferred",
+        mode: "embedded", // deferred?
       }),
     ],
     bundle: true,
