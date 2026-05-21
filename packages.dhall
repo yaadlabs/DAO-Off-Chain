@@ -114,6 +114,47 @@ let additions =
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
         , version = "3a515ad3c3ab9a9fb876602289084afd77279a5c"
         }
+      , cardano-blockfrost-provider =
+        { dependencies =
+          [ "aeson"
+          , "aff"
+          , "affjax"
+          , "arrays"
+          , "bifunctors"
+          , "bignumber"
+          , "bytearrays"
+          , "cardano-provider"
+          , "cardano-data-lite"
+          , "cardano-types"
+          , "control"
+          , "datetime"
+          , "effect"
+          , "either"
+          , "exceptions"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "heterogeneous"
+          , "http-methods"
+          , "js-bigints"
+          , "js-date"
+          , "lists"
+          , "maybe"
+          , "media-types"
+          , "monad-logger"
+          , "newtype"
+          , "numbers"
+          , "ordered-collections"
+          , "parallel"
+          , "prelude"
+          , "strings"
+          , "transformers"
+          , "tuples"
+          , "uint"
+          ]
+        , repo =
+            "https://github.com/mlabs-haskell/purescript-cardano-blockfrost-provider"
+        , version = "283ee45fe344ea24f3877daed57fa433280faea6"
+        }
       , lambda-buffers =
         { dependencies = 
           [ "aeson"

@@ -23,6 +23,7 @@
   , "functions"
   , "gen"
   , "js-bigints"
+  , "lambda-buffers"
   , "maybe"
   , "monad-logger"
   , "mote"

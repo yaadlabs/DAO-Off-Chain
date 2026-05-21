@@ -13,8 +13,7 @@
     "build": "make build",
     "bundle": "make bundle", 
     "test": "make test",
-    "start-runtime": "nix run -L .#dao-offchain-runtime",
-    "publish": "npm run build && npm publish --access public"
+    "publish": "npm publish --access public"
   },
   "dependencies": {
     "@mlabs-haskell/ctl-npm-meta": "2.0.0"

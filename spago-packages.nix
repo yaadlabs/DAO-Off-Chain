@@ -235,11 +235,11 @@ let
 
     "cardano-blockfrost-provider" = pkgs.stdenv.mkDerivation {
         name = "cardano-blockfrost-provider";
-        version = "v2.1.0";
+        version = "283ee45fe344ea24f3877daed57fa433280faea6";
         src = pkgs.fetchgit {
           url = "https://github.com/mlabs-haskell/purescript-cardano-blockfrost-provider";
-          rev = "f501638cdf4a7a1f1c5d30dafd7369ac31d31024";
-          sha256 = "1msdagzdlalq31ph0gmkl2fm5sngw4d8s6i6vp5fj4grwmxzbz8m";
+          rev = "283ee45fe344ea24f3877daed57fa433280faea6";
+          sha256 = "1yzn5yfkwymxwywdmyhwijak0a2fs65il8i0lj01q5shcfyy60kd";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -924,6 +924,18 @@ let
           url = "https://github.com/purescript-contrib/purescript-js-uri.git";
           rev = "06f7ae755ccb36bfa80bc3702533165af5c7ef06";
           sha256 = "0c9k1fpf4ljlqsnb07i3gwa6jiwlli0046pnglmk56ls53l6d4aj";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
+    "lambda-buffers" = pkgs.stdenv.mkDerivation {
+        name = "lambda-buffers";
+        version = "v2.0.0";
+        src = pkgs.fetchgit {
+          url = "https://github.com/mlabs-haskell/lambda-buffers.git";
+          rev = "40a89e09d6d73258434a49bf2ba124a7a935cd7f";
+          sha256 = "0k9kcqrlrpr870nqjfxwa9c7wpm6d78p7qar8gjxswrsd8j2vsb4";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
