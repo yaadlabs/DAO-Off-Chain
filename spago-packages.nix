@@ -235,11 +235,11 @@ let
 
     "cardano-blockfrost-provider" = pkgs.stdenv.mkDerivation {
         name = "cardano-blockfrost-provider";
-        version = "283ee45fe344ea24f3877daed57fa433280faea6";
+        version = "c1ae688ba886234515ab6737da99306fd271f57b";
         src = pkgs.fetchgit {
           url = "https://github.com/mlabs-haskell/purescript-cardano-blockfrost-provider";
-          rev = "283ee45fe344ea24f3877daed57fa433280faea6";
-          sha256 = "1yzn5yfkwymxwywdmyhwijak0a2fs65il8i0lj01q5shcfyy60kd";
+          rev = "c1ae688ba886234515ab6737da99306fd271f57b";
+          sha256 = "1nix158zgip9qsm7510zmjbic6kzi3nz13hlbq7b2av496cki0nw";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -828,18 +828,6 @@ let
           url = "https://github.com/purescript/purescript-gen.git";
           rev = "9fbcc2a1261c32e30d79c5418edef4d96fe76931";
           sha256 = "0kajzcp9a8dmqvb3ga27hlf18m2smbp98a0bmzzb9vv156ckw0b4";
-        };
-        phases = "installPhase";
-        installPhase = "ln -s $src $out";
-      };
-
-    "heterogeneous" = pkgs.stdenv.mkDerivation {
-        name = "heterogeneous";
-        version = "v0.6.0";
-        src = pkgs.fetchgit {
-          url = "https://github.com/natefaubion/purescript-heterogeneous.git";
-          rev = "5b7542bdd9547c5aef95b8878f103f0ce4ee1383";
-          sha256 = "0ff1wjq2ayhy67ydggbb2qlzbhvmv1m1z8dcp48p9zhxiq9fpfsz";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";

@@ -133,11 +133,9 @@ let additions =
           , "exceptions"
           , "foldable-traversable"
           , "foreign-object"
-          , "heterogeneous"
           , "http-methods"
           , "js-bigints"
           , "js-date"
-          , "lists"
           , "maybe"
           , "media-types"
           , "monad-logger"
@@ -153,7 +151,7 @@ let additions =
           ]
         , repo =
             "https://github.com/mlabs-haskell/purescript-cardano-blockfrost-provider"
-        , version = "283ee45fe344ea24f3877daed57fa433280faea6"
+        , version = "c1ae688ba886234515ab6737da99306fd271f57b"
         }
       , lambda-buffers =
         { dependencies = 
