@@ -30,11 +30,11 @@ dummyNewConfig = do
     , maxTripDisbursement: BigInt.fromInt 0
     , agentDisbursementPercent: BigInt.fromInt 0
     , proposalTallyEndOffset: BigInt.fromInt 0
-    , tallyNft: someScriptHash -- FIXME?: adaSymbol
-    , voteCurrencySymbol: someScriptHash -- FIXME?: adaSymbol
+    , tallyNft: someScriptHash
+    , voteCurrencySymbol: someScriptHash
     , voteTokenName: unwrap adaToken
-    , voteNft: someScriptHash -- FIXME?: adaSymbol
-    , voteFungibleCurrencySymbol: someScriptHash -- FIXME?: adaSymbol
+    , voteNft: someScriptHash
+    , voteFungibleCurrencySymbol: someScriptHash
     , voteFungibleTokenName: unwrap adaToken
     , fungibleVotePercent: BigInt.fromInt 0
     }

@@ -27,8 +27,6 @@ import Dao.Component.Fungible.Params (CreateFungibleParams)
 import Dao.Scripts.Policy (fungiblePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
-import Data.Maybe (fromJust)
-import Partial.Unsafe (unsafePartial)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
@@ -48,11 +46,15 @@ createFungible params' = do
     fungibleSymbol :: ScriptHash
     fungibleSymbol = PlutusScript.hash fungiblePolicy'
 
+  fungibleAmount <-
+    liftContractM "Could not convert fungible token quantity to BigNum" $
+      BigNum.fromBigInt params.amount
+
+  let
     fungibleValue :: Value
     fungibleValue =
-      -- FIXME: unsafe
-      Value.singleton fungibleSymbol fungibleTokenName $ unsafePartial fromJust
-        (BigNum.fromBigInt params.amount)
+      Value.singleton fungibleSymbol fungibleTokenName
+        fungibleAmount
 
     lookups :: Lookups.ScriptLookups
     lookups = mconcat [ Lookups.plutusMintingPolicy fungiblePolicy' ]

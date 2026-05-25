@@ -20,10 +20,10 @@ import Cardano.Types
   )
 import Cardano.Types.BigNum (fromInt, one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
-import Cardano.Types.Value (getMultiAsset, singleton) as Value
+import Cardano.Types.Value (add, getMultiAsset, singleton) as Value
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prelude
   ( bind
   , discard
@@ -37,6 +37,7 @@ import Contract.Prelude
   , ($)
   , (*)
   , (<>)
+  , (=<<)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Time (POSIXTime(POSIXTime))
@@ -60,7 +61,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
-import Partial.Unsafe (unsafePartial)
 import ScriptArguments.Types (ValidatorParams(ValidatorParams))
 
 -- | Vote result
@@ -169,18 +169,18 @@ voteOnProposal params' = do
     voteValue :: Value
     voteValue = Value.singleton voteSymbol voteTokenName BigNum.one
 
-    -- The value to be paid to the script
-    -- Consists of the vote value, voteNft value, and maybe a fungible value
-    valueToPayToScript :: Value
-    valueToPayToScript =
-      -- FIXME: unsafe
-      unsafePartial $
-        case fungibleInfo of
-          Just fungibleInfo' ->
-            voteValue <> voteNftInfo.value <> fungibleInfo'.value
-          Nothing ->
-            voteValue <> voteNftInfo.value
+  -- The value to be paid to the script
+  -- Consists of the vote value, voteNft value, and maybe a fungible value
+  (valueToPayToScript :: Value) <-
+    liftContractM "Could not build valueToPayToScript"
+      case fungibleInfo of
+        Just fungibleInfo' ->
+          Value.add voteValue =<< Value.add voteNftInfo.value
+            fungibleInfo'.value
+        Nothing ->
+          Value.add voteValue voteNftInfo.value
 
+  let
     -- The 'votePolicy' minting policy takes two possible redeemers, Mint or Burn
     -- In this case we wish to mint a vote token in order to vote on the proposal
     votePolicyRedeemer :: RedeemerDatum

@@ -30,6 +30,7 @@ import Contract.Prelude
   , (*)
   , (+)
   , (/)
+  , (=<<)
   , (>)
   , (>=)
   )
@@ -52,14 +53,13 @@ import Dao.Utils.Address (addressToPaymentPubKeyHash, addressToStakePubKeyHash)
 import Dao.Utils.Constraints (mustPayToPubKeyStakeAddress)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
-import Data.Maybe (Maybe(Nothing, Just), fromJust)
+import Data.Maybe (Maybe(Nothing, Just))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal
   ( ProposalType(ProposalType'General)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Partial.Unsafe (unsafePartial)
 
 -- | Contract for disbursing treasury funds based on a general proposal
 treasuryGeneral ::
@@ -169,6 +169,11 @@ treasuryGeneral params' = do
     disbursementAmount :: BigInt
     disbursementAmount = min configMaxGeneralDisbursement paymentAmount
 
+  disbursementAmountBigNum <-
+    liftContractM "Could not convert disbursementAmount to BigNum" $
+      BigNum.fromBigInt disbursementAmount
+
+  let
     -- The value held at the treasury input UTXO which
     -- must cover the disbursement amount
     treasuryInputAmount :: Value
@@ -176,17 +181,15 @@ treasuryGeneral params' = do
 
     -- The Ada amount to send to the receiver
     amountToSendToPaymentAddress :: Value
-    amountToSendToPaymentAddress =
-      -- FIXME: unsafe
-      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
-        disbursementAmount
+    amountToSendToPaymentAddress = lovelaceValueOf disbursementAmountBigNum
 
-    -- The change to send back to the treasury
-    amountToSendBackToTreasury :: Value
-    amountToSendBackToTreasury =
-      -- FIXME: unsafe
-      normaliseValue $ unsafePartial fromJust $
-        valueSubtraction treasuryInputAmount amountToSendToPaymentAddress
+  -- The change to send back to the treasury
+  (amountToSendBackToTreasury :: Value) <-
+    liftContractM
+      "Could not subtract disbursement amount from treasury input amount"
+      ( normaliseValue =<<
+          valueSubtraction treasuryInputAmount amountToSendToPaymentAddress
+      )
 
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive

@@ -7,7 +7,7 @@ module Dao.Utils.Query
   , QueryType(..)
   , SpendPubKeyResult
   , getAllWalletUtxos
-  , hasTokenWithSymbol
+  , hasTokenWithNonAdaSymbol
   , findScriptUtxoBySymbol
   , findScriptUtxoByToken
   , findScriptUtxoByTokenWithScriptRef
@@ -17,6 +17,7 @@ module Dao.Utils.Query
 
 import Cardano.Types
   ( Credential(ScriptHashCredential)
+  , ScriptHash
   , TransactionOutput(TransactionOutput)
   )
 import Cardano.Types.Address (mkPaymentAddress)
@@ -103,7 +104,7 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasTokenWithSymbol symbol)
+      $ filter (hasTokenWithNonAdaSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 
@@ -161,7 +162,7 @@ findScriptUtxoBySymbolWithScriptRef
     (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasTokenWithSymbol symbol)
+      $ filter (hasTokenWithNonAdaSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 
@@ -363,7 +364,7 @@ findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter
-          ( hasTokenWithSymbol symbol
+          ( hasTokenWithNonAdaSymbol symbol
               && hasPkhInVoteDatum userPkh
               &&
                 hasProposalTokenNameInVoteDatum proposalTokenName
@@ -424,16 +425,16 @@ hasProposalTokenNameInVoteDatum
         _ -> false
     _ -> false
 
--- | Check for the presence of a token with the given symbol
+-- | Check for the presence of a token with the given non-ADA symbol
 -- | at the provided transactioun output
-hasTokenWithSymbol ::
-  CurrencySymbol -> (TransactionInput /\ TransactionOutput) -> Boolean
-hasTokenWithSymbol symbol (_ /\ TransactionOutput txOut) =
+hasTokenWithNonAdaSymbol ::
+  ScriptHash -> (TransactionInput /\ TransactionOutput) -> Boolean
+hasTokenWithNonAdaSymbol symbol (_ /\ TransactionOutput txOut) =
   any
     ( \x ->
         case fst x of
           Asset cs _ -> cs == symbol
-          _ -> false -- FIXME: ada symbol?
+          _ -> false
     )
     (flatten txOut.amount)
 

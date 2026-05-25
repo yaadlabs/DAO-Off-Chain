@@ -41,7 +41,7 @@ import Dao.Component.Proposal.Query
 import Dao.Component.Tally.Params (mkTallyConfig)
 import Dao.Scripts.Policy (unappliedTallyPolicy)
 import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
-import Dao.Utils.Query (hasTokenWithSymbol)
+import Dao.Utils.Query (hasTokenWithNonAdaSymbol)
 import Dao.Utils.Time (getCurrentTime)
 import Data.Array (filter, mapMaybe)
 import Data.Map as Map
@@ -113,7 +113,7 @@ getAllProposals params' = do
   let
     proposalUtxos :: Array QueryResult
     proposalUtxos = getProposalInfo tallySymbol $ filter
-      (hasTokenWithSymbol tallySymbol)
+      (hasTokenWithNonAdaSymbol tallySymbol)
       (Map.toUnfoldable tallyValidatorUtxos)
 
   logInfo' $ "Proposal UTXOs: " <> show proposalUtxos

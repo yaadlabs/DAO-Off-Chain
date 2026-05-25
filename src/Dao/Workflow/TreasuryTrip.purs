@@ -25,6 +25,7 @@ import Contract.Prelude
   , (+)
   , (-)
   , (/)
+  , (=<<)
   , (>=)
   )
 import Contract.ScriptLookups as Lookups
@@ -45,12 +46,11 @@ import Dao.Scripts.Validator
 import Dao.Utils.Address (addressToPaymentPubKeyHash)
 import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (allPositive, normaliseValue, valueSubtraction)
-import Data.Maybe (Maybe(Just, Nothing), fromJust)
+import Data.Maybe (Maybe(Just, Nothing))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Proposal (ProposalType(ProposalType'Trip))
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum)
-import Partial.Unsafe (unsafePartial)
 
 -- | Contract for disbursing treasury funds based on a trip proposal
 treasuryTrip :: TreasuryParams -> Contract TransactionHash
@@ -165,24 +165,28 @@ treasuryTrip params' = do
     disbursementAmount :: BigInt
     disbursementAmount = min configMaxTripDisbursement totalTravelCost
 
+  disbursementAmountBigNum <-
+    liftContractM "Could not convert disbursementAmount to BigNum" $
+      BigNum.fromBigInt disbursementAmount
+
+  let
     disbursementAmountLovelaces :: Value
-    disbursementAmountLovelaces =
-      -- FIXME: unsafe
-      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
-        disbursementAmount
+    disbursementAmountLovelaces = lovelaceValueOf disbursementAmountBigNum
 
     -- The value held at the treasury input UTXO which
     -- must cover the disbursement amount
     treasuryInputAmount :: Value
     treasuryInputAmount = treasuryInfo.value
 
-    -- The change to send back to the treasury
-    amountToSendBackToTreasuryLovelaces :: Value
-    amountToSendBackToTreasuryLovelaces =
-      -- FIXME: unsafe
-      normaliseValue $ unsafePartial fromJust $
-        valueSubtraction treasuryInputAmount disbursementAmountLovelaces
+  -- The change to send back to the treasury
+  (amountToSendBackToTreasuryLovelaces :: Value) <-
+    liftContractM
+      "Could not subtract disbursement amount from treasury input amount"
+      ( normaliseValue =<<
+          valueSubtraction treasuryInputAmount disbursementAmountLovelaces
+      )
 
+  let
     -- Caluclate amount to send to the travel agent
     amountToSendToTravelAgent :: BigInt
     amountToSendToTravelAgent =
@@ -192,17 +196,22 @@ treasuryTrip params' = do
     amountToSendToTraveller :: BigInt
     amountToSendToTraveller = totalTravelCost - amountToSendToTravelAgent
 
+  amountToSendToTravelAgentBigNum <-
+    liftContractM "Could not convert amountToSendToTravelAgent to BigNum" $
+      BigNum.fromBigInt amountToSendToTravelAgent
+
+  amountToSendToTravellerBigNum <-
+    liftContractM "Could not convert amountToSendToTraveller to BigNum" $
+      BigNum.fromBigInt amountToSendToTraveller
+
+  let
     amountToSendToTravelAgentLovelaces :: Value
     amountToSendToTravelAgentLovelaces =
-      -- FIXME: unsafe
-      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
-        amountToSendToTravelAgent
+      lovelaceValueOf amountToSendToTravelAgentBigNum
 
     amountToSendToTravellerLovelaces :: Value
     amountToSendToTravellerLovelaces =
-      -- FIXME: unsafe
-      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
-        amountToSendToTraveller
+      lovelaceValueOf amountToSendToTravellerBigNum
 
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive

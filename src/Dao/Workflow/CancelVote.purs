@@ -18,7 +18,7 @@ import Cardano.Types
 import Cardano.Types.BigNum (one, zero) as BigNum
 import Cardano.Types.Int (negate, one) as CTInt
 import Cardano.Types.Mint (singleton) as Mint
-import Cardano.Types.Value (empty, singleton) as Value
+import Cardano.Types.Value (add, empty, singleton) as Value
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
@@ -30,7 +30,6 @@ import Contract.Prelude
   , pure
   , (#)
   , ($)
-  , (<>)
   , (==)
   )
 import Contract.ScriptLookups as Lookups
@@ -51,7 +50,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Cancel)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import Partial.Unsafe (unsafePartial)
 
 -- | Contract for cancelling a vote
 cancelVote ::
@@ -127,6 +125,7 @@ cancelVote params' = do
   voteNftTokenName :: AssetName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
       "vote_pass"
+
   let
     -- The symbol of the vote 'multiplier' token
     fungibleSymbol :: ScriptHash
@@ -157,6 +156,10 @@ cancelVote params' = do
     voteNftPass :: Value
     voteNftPass = Value.singleton voteNftSymbol voteNftTokenName BigNum.one
 
+  voteOwnerValue <- liftContractM "Could not build voteOwnerValue" $
+    Value.add voteNftPass fungibleToken
+
+  let
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
@@ -171,9 +174,7 @@ cancelVote params' = do
         [ Constraints.mustMintValueWithRedeemer burnVoteRedeemer burnVoteNft
         , Constraints.mustBeSignedBy voteOwnerKey
         -- ^ The script requires the tx to be signed by the vote owner
-        , Constraints.mustPayToPubKey voteOwnerKey $
-            unsafePartial -- FIXME: unsafe
-              (voteNftPass <> fungibleToken)
+        , Constraints.mustPayToPubKey voteOwnerKey voteOwnerValue
         -- ^ Pay the vote 'pass' back to the owner, and the fungibleTokens if any
         , configInfo.constraints
         , voteInfo.constraints

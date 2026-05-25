@@ -9,21 +9,12 @@ import Cardano.Types (PlutusScript, ScriptHash, Value)
 import Cardano.Types.BigNum (fromBigInt, one) as BigNum
 import Cardano.Types.Mint (fromMultiAsset) as Mint
 import Cardano.Types.PlutusScript (hash) as PlutusScript
-import Cardano.Types.Value (getMultiAsset, singleton) as Value
+import Cardano.Types.Value (add, getMultiAsset, singleton) as Value
 import Cardano.Types.Value (lovelaceValueOf)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
-import Contract.Prelude
-  ( bind
-  , discard
-  , mconcat
-  , pure
-  , ($)
-  , (/\)
-  , (<>)
-  , (>)
-  )
+import Contract.Prelude (bind, discard, mconcat, pure, ($), (/\), (>))
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
@@ -36,10 +27,8 @@ import Dao.Utils.Error (guardContract)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Data.Array (head)
 import Data.Map as Map
-import Data.Maybe (fromJust)
 import Data.Newtype (unwrap)
 import JS.BigInt (fromInt)
-import Partial.Unsafe (unsafePartial)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
@@ -76,12 +65,17 @@ createTreasuryFund params = do
     treasuryValue :: Value
     treasuryValue = Value.singleton treasurySymbol (unwrap adaToken) BigNum.one
 
-    adaValue :: Value
-    adaValue =
-      -- FIXME: unsafe
-      lovelaceValueOf $ unsafePartial fromJust $ BigNum.fromBigInt
-        params.adaAmount
+  adaAmount <- liftContractM "Could not convert ADA amount to BigNum" $
+    BigNum.fromBigInt params.adaAmount
 
+  let
+    adaValue :: Value
+    adaValue = lovelaceValueOf adaAmount
+
+  treasuryValueWithAda <- liftContractM "Could not build treasuryValueWithAda" $
+    Value.add treasuryValue adaValue
+
+  let
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
       [ Lookups.plutusMintingPolicy appliedTreasuryPolicy
@@ -97,8 +91,7 @@ createTreasuryFund params = do
           treasuryValidatorHash
           unitDatum
           Constraints.DatumInline
-          -- FIXME: unsafe
-          (unsafePartial $ treasuryValue <> adaValue)
+          treasuryValueWithAda
       ]
 
   txHash <- submitTxFromConstraints lookups constraints

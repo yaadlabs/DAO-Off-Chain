@@ -23,7 +23,7 @@ import Cardano.Types
   )
 import Cardano.Types.BigNum (fromBigInt, one, toBigInt) as BigNum
 import Cardano.Types.Int (negate, one) as CTInt
-import Cardano.Types.Value (singleton) as Value
+import Cardano.Types.Value (add, singleton) as Value
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
@@ -44,7 +44,6 @@ import Contract.Prelude
   , (/\)
   , (<$>)
   , (<<<)
-  , (<>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints (InputWithScriptRef)
@@ -56,13 +55,13 @@ import Dao.Utils.Query
   ( SpendPubKeyResult
   , UtxoInfo
   , findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
-  , hasTokenWithSymbol
+  , hasTokenWithNonAdaSymbol
   )
 import Dao.Utils.Value (countOfTokenInValue, mkTokenName)
 import Data.Array (catMaybes, filter, head)
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(Just, Nothing), fromJust)
+import Data.Maybe (Maybe(Just, Nothing))
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteActionRedeemer(VoteActionRedeemer'Count)
@@ -70,7 +69,6 @@ import LambdaBuffers.ApplicationTypes.Vote
   , VoteDirection
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Burn)
   )
-import Partial.Unsafe (unsafePartial)
 import Type.Proxy (Proxy(Proxy))
 
 -- | Helper used by the 'countVote' contract.
@@ -188,6 +186,24 @@ mkVoteUtxoConstraintsAndLookups
         -- If the user holds fungible tokens we need to add the calculated weight
         -- of these tokens to the vote amount
         fungibleAmount = BigNum.toBigInt $ countOfToken fungibleSymbol txOut
+
+      fungibleAmountBigNum <-
+        liftContractM "Could not convert fungibleAmount to BigNum" $
+          BigNum.fromBigInt fungibleAmount
+
+      let
+        fungibleToken :: Value
+        fungibleToken =
+          Value.singleton fungibleSymbol fungibleTokenName
+            fungibleAmountBigNum
+
+        voteNftToken :: Value
+        voteNftToken = Value.singleton voteNftSymbol voteNftTokenName BigNum.one
+
+      voteOwnerValue <- liftContractM "Could not build voteOwnerValue" $
+        Value.add voteNftToken fungibleToken
+
+      let
         fungibleVoteWeight = (fungibleAmount * fungiblePercent) / (fromInt 1000)
 
         voteDirection' :: VoteDirection
@@ -195,15 +211,6 @@ mkVoteUtxoConstraintsAndLookups
 
         voteAmount :: BigInt
         voteAmount = (fromInt 1) + fungibleVoteWeight
-
-        voteNftToken :: Value
-        voteNftToken = Value.singleton voteNftSymbol voteNftTokenName BigNum.one
-
-        fungibleToken :: Value
-        fungibleToken =
-          -- FIXME: unsafe
-          Value.singleton fungibleSymbol fungibleTokenName $
-            unsafePartial fromJust (BigNum.fromBigInt fungibleAmount)
 
         burnVoteRedeemer :: RedeemerDatum
         burnVoteRedeemer = RedeemerDatum $ toData VoteMinterActionRedeemer'Burn
@@ -220,9 +227,7 @@ mkVoteUtxoConstraintsAndLookups
           [ Constraints.mustSpendScriptOutputUsingScriptRef txIn
               (RedeemerDatum $ toData VoteActionRedeemer'Count)
               voteValidatorScriptRef
-          , Constraints.mustPayToPubKey voteOwnerKey
-              -- FIXME: unsafe
-              (unsafePartial $ voteNftToken <> fungibleToken)
+          , Constraints.mustPayToPubKey voteOwnerKey voteOwnerValue
           -- ^ Return the 'voteNft', and 'fungibleToken(s)' if any
           , Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
               votePolicyHash
@@ -329,15 +334,7 @@ filterOneOfTokenInUtxo ::
   CurrencySymbol ->
   Map TransactionInput TransactionOutput ->
   Maybe (TransactionInput /\ TransactionOutput)
-filterOneOfTokenInUtxo symbol = head <<< filter (hasTokenWithSymbol symbol) <<<
-  Map.toUnfoldable
-
-{-
-inputWithScriptRefToUnspentOutputs ::
-  InputWithScriptRef ->
-  Map.Map TransactionInput TransactionOutput
-inputWithScriptRefToUnspentOutputs ref =
-  case ref of
-    SpendInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output
-    RefInput inp -> Map.singleton (unwrap inp).input (unwrap inp).output
--}
+filterOneOfTokenInUtxo symbol = head
+  <<< filter (hasTokenWithNonAdaSymbol symbol)
+  <<<
+    Map.toUnfoldable

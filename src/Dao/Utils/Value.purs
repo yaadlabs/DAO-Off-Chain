@@ -25,10 +25,9 @@ import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Data.Array (filter) as Array
 import Data.Foldable (foldl)
 import Data.Map (lookup, values) as Map
-import Data.Maybe (Maybe(Just), fromJust, fromMaybe)
+import Data.Maybe (Maybe(Just), fromMaybe)
 import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(Tuple))
-import Partial.Unsafe (unsafePartial)
 
 mkTokenName :: String -> Maybe AssetName
 mkTokenName = mkAssetName <=< byteArrayFromAscii
@@ -39,10 +38,9 @@ allPositive = Value.isPositive
 valueSubtraction :: Value -> Value -> Maybe Value
 valueSubtraction = Value.unionWith BigNum.sub
 
-normaliseValue :: Value -> Value
+normaliseValue :: Value -> Maybe Value
 normaliseValue =
-  unsafePartial fromJust
-    <<< Value.unflatten
+  Value.unflatten
     <<< Array.filter (\(Tuple _ amount) -> amount /= BigNum.zero)
     <<< Value.flatten
 
