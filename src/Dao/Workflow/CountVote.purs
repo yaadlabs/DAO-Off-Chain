@@ -4,58 +4,39 @@ Description: Contract for counting a vote on a proposal
 -}
 module Dao.Workflow.CountVote (countVote) where
 
-
 import Prelude
-import Contract.Prelude (show)
 
-import Contract.Address (Address, scriptHashAddress)
+import Cardano.ToData (toData)
+import Cardano.Types
+  ( Address
+  , AssetName
+  , Credential(ScriptHashCredential)
+  , PlutusScript
+  , ScriptHash
+  , TransactionHash
+  , TransactionInput
+  , TransactionOutput
+  )
+import Cardano.Types.Address (mkPaymentAddress)
+import Cardano.Types.BigNum (fromInt) as BigNum
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Contract.Address (getNetworkId)
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, throwContractError)
-import Contract.Numeric.Natural as Natural
-import Contract.PlutusData
-  ( Datum(Datum)
-  , toData
-  )
+import Contract.Monad (Contract)
 import Contract.Prelude
   ( type (/\)
-  , bind
-  , discard
   , foldMap
   , foldr
   , mconcat
-  , otherwise
-  , pure
   , unwrap
-  , void
-  , show
-  , (#)
-  , ($)
-  , (*)
-  , (+)
   , (/\)
-  , (==)
-  , (<>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , PlutusScript
-  , Validator
-  , ValidatorHash(ValidatorHash)
-  , mintingPolicyHash
-  , validatorHash
-  )
 import Contract.Time (POSIXTime(POSIXTime))
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Contract.Value (CurrencySymbol, TokenName)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, spendTallyUtxo)
@@ -71,6 +52,7 @@ import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Dao.Workflow.ReferenceScripts (retrieveReferenceScript)
 import Data.Map (Map)
 import Data.Maybe (Maybe(Nothing))
+import Data.Newtype (wrap)
 import JS.BigInt (BigInt, fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
@@ -91,21 +73,19 @@ countVote params' = do
   let
     validatorConfig = mkValidatorConfig params.configSymbol
       params.configTokenName
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: PlutusScript <- unappliedConfigValidator
     validatorConfig
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: PlutusScript <- unappliedTallyValidator
     validatorConfig
-  appliedVoteValidator :: Validator <- unappliedVoteValidator
+  appliedVoteValidator :: PlutusScript <- unappliedVoteValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
+  votePolicyScript :: PlutusScript <- unappliedVotePolicy validatorConfig
 
-  tallyValidatorRef <- retrieveReferenceScript $ unwrap appliedTallyValidator
-  voteValidatorRef <- retrieveReferenceScript $ unwrap appliedVoteValidator
-
-  votePolicyScript <- getPlutusScript appliedVotePolicy
+  tallyValidatorRef <- retrieveReferenceScript appliedTallyValidator
+  voteValidatorRef <- retrieveReferenceScript appliedVoteValidator
   votePolicyRef <- retrieveReferenceScript votePolicyScript
 
-  let votePolicyHash = mintingPolicyHash appliedVotePolicy
+  let votePolicyHash = PlutusScript.hash votePolicyScript
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -115,20 +95,26 @@ countVote params' = do
     appliedTallyValidator
     tallyValidatorRef
 
+  network <- getNetworkId
+
   let
     -- The main config referenced at the config UTXO
     configDatum :: DynamicConfigDatum
     configDatum = configInfo.datum
 
-    voteValidatorHash :: ValidatorHash
-    voteValidatorHash = ValidatorHash $ configDatum # unwrap # _.voteValidator
+    voteValidatorHash :: ScriptHash
+    voteValidatorHash = configDatum # unwrap # _.voteValidator
 
     -- We need the address of the vote validator in order to retrieve the vote UTXOs
     voteValidatorAddress :: Address
-    voteValidatorAddress = scriptHashAddress voteValidatorHash Nothing
+    voteValidatorAddress =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential voteValidatorHash)
+        Nothing
 
   -- Get the UTXOs at the vote validator
-  voteUtxos :: Map TransactionInput TransactionOutputWithRefScript <- utxosAt
+  voteUtxos :: Map TransactionInput TransactionOutput <- utxosAt
     voteValidatorAddress
   logInfo' $ "voteUtxos: " <> show voteUtxos
 
@@ -136,20 +122,20 @@ countVote params' = do
   let
     -- The 'voteSymbol' is the symbol of the 'votePolicy'
     -- used when a user votes on a proposal
-    voteSymbol :: CurrencySymbol
+    voteSymbol :: ScriptHash
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
     -- The token name for the token created with the 'voteSymbol'
-    voteTokenName :: TokenName
+    voteTokenName :: AssetName
     voteTokenName = configDatum # unwrap # _.voteTokenName
 
     -- The symbol of the vote 'pass'
     -- A user requires this token in order to vote on a proposal
-    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol :: ScriptHash
     voteNftSymbol = configDatum # unwrap # _.voteNft
 
     -- The symbol of the vote 'multiplier' token
-    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol :: ScriptHash
     fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
 
     -- This percentage is used when calculating the value of the user's
@@ -186,7 +172,7 @@ countVote params' = do
   onchainTimeRange <- mkOnchainTimeRange timeRange
 
   -- Hack to work around Ogmios submitted too early error (in Plutip test)
-  void $ waitNSlots (Natural.fromInt' 10)
+  void $ waitNSlots $ BigNum.fromInt 10
 
   let
     -- Get the total votes for and against
@@ -208,8 +194,8 @@ countVote params' = do
   let
     -- We need to pay the updated datum with its corresponding token
     -- to the tally validator, hence we need its hash
-    tallyValidatorHash :: ValidatorHash
-    tallyValidatorHash = ValidatorHash $ configDatum # unwrap # _.tallyValidator
+    tallyValidatorHash :: ScriptHash
+    tallyValidatorHash = configDatum # unwrap # _.tallyValidator
 
     -- Collect the vote lookups
     voteLookups :: Lookups.ScriptLookups
@@ -233,7 +219,7 @@ countVote params' = do
       mconcat
         [ Constraints.mustPayToScript
             tallyValidatorHash
-            (Datum $ toData tallyDatumWithUpdatedVoteCount)
+            (toData tallyDatumWithUpdatedVoteCount)
             Constraints.DatumInline
             tallyInfo.value
         , voteConstraints
@@ -258,7 +244,3 @@ countVote params' = do
     op ((voteDirection /\ voteAmount) /\ _ /\ _) (for /\ against)
       | voteDirection == VoteDirection'For = ((for + voteAmount) /\ against)
       | otherwise = (for /\ (against + voteAmount))
-
-  getPlutusScript :: MintingPolicy -> Contract PlutusScript
-  getPlutusScript (PlutusMintingPolicy script) = pure script
-  getPlutusScript _ = throwContractError "Wrong script type"

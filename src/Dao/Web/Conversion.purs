@@ -4,17 +4,14 @@ Description: For conversions between JavaScript and PureScript
 -}
 module Dao.Web.Conversion where
 
-import Contract.Address
-  ( Address
-  , AddressWithNetworkTag(AddressWithNetworkTag)
-  , PaymentPubKeyHash(PaymentPubKeyHash)
-  , PubKeyHash(PubKeyHash)
-  , addressWithNetworkTagFromBech32
-  , addressWithNetworkTagToBech32
-  ) as Ctl
-import Contract.Config
-  ( NetworkId
-  ) as Ctl
+import Cardano.AsCbor (decodeCbor, encodeCbor)
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (fromCardano, toCardano) as Plutus.Address
+import Cardano.Types (NetworkId) as Ctl
+import Cardano.Types.Address (fromBech32, toBech32) as Ctl.Address
+import Cardano.Types.AssetName (mkAssetName, unAssetName) as Ctl
+import Contract.Address (PaymentPubKeyHash(PaymentPubKeyHash)) as Ctl
+import Contract.CborBytes (cborBytesToHex)
 import Contract.Prelude
   ( bind
   , pure
@@ -27,24 +24,9 @@ import Contract.Prelude
   , (>>=)
   )
 import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArray) as Ctl
-import Contract.Prim.ByteArray (rawBytesToHex)
-import Contract.Transaction (TransactionHash(TransactionHash)) as Ctl
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , getCurrencySymbol
-  , getTokenName
-  , mkCurrencySymbol
-  , mkTokenName
-  ) as Ctl
+import Contract.Transaction (TransactionHash) as Ctl
+import Contract.Value (CurrencySymbol, ScriptHash, TokenName) as Ctl
 import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
-import Ctl.Internal.Serialization.Hash (ScriptHash) as Ctl
-import Ctl.Internal.Serialization.Hash
-  ( ed25519KeyHashFromBytes
-  , ed25519KeyHashToBytes
-  , scriptHashFromBytes
-  , scriptHashToBytes
-  )
 import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
   , UpgradeConfigParams(UpgradeConfigParams)
@@ -56,12 +38,10 @@ import Dao.Component.Proposal.Params
   ( CreateProposalParams(CreateProposalParams)
   , QueryProposalParams(QueryProposalParams)
   ) as DaoApi
-import Dao.Component.Proposal.Query
-  ( QueryResult(QueryResult)
-  ) as DaoApi
+import Dao.Component.Proposal.Query (QueryResult(QueryResult)) as DaoApi
 import Dao.Component.Treasury.Params
-  ( TreasuryParams(TreasuryParams)
-  , TreasuryFundParams
+  ( TreasuryFundParams
+  , TreasuryParams(TreasuryParams)
   ) as DaoApi
 import Dao.Component.Vote.Params
   ( CancelVoteParams(CancelVoteParams)
@@ -74,6 +54,7 @@ import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult)) as Dao
 import Dao.Workflow.VoteOnProposal (VoteOnProposalResult(VoteOnProposalResult)) as DaoApi
 import Data.Either (Either(Left))
 import Data.Maybe (Maybe(Just, Nothing))
+import Data.Newtype (wrap)
 import LambdaBuffers.ApplicationTypes.Configuration
   ( DynamicConfigDatum(DynamicConfigDatum)
   ) as DaoApi
@@ -776,57 +757,55 @@ instance ConvertJsToPs WebApi.ProposalType DaoApi.ProposalType where
 
 -- * Address
 
-instance ConvertPsToJs WebApi.Address Ctl.Address where
-  convertPsToJs address = do
-    networkId <- ask
-    pure $ WebApi.Address $ Ctl.addressWithNetworkTagToBech32 $
-      Ctl.AddressWithNetworkTag
-        { address: address
-        , networkId
-        }
+instance ConvertPsToJs WebApi.Address Plutus.Address where
+  convertPsToJs paddr = do
+    network <- ask
+    addr <- note ("Invalid address: " <> show paddr) $ Plutus.Address.toCardano
+      network
+      paddr
+    pure $ WebApi.Address $ Ctl.Address.toBech32 addr
 
-instance ConvertJsToPs WebApi.Address Ctl.Address where
+instance ConvertJsToPs WebApi.Address Plutus.Address where
   convertJsToPs (WebApi.Address addr) = do
-    Ctl.AddressWithNetworkTag { address } <-
-      note ("Invalid address: " <> show addr) $
-        Ctl.addressWithNetworkTagFromBech32 addr
-    pure address
+    note ("Invalid address: " <> show addr)
+      $ Ctl.Address.fromBech32 addr
+      >>= Plutus.Address.fromCardano
 
 -- * TokenName
 
 instance ConvertPsToJs WebApi.TokenName Ctl.TokenName where
   convertPsToJs = pure <<< WebApi.TokenName <<< Ctl.byteArrayToHex <<<
-    Ctl.getTokenName
+    Ctl.unAssetName
 
 instance ConvertJsToPs WebApi.TokenName Ctl.TokenName where
   convertJsToPs (WebApi.TokenName tn) = do
     note ("Invalid token name: " <> show tn)
       $ Ctl.hexToByteArray tn
-      >>= Ctl.mkTokenName
+      >>= Ctl.mkAssetName
 
 -- * CurrencySymbol
 
 instance ConvertPsToJs WebApi.Hash28 Ctl.CurrencySymbol where
-  convertPsToJs = pure <<< WebApi.Hash28 <<< Ctl.byteArrayToHex <<<
-    Ctl.getCurrencySymbol
+  convertPsToJs = pure <<< WebApi.Hash28 <<< cborBytesToHex <<<
+    encodeCbor
 
 instance ConvertJsToPs WebApi.Hash28 Ctl.CurrencySymbol where
   convertJsToPs (WebApi.Hash28 hash28) =
     note ("Invalid currency symbol: " <> show hash28)
       $ Ctl.hexToByteArray hash28
-      >>= Ctl.mkCurrencySymbol
+      >>= (decodeCbor <<< wrap)
 
 -- * ScriptHash
 
 instance ConvertPsToJs WebApi.ScriptHash Ctl.ScriptHash where
-  convertPsToJs = pure <<< WebApi.ScriptHash <<< rawBytesToHex <<<
-    scriptHashToBytes
+  convertPsToJs = pure <<< WebApi.ScriptHash <<< cborBytesToHex <<<
+    encodeCbor
 
 instance ConvertJsToPs WebApi.ScriptHash Ctl.ScriptHash where
   convertJsToPs (WebApi.ScriptHash scriptHash) =
     note ("Invalid ScriptHash: " <> show scriptHash)
       $ Ctl.hexToByteArray scriptHash
-      >>= scriptHashFromBytes
+      >>= (decodeCbor <<< wrap)
 
 -- * PaymentPubKeyHash
 
@@ -834,9 +813,8 @@ instance ConvertPsToJs WebApi.PaymentPubKeyHash Ctl.PaymentPubKeyHash where
   convertPsToJs =
     pure
       <<< WebApi.PaymentPubKeyHash
-      <<< rawBytesToHex
-      <<< ed25519KeyHashToBytes
-      <<< unwrap
+      <<< cborBytesToHex
+      <<< encodeCbor
       <<< unwrap
 
 instance ConvertJsToPs WebApi.PaymentPubKeyHash Ctl.PaymentPubKeyHash where
@@ -844,17 +822,16 @@ instance ConvertJsToPs WebApi.PaymentPubKeyHash Ctl.PaymentPubKeyHash where
     bytes <- note ("Invalid PaymentPubKeyHash: " <> show pkh) $
       Ctl.hexToByteArray pkh
     edKey <- note ("Invalid PaymentPubKeyHash: " <> show pkh) $
-      ed25519KeyHashFromBytes bytes
-    pure $ Ctl.PaymentPubKeyHash $ Ctl.PubKeyHash edKey
+      decodeCbor (wrap bytes)
+    pure $ Ctl.PaymentPubKeyHash edKey
 
 -- * TransactionHash
 
 instance ConvertPsToJs WebApi.Hash32 Ctl.TransactionHash where
-  convertPsToJs (Ctl.TransactionHash bytes) =
-    pure $ WebApi.Hash32 $ Ctl.byteArrayToHex bytes
+  convertPsToJs = pure <<< WebApi.Hash32 <<< cborBytesToHex <<< encodeCbor
 
 instance ConvertJsToPs WebApi.Hash32 Ctl.TransactionHash where
-  convertJsToPs (WebApi.Hash32 hash32) = do
-    bytes <- note ("Invalid txHash: " <> show hash32) $ Ctl.hexToByteArray
-      hash32
-    pure $ Ctl.TransactionHash bytes
+  convertJsToPs (WebApi.Hash32 hash32) =
+    note ("Invalid txHash: " <> show hash32)
+      $ Ctl.hexToByteArray hash32
+      >>= (decodeCbor <<< wrap)

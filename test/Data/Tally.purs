@@ -4,18 +4,15 @@ module Test.Data.Tally
   , sampleUpgradeConfigProposalTallyStateDatum
   ) where
 
-import Contract.Address (Address)
+import Cardano.Plutus.Types.Address (Address)
 import Contract.Monad (Contract)
-import Contract.Prelude (bind, pure, ($))
-import Contract.Prelude ((*), (+))
-import Contract.Time (POSIXTime(POSIXTime))
+import Contract.Prelude (bind, pure, ($), (+))
+import Contract.Time (POSIXTime)
 import Contract.Value (CurrencySymbol)
 import Dao.Utils.Time (getCurrentTime, mkPosixTime)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Proposal
-  ( ProposalType(ProposalType'General)
-  , ProposalType(ProposalType'Trip)
-  , ProposalType(ProposalType'Upgrade)
+  ( ProposalType(ProposalType'General, ProposalType'Trip, ProposalType'Upgrade)
   )
 import LambdaBuffers.ApplicationTypes.Tally (TallyStateDatum(TallyStateDatum))
 
@@ -57,8 +54,10 @@ sampleUpgradeConfigProposalTallyStateDatum symbol = do
     , against: BigInt.fromInt 0
     }
 
-proposalEndTimeWayInFuture :: POSIXTime
-proposalEndTimeWayInFuture = mkPosixTime "1795941991500"
+-- proposalEndTimeWayInFuture :: POSIXTime
+-- proposalEndTimeWayInFuture = mkPosixTime "1795941991500"
 
 offsetPosixTime :: POSIXTime
-offsetPosixTime = mkPosixTime "0000000040000"
+offsetPosixTime = mkPosixTime "0000000600000" -- 10 min
+
+-- mkPosixTime "0000000040000"

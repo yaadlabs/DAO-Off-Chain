@@ -6,21 +6,14 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
-    ctl = {
-      type = "github";
-      owner = "Plutonomicon";
-      repo = "cardano-transaction-lib";
-      rev = "f2e0f90d269815448f2fb7c6741b9ad25d095d7d";
-    };
 
+    ctl.url = "github:Plutonomicon/cardano-transaction-lib/3a515ad3c3ab9a9fb876602289084afd77279a5c";
     nixpkgs.follows = "ctl/nixpkgs";
 
-    lbf.url = "github:mlabs-haskell/lambda-buffers";
-
-    dao-onchain.url = "github:yaadlabs/DAO";
+    # dao-onchain.url = "github:mlabs-haskell/yaadlabs-DAO";
   };
 
-  outputs = { self, nixpkgs, ctl, lbf, ... }@inputs:
+  outputs = { self, nixpkgs, ctl, ... }@inputs:
     let
       supportedSystems = [
         "x86_64-linux"
@@ -30,6 +23,7 @@
       ];
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
+      /*
       spago-2-nix-overlay = final: prev: {
         dao-onchain-ctl-types = final.stdenv.mkDerivation {
           name = "dao-onchain-ctl-types";
@@ -39,6 +33,7 @@
           installPhase = "ln -s $src $out";
         };
       };
+      */
       
       nixpkgsFor = system: import nixpkgs {
         inherit system;
@@ -46,7 +41,7 @@
           ctl.overlays.purescript
           ctl.overlays.runtime
           ctl.overlays.spago
-          spago-2-nix-overlay
+          # FIXME: spago-2-nix-overlay
         ];
       };
 

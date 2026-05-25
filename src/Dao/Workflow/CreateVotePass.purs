@@ -4,32 +4,24 @@ Description: Contract for creating token corresponding to the 'voteNft' field of
 -}
 module Dao.Workflow.CreateVotePass (createVotePass) where
 
+import Cardano.Types.BigNum (one) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
-  , one
   , pure
   , ($)
-  , (/\)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
-import Contract.Value (singleton) as Value
+import Contract.Value (CurrencySymbol, TokenName, Value)
+import Contract.Value (getMultiAsset, singleton) as Value
 import Dao.Scripts.Policy (voteNftPolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
@@ -49,17 +41,18 @@ createVotePass userPkh = do
 
   let
     voteNftSymbol :: CurrencySymbol
-    voteNftSymbol = scriptCurrencySymbol voteNftPolicy'
+    voteNftSymbol = PlutusScript.hash voteNftPolicy'
 
     voteNftValue :: Value
-    voteNftValue = Value.singleton voteNftSymbol voteNftTokenName one
+    voteNftValue = Value.singleton voteNftSymbol voteNftTokenName BigNum.one
 
     lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.mintingPolicy voteNftPolicy' ]
+    lookups = Lookups.plutusMintingPolicy voteNftPolicy'
 
     constraints :: Constraints.TxConstraints
     constraints = mconcat
-      [ Constraints.mustMintValue voteNftValue
+      [ Constraints.mustMintValue $ Mint.fromMultiAsset $ Value.getMultiAsset
+          voteNftValue
       , Constraints.mustPayToPubKey userPkh voteNftValue
       ]
 

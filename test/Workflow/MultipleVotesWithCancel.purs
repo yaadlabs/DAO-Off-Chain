@@ -5,12 +5,16 @@ Description: Workflow that includes multiple votes and one user cancelling their
 -}
 module Test.Workflow.MultipleVotesWithCancel (suite) where
 
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (fromCardano) as Plutus.Address
+import Cardano.Plutus.Types.TokenName (adaToken)
+import Cardano.Types (AssetName, BigNum)
+import Cardano.Types.BigNum (fromInt) as BigNum
+import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Chain (waitNSlots)
-import Contract.Config (NetworkId(TestnetId))
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM, liftedM)
-import Contract.Numeric.Natural (fromInt') as Natural
 import Contract.Prelude
   ( type (/\)
   , Unit
@@ -18,28 +22,16 @@ import Contract.Prelude
   , discard
   , mconcat
   , pure
-  , show
-  , show
-  , unit
   , void
-  , (#)
   , ($)
   , (/\)
-  , (<>)
   )
+import Contract.Test (ContractTest, withKeyWallet, withWallets)
 import Contract.Test.Mote (TestPlanM)
-import Contract.Test.Plutip
-  ( InitialUTxOs
-  , PlutipTest
-  , withKeyWallet
-  , withWallets
-  )
 import Contract.Transaction (awaitTxConfirmedWithTimeout)
-import Contract.Value (TokenName, adaSymbol, adaToken, scriptCurrencySymbol)
-import Contract.Wallet (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Wallet (getWalletAddress)
 import Dao.Component.Config.Params
   ( CreateConfigParams(CreateConfigParams)
-  , mkValidatorConfig
   )
 import Dao.Component.Fungible.Params
   ( CreateFungibleParams(CreateFungibleParams)
@@ -59,7 +51,10 @@ import Dao.Utils.Contract (ContractResult(ContractResult))
 import Dao.Utils.Value (mkTokenName)
 import Dao.Workflow.CancelVote (cancelVote)
 import Dao.Workflow.CountVote (countVote)
-import Dao.Workflow.CreateConfig (CreateConfigResult(CreateConfigResult), createConfig)
+import Dao.Workflow.CreateConfig
+  ( CreateConfigResult(CreateConfigResult)
+  , createConfig
+  )
 import Dao.Workflow.CreateFungible (createFungible)
 import Dao.Workflow.CreateIndex (createIndex)
 import Dao.Workflow.CreateProposal (createProposal)
@@ -72,13 +67,12 @@ import Dao.Workflow.VoteOnProposal
   )
 import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds(Seconds))
-import JS.BigInt (BigInt)
 import JS.BigInt (fromInt) as BigInt
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection(VoteDirection'For))
 import Mote (group, test)
 import Test.Data.Tally (sampleGeneralProposalTallyStateDatum)
 
-suite :: TestPlanM PlutipTest Unit
+suite :: TestPlanM ContractTest Unit
 suite = do
   group "DAO tests" do
     test
@@ -94,21 +88,21 @@ suite = do
       do
         let
           distribution ::
-            ( Array BigInt
-                /\ Array BigInt
-                /\ Array BigInt
-                /\ Array BigInt
-                /\ Array BigInt
-                /\ Array BigInt
+            ( Array BigNum
+                /\ Array BigNum
+                /\ Array BigNum
+                /\ Array BigNum
+                /\ Array BigNum
+                /\ Array BigNum
             )
           distribution =
-            [ BigInt.fromInt 2_000_000_000
-            , BigInt.fromInt 500_000_000
-            ] /\ [ BigInt.fromInt 2_000_000_000 ]
-              /\ [ BigInt.fromInt 2_000_000_000 ]
-              /\ [ BigInt.fromInt 2_000_000_000 ]
-              /\ [ BigInt.fromInt 2_000_000_000 ]
-              /\ [ BigInt.fromInt 2_000_000_000 ]
+            [ BigNum.fromInt 2_000_000_000
+            , BigNum.fromInt 500_000_000
+            ] /\ [ BigNum.fromInt 2_000_000_000 ]
+              /\ [ BigNum.fromInt 2_000_000_000 ]
+              /\ [ BigNum.fromInt 2_000_000_000 ]
+              /\ [ BigNum.fromInt 2_000_000_000 ]
+              /\ [ BigNum.fromInt 2_000_000_000 ]
         withWallets distribution
           \( walletOne
                /\ walletTwo
@@ -122,21 +116,25 @@ suite = do
             -- ******************************************************************************* --
             -- * Get the wallet address for user two to use in the first create proposal     * --
             -- * section below. This will be used as the payment address for the tally datum * --
-            userTwoWalletAddress :: Address <- withKeyWallet walletTwo do
-              logInfo' "Running in walletTwo - first time"
-              walletAddress :: Address <- liftedM "Could not get wallet address"
-                getWalletAddress
-              pure walletAddress
+            (userTwoWalletAddress :: Plutus.Address) <-
+              withKeyWallet walletTwo do
+                logInfo' "Running in walletTwo - first time"
+                (addr :: Address) <- liftedM "Could not get wallet address"
+                  getWalletAddress
+                liftContractM "Could not convert userTwoWalletAddress" $
+                  Plutus.Address.fromCardano addr
 
             -- ******************************************************************************* --
             -- ******************************************************************************* --
             -- * Get the wallet address for user six to use in the second create proposal    * --
             -- * section below. This will be used as the payment address for the tally datum * --
-            userSixWalletAddress :: Address <- withKeyWallet walletSix do
-              logInfo' "Running in walletSix - first time"
-              walletAddress :: Address <- liftedM "Could not get wallet address"
-                getWalletAddress
-              pure walletAddress
+            (userSixWalletAddress :: Plutus.Address) <-
+              withKeyWallet walletSix do
+                logInfo' "Running in walletSix - first time"
+                (addr :: Address) <- liftedM "Could not get wallet address"
+                  getWalletAddress
+                liftContractM "Could not convert userSixWalletAddress" $
+                  Plutus.Address.fromCardano addr
 
             -- ************************************************************************ --
             -- ************************************************************************ --
@@ -183,11 +181,11 @@ suite = do
                 { txHash: createIndexTxHash
                 , symbol: indexSymbol
                 , tokenName: indexTokenName
-                } <- createIndex adaToken
+                } <- createIndex $ unwrap adaToken
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 createIndexTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- The policy for the 'voteNft' token (vote pass)
               votePassPolicy <- voteNftPolicy
@@ -196,24 +194,24 @@ suite = do
               fungiblePolicy' <- fungiblePolicy
 
               -- The fungible token name is hardcoded to this for now
-              fungibleTokenName :: TokenName <-
+              fungibleTokenName :: AssetName <-
                 liftContractM "Could not make voteNft token name" $ mkTokenName
                   "vote_fungible"
               let
                 -- The symbol for the 'voteNft' 
                 -- This is the vote 'pass' that a user must possess
                 -- in order to vote on a proposal
-                votePassSymbol = scriptCurrencySymbol votePassPolicy
+                votePassSymbol = PlutusScript.hash votePassPolicy
 
                 -- The symbol for the 'fungibleSymbol'
                 -- This acts as a vote multiplier for the user
                 -- Without it the user's vote counts strictly for one (for or against)
-                fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+                fungibleSymbol = PlutusScript.hash fungiblePolicy'
 
                 -- The params needed for the initial dynamic config
                 sampleConfigParams :: CreateConfigParams
                 sampleConfigParams = CreateConfigParams
-                  { configTokenName: adaToken
+                  { configTokenName: unwrap adaToken
                   , upgradeMajorityPercent: BigInt.fromInt 0
                   , upgradeRelativeMajorityPercent: BigInt.fromInt 0
                   , generalMajorityPercent: BigInt.fromInt 0
@@ -225,7 +223,7 @@ suite = do
                   , maxTripDisbursement: BigInt.fromInt 0
                   , agentDisbursementPercent: BigInt.fromInt 0
                   , proposalTallyEndOffset: BigInt.fromInt 0
-                  , voteTokenName: adaToken
+                  , voteTokenName: unwrap adaToken
                   , voteFungibleCurrencySymbol: fungibleSymbol
                   , voteFungibleTokenName: fungibleTokenName
                   , voteNftSymbol: votePassSymbol
@@ -244,7 +242,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 createConfigTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- ************************** --
               -- Create the first proposal  --
@@ -274,7 +272,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 createProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- ************************** --
               -- Create the second proposal --
@@ -304,7 +302,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 createProposalTxHashTwo
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- **************************************************************************** --
               -- Create the voting credentials (vote pass and fungible tokens) for user three --
@@ -324,7 +322,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 votePassTxHashUserThree
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- Create the fungible token (amount 400) for user three (walletThree)
               let
@@ -340,7 +338,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 fungibleTxHashUserThree
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- ******************************************************************************* --
               -- * Create the voting credentials (vote pass and fungible tokens) for user four * --
@@ -359,7 +357,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 votePassTxHashUserFour
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- Create the fungible token (amount 200) for user four (walletFour)
               let
@@ -375,7 +373,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 fungibleTxHashUserFour
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- ******************************************************************************* --
               -- * Create the voting credentials (vote pass and fungible tokens) for user five * --
@@ -394,7 +392,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 votePassTxHashUserFive
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               -- Create the fungible token (amount 600) for user five (walletFive)
               let
@@ -410,7 +408,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 fungibleTxHashUserFour
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               pure
                 ( proposalOneSymbol /\ proposalOneTokenName /\ configSymbol
@@ -438,7 +436,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 treasuryFundTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
               pure treasuryFundSymbol
 
@@ -468,7 +466,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************ --
             -- ************************************************ --
@@ -496,7 +494,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************ --
             -- ************************************************ --
@@ -524,7 +522,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************************** --
             -- ************************************************************** --
@@ -544,7 +542,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 cancelVoteTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ********************************************************* --
             -- ********************************************************* --
@@ -578,7 +576,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 countVoteTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************************ --
             -- ************************************************************ --
@@ -603,7 +601,7 @@ suite = do
               treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************** --
             -- ************************************************** --
@@ -631,7 +629,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************ --
             -- ************************************************ --
@@ -659,7 +657,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ********************************************************************** --
             -- ********************************************************************** --
@@ -679,7 +677,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 cancelVoteTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ************************************************************************** --
             -- ************************************************************************** --
@@ -710,7 +708,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 voteOnProposalTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ********************************************************* --
             -- ********************************************************* --
@@ -732,7 +730,7 @@ suite = do
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0)
                 countVoteTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)
 
             -- ****************************************************************** --
             -- ****************************************************************** --
@@ -757,4 +755,4 @@ suite = do
               treasuryTxHash <- treasuryGeneral treasuryGeneralParams
 
               void $ awaitTxConfirmedWithTimeout (Seconds 600.0) treasuryTxHash
-              void $ waitNSlots (Natural.fromInt' 3)
+              void $ waitNSlots (BigNum.fromInt 3)

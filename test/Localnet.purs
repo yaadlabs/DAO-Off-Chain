@@ -1,50 +1,37 @@
 {-|
-Module: Test.Plutip
-Description: Entry point for Plutip tests
+Module: Test.Localnet
+Description: Entry point for cardano-testnet integration tests
 -}
-module Test.Plutip (main) where
+module Test.Localnet (main) where
 
 import Contract.Prelude
 
 import Contract.Test.Mote (interpretWithConfig)
-import Contract.Test.Plutip
-  ( PlutipConfig
-  , testPlutipContracts
-  )
+import Contract.Test.Testnet (Era(Conway), TestnetConfig, testTestnetContracts)
 import Contract.Test.Utils (exitCode, interruptOnSignal)
 import Ctl.Internal.Contract.Hooks (emptyHooks)
 import Data.Maybe (Maybe(Just))
 import Data.Posix.Signal (Signal(SIGINT))
-import Data.Time.Duration (Seconds(Seconds))
+import Data.Time.Duration (Minutes(Minutes), Seconds(Seconds), fromDuration)
 import Data.UInt as UInt
-import Effect.Aff
-  ( Milliseconds(Milliseconds)
-  , cancelWith
-  , effectCanceler
-  , launchAff
-  )
+import Effect.Aff (cancelWith, effectCanceler, launchAff)
 import Test.Spec.Runner (defaultConfig)
-import Test.Workflow.MultipleVotesWithCancel as MultipleVotesWithCancel
-import Test.Workflow.QueryProposals as QueryProposals
 import Test.Workflow.ReferenceScripts as ReferenceScripts
 
 main :: Effect Unit
 main = interruptOnSignal SIGINT =<< launchAff do
   flip cancelWith (effectCanceler (exitCode 1)) do
     interpretWithConfig
-      defaultConfig { timeout = Just $ Milliseconds 70_000.0, exit = true } $
-      testPlutipContracts plutipConfig do
+      defaultConfig { timeout = Just $ fromDuration $ Minutes 5.0 } $
+      testTestnetContracts localnetConfig do
         ReferenceScripts.suite
 
 -- QueryProposals.suite
 -- MultipleVotesWithCancel.suite
 
-plutipConfig :: PlutipConfig
-plutipConfig =
-  { host: "127.0.0.1"
-  , port: UInt.fromInt 8082
-  , logLevel: Trace
-  -- Server configs are used to deploy the corresponding services.
+localnetConfig :: TestnetConfig
+localnetConfig =
+  { logLevel: Trace
   , ogmiosConfig:
       { port: UInt.fromInt 1338
       , host: "127.0.0.1"
@@ -61,9 +48,9 @@ plutipConfig =
   , customLogger: Nothing
   , hooks: emptyHooks
   , clusterConfig:
-      { slotLength: Seconds 0.1
-      , epochSize: Nothing
-      , maxTxSize: Just $ UInt.fromInt 16000
-      , raiseExUnitsToMax: false
+      { testnetMagic: 2
+      , era: Conway
+      , slotLength: Seconds 0.1
+      , epochSize: Just $ UInt.fromInt 4320000
       }
   }

@@ -7,19 +7,28 @@ module Dao.Workflow.VoteOnProposal
   , voteOnProposal
   ) where
 
-import Contract.Address (Address)
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (pubKeyHashAddress)
+import Cardano.ToData (toData)
+import Cardano.Types
+  ( AssetName
+  , PlutusScript
+  , RedeemerDatum
+  , ScriptHash
+  , TransactionHash
+  , Value
+  )
+import Cardano.Types.BigNum (fromInt, one) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.Value (add, getMultiAsset, singleton) as Value
 import Contract.Chain (waitNSlots)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedM)
-import Contract.Numeric.Natural (fromInt') as Natural
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , mempty
-  , one
   , pure
   , show
   , unwrap
@@ -27,57 +36,37 @@ import Contract.Prelude
   , (#)
   , ($)
   , (*)
-  , (/\)
   , (<>)
+  , (=<<)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash(ValidatorHash)
-  , validatorHash
-  )
 import Contract.Time (POSIXTime(POSIXTime))
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
-import Contract.Value (singleton) as Value
 import Contract.Wallet (ownPaymentPubKeyHash)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
 import Dao.Component.Vote.Params (VoteOnProposalParams)
 import Dao.Component.Vote.Query (spendFungibleUtxo, spendVoteNftUtxo)
 import Dao.Scripts.Policy (unappliedVotePolicy)
-import Dao.Scripts.Validator
-  ( unappliedConfigValidator
-  , unappliedTallyValidator
-  )
-import Dao.Utils.Address (paymentPubKeyHashToAddress)
+import Dao.Scripts.Validator (unappliedConfigValidator, unappliedTallyValidator)
 import Dao.Utils.Query (getAllWalletUtxos)
 import Dao.Utils.Time (mkOnchainTimeRange, mkValidityRange, oneMinute)
 import Data.Maybe (Maybe(Just, Nothing))
+import Data.Newtype (wrap)
+import Debug (traceM)
 import JS.BigInt (fromInt)
 import LambdaBuffers.ApplicationTypes.Configuration (DynamicConfigDatum)
 import LambdaBuffers.ApplicationTypes.Vote
   ( VoteDatum(VoteDatum)
   , VoteMinterActionRedeemer(VoteMinterActionRedeemer'Mint)
   )
-import ScriptArguments.Types
-  ( ValidatorParams(ValidatorParams)
-  )
+import ScriptArguments.Types (ValidatorParams(ValidatorParams))
 
 -- | Vote result
 newtype VoteOnProposalResult = VoteOnProposalResult
   { txHash :: TransactionHash
-  , symbol :: CurrencySymbol
+  , symbol :: ScriptHash
   }
 
 -- | Contract for voting on a specific proposal
@@ -98,11 +87,11 @@ voteOnProposal params' = do
       , vpConfigTokenName: params.configTokenName
       }
 
-  appliedTallyValidator :: Validator <- unappliedTallyValidator
+  appliedTallyValidator :: PlutusScript <- unappliedTallyValidator
     validatorConfig
-  appliedConfigValidator :: Validator <- unappliedConfigValidator
+  appliedConfigValidator :: PlutusScript <- unappliedConfigValidator
     validatorConfig
-  appliedVotePolicy :: MintingPolicy <- unappliedVotePolicy validatorConfig
+  appliedVotePolicy :: PlutusScript <- unappliedVotePolicy validatorConfig
 
   -- Query the UTXOs
   configInfo :: ConfigInfo <- referenceConfigUtxo params.configSymbol
@@ -117,22 +106,25 @@ voteOnProposal params' = do
     configDatum = configInfo.datum
 
     -- Symbol of the vote 'pass' token (required to vote on a proposal)
-    voteNftSymbol :: CurrencySymbol
+    voteNftSymbol :: ScriptHash
     voteNftSymbol = configDatum # unwrap # _.voteNft
 
-    fungibleSymbol :: CurrencySymbol
+    fungibleSymbol :: ScriptHash
     fungibleSymbol = configDatum # unwrap # _.voteFungibleCurrencySymbol
 
-    fungibleTokenName :: TokenName
+    fungibleTokenName :: AssetName
     fungibleTokenName = configDatum # unwrap # _.voteFungibleTokenName
 
   -- Make the on-chain time range
   timeRange <- mkValidityRange (POSIXTime $ fromInt $ 5 * oneMinute)
   onchainTimeRange <- mkOnchainTimeRange timeRange
+  traceM $ "PROPOSAL END TIME: " <> show
+    (unwrap tallyInfo.datum).proposalEndTime
+  traceM $ " TX VALID RANGE: " <> show onchainTimeRange
 
   -- Hack to work around Ogmios submitted too early error (in Plutip test)
   -- TODO: Find better solution
-  void $ waitNSlots (Natural.fromInt' 10)
+  void $ waitNSlots $ BigNum.fromInt 10
 
   -- Get the UTXOs at user's address
   userUtxos <- getAllWalletUtxos
@@ -150,8 +142,9 @@ voteOnProposal params' = do
   let
     -- The 'voteOwner' field of the 'VoteDatum' must correspond to the
     -- address of the wallet executing this transaction
-    ownerAddress :: Address
-    ownerAddress = paymentPubKeyHashToAddress ownPaymentPkh
+    ownerAddress :: Plutus.Address
+    ownerAddress = pubKeyHashAddress (wrap $ wrap $ unwrap ownPaymentPkh)
+      Nothing
 
     -- The datum includes the user's key, the type of proposal
     -- and whether the user is voting for or against the proposal
@@ -165,33 +158,37 @@ voteOnProposal params' = do
 
     -- The 'voteSymbol' is the symbol of the 'votePolicy'
     -- used when a user votes on a proposal
-    voteSymbol :: CurrencySymbol
+    voteSymbol :: ScriptHash
     voteSymbol = configDatum # unwrap # _.voteCurrencySymbol
 
     -- The token name for the token created with the 'voteSymbol'
-    voteTokenName :: TokenName
+    voteTokenName :: AssetName
     voteTokenName = configDatum # unwrap # _.voteTokenName
 
     -- The vote value to be minted
     voteValue :: Value
-    voteValue = Value.singleton voteSymbol voteTokenName one
+    voteValue = Value.singleton voteSymbol voteTokenName BigNum.one
 
-    -- The value to be paid to the script
-    -- Consists of the vote value, voteNft value, and maybe a fungible value
-    valueToPayToScript :: Value
-    valueToPayToScript = case fungibleInfo of
-      Just fungibleInfo' ->
-        (voteValue <> voteNftInfo.value <> fungibleInfo'.value)
-      Nothing -> (voteValue <> voteNftInfo.value)
+  -- The value to be paid to the script
+  -- Consists of the vote value, voteNft value, and maybe a fungible value
+  (valueToPayToScript :: Value) <-
+    liftContractM "Could not build valueToPayToScript"
+      case fungibleInfo of
+        Just fungibleInfo' ->
+          Value.add voteValue =<< Value.add voteNftInfo.value
+            fungibleInfo'.value
+        Nothing ->
+          Value.add voteValue voteNftInfo.value
 
+  let
     -- The 'votePolicy' minting policy takes two possible redeemers, Mint or Burn
     -- In this case we wish to mint a vote token in order to vote on the proposal
-    votePolicyRedeemer :: Redeemer
-    votePolicyRedeemer = Redeemer $ toData VoteMinterActionRedeemer'Mint
+    votePolicyRedeemer :: RedeemerDatum
+    votePolicyRedeemer = wrap $ toData VoteMinterActionRedeemer'Mint
 
     -- We require the hash in order to pay to the vote validator script
-    voteValidatorHash :: ValidatorHash
-    voteValidatorHash = ValidatorHash $ configDatum # unwrap # _.voteValidator
+    voteValidatorHash :: ScriptHash
+    voteValidatorHash = configDatum # unwrap # _.voteValidator
 
     fungibleLookups :: Lookups.ScriptLookups
     fungibleLookups = case fungibleInfo of
@@ -201,7 +198,7 @@ voteOnProposal params' = do
     lookups :: Lookups.ScriptLookups
     lookups =
       mconcat
-        [ Lookups.mintingPolicy appliedVotePolicy
+        [ Lookups.plutusMintingPolicy appliedVotePolicy
         , configInfo.lookups
         , tallyInfo.lookups
         , voteNftInfo.lookups
@@ -216,10 +213,11 @@ voteOnProposal params' = do
     constraints :: Constraints.TxConstraints
     constraints =
       mconcat
-        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer voteValue
+        [ Constraints.mustMintValueWithRedeemer votePolicyRedeemer $
+            Mint.fromMultiAsset (Value.getMultiAsset voteValue)
         , Constraints.mustPayToScript
             voteValidatorHash
-            (Datum $ toData voteDatum)
+            (toData voteDatum)
             Constraints.DatumInline
             valueToPayToScript
         -- ^ We send the 'VoteDatum' along with the relevant vote

@@ -4,42 +4,29 @@ Description: Contract for creating token corresponding to the 'voteFungibleCurre
 -}
 module Dao.Workflow.CreateFungible (createFungible) where
 
-import Contract.Address (PaymentPubKeyHash)
+import Cardano.Types (AssetName, PlutusScript, ScriptHash, Value)
+import Cardano.Types.BigNum (fromBigInt) as BigNum
+import Cardano.Types.Mint (fromMultiAsset) as Mint
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.Value (getMultiAsset, singleton) as Value
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prelude
-  ( type (/\)
-  , bind
+  ( bind
   , discard
   , mconcat
   , pure
   , unwrap
   , (#)
   , ($)
-  , (/\)
-  , (<)
-  , (>)
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , scriptCurrencySymbol
-  )
-import Contract.Value (singleton) as Value
 import Dao.Component.Fungible.Params (CreateFungibleParams)
 import Dao.Scripts.Policy (fungiblePolicy)
 import Dao.Utils.Contract (ContractResult(ContractResult))
-import Dao.Utils.Error (guardContract)
 import Dao.Utils.Value (mkTokenName)
-import JS.BigInt (BigInt, fromInt)
 
 -- | Contract for creating token corresponding to the 'voteFungibleCurrencySymbol' field of the config
 -- | This token acts as a multiplier of a user's voting weight
@@ -50,25 +37,32 @@ createFungible params' = do
 
   let params = params' # unwrap
 
-  fungiblePolicy' :: MintingPolicy <- fungiblePolicy
-  fungibleTokenName :: TokenName <-
+  fungiblePolicy' :: PlutusScript <- fungiblePolicy
+  fungibleTokenName :: AssetName <-
     liftContractM "Could not make voteNft token name" $ mkTokenName
       "vote_fungible"
 
   let
-    fungibleSymbol :: CurrencySymbol
-    fungibleSymbol = scriptCurrencySymbol fungiblePolicy'
+    fungibleSymbol :: ScriptHash
+    fungibleSymbol = PlutusScript.hash fungiblePolicy'
 
+  fungibleAmount <-
+    liftContractM "Could not convert fungible token quantity to BigNum" $
+      BigNum.fromBigInt params.amount
+
+  let
     fungibleValue :: Value
-    fungibleValue = Value.singleton fungibleSymbol fungibleTokenName
-      params.amount
+    fungibleValue =
+      Value.singleton fungibleSymbol fungibleTokenName
+        fungibleAmount
 
     lookups :: Lookups.ScriptLookups
-    lookups = mconcat [ Lookups.mintingPolicy fungiblePolicy' ]
+    lookups = mconcat [ Lookups.plutusMintingPolicy fungiblePolicy' ]
 
     constraints :: Constraints.TxConstraints
     constraints = mconcat
-      [ Constraints.mustMintValue fungibleValue
+      [ Constraints.mustMintValue $ Mint.fromMultiAsset $ Value.getMultiAsset
+          fungibleValue
       , Constraints.mustPayToPubKey params.userPkh fungibleValue
       ]
 

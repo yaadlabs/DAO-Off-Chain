@@ -2,8 +2,7 @@ module Dao.Web.Call
   ( mkContractCall1
   , mkContractCall2
   , mkContractCall3
-  )
-  where
+  ) where
 
 import Contract.Address (getNetworkId)
 import Contract.Monad
@@ -12,7 +11,7 @@ import Contract.Monad
   , liftContractE
   , runContractInEnv
   ) as Ctl
-import Contract.Prelude (Effect, bind, ($))
+import Contract.Prelude (bind, ($))
 import Control.Promise (Promise, fromAff)
 import Dao.Web.Conversion
   ( class ConvertJsToPs
@@ -21,7 +20,6 @@ import Dao.Web.Conversion
   , runConvertPsToJs
   )
 import Data.Function.Uncurried (Fn1, Fn2, Fn3, mkFn1, mkFn2, mkFn3)
-import Effect.Aff.Compat (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 
 -- | Create a function that calls a contract with only the ContractEnv as an argument.
@@ -31,9 +29,9 @@ mkContractCall1 ::
   Ctl.Contract resPurs ->
   Fn1 Ctl.ContractEnv (Promise resJs)
 mkContractCall1 contractCall = mkFn1 \env -> do
-    unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
-      res <- contractCall
-      convertPsToJsContract res
+  unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
+    res <- contractCall
+    convertPsToJsContract res
 
 -- | Create an uncurried function that calls a contract with the ContractEnv and another argument.
 mkContractCall2 ::
@@ -43,10 +41,10 @@ mkContractCall2 ::
   (argPurs -> Ctl.Contract resPurs) ->
   Fn2 Ctl.ContractEnv argJs (Promise resJs)
 mkContractCall2 contractCall = mkFn2 \env argJs -> do
-    unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
-      argPurs <- convertJsToPsContract argJs
-      res <- contractCall argPurs
-      convertPsToJsContract res
+  unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
+    argPurs <- convertJsToPsContract argJs
+    res <- contractCall argPurs
+    convertPsToJsContract res
 
 -- | Create an uncurried function that calls a contract with the ContractEnv and 2 other arguments.
 mkContractCall3 ::
@@ -57,12 +55,13 @@ mkContractCall3 ::
   (arg1Purs -> arg2Purs -> Ctl.Contract resPurs) ->
   Fn3 Ctl.ContractEnv arg1Js arg2Js (Promise resJs)
 mkContractCall3 contractCall = mkFn3 \env arg1Js arg2Js -> do
-    unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
-      arg1Purs <- convertJsToPsContract arg1Js
-      arg2Purs <- convertJsToPsContract arg2Js
-      res <- contractCall arg1Purs arg2Purs
-      convertPsToJsContract res
+  unsafePerformEffect $ fromAff $ Ctl.runContractInEnv env $ do
+    arg1Purs <- convertJsToPsContract arg1Js
+    arg2Purs <- convertJsToPsContract arg2Js
+    res <- contractCall arg1Purs arg2Purs
+    convertPsToJsContract res
 
+{-
 contractCallTwoArgs ::
   forall resJs resPurs arg1Js arg1Purs arg2Js arg2Purs.
   ConvertPsToJs resJs resPurs =>
@@ -78,6 +77,7 @@ contractCallTwoArgs env contractCall =
       arg2Purs <- convertJsToPsContract arg2Js
       res <- contractCall arg1Purs arg2Purs
       convertPsToJsContract res
+-}
 
 convertPsToJsContract ::
   forall js ps. (ConvertPsToJs js ps) => ps -> Ctl.Contract js

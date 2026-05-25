@@ -7,6 +7,16 @@ module ScriptArguments.Types
 
 import Prelude
 
+import Cardano.Plutus.DataSchema
+  ( class HasPlutusSchema
+  , type (:+)
+  , type (:=)
+  , type (@@)
+  , I
+  , PNil
+  , Z
+  )
+import Cardano.Types (ScriptHash)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -15,16 +25,6 @@ import Contract.PlutusData
   )
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
-import Ctl.Internal.Plutus.Types.DataSchema
-  ( class HasPlutusSchema
-  , type (:+)
-  , type (:=)
-  , type (@@)
-  , I
-  , PNil
-  )
-import Ctl.Internal.Serialization.Hash (ScriptHash)
-import Ctl.Internal.TypeLevel.Nat (Z)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 

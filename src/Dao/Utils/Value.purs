@@ -3,74 +3,50 @@ Module: Dao.Utils.Value
 Description: Value related helpers
 -}
 module Dao.Utils.Value
-  ( mkTokenName
+  ( countOfTokenInValue
+  , mkTokenName
   , valueSubtraction
   , normaliseValue
   , allPositive
-  , countOfTokenInValue
   ) where
 
-import Contract.AssocMap as AssocMap
-import Contract.Prelude
-  ( class Foldable
-  , type (/\)
-  , all
-  , foldMap
-  , sub
-  , sum
-  , zero
-  , ($)
-  , (/=)
-  , (/\)
-  , (<$>)
-  , (<<<)
-  , (<=<)
-  , (>=)
-  )
-import Contract.Prim.ByteArray (byteArrayFromAscii, hexToByteArray)
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , flattenValue
-  , getValue
-  , getValue
-  , singleton
+import Cardano.Types (AssetName, BigNum, ScriptHash, Value)
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.BigNum (add, sub, zero) as BigNum
+import Cardano.Types.Value
+  ( flatten
+  , getMultiAsset
+  , isPositive
+  , unflatten
   , unionWith
-  )
-import Contract.Value
-  ( mkTokenName
   ) as Value
+import Contract.Prelude (($), (/=), (<<<), (<=<), (=<<))
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Data.Array (filter) as Array
-import Data.Maybe (Maybe, fromMaybe)
-import JS.BigInt (BigInt)
+import Data.Foldable (foldl)
+import Data.Map (lookup, values) as Map
+import Data.Maybe (Maybe(Just), fromMaybe)
+import Data.Newtype (unwrap)
+import Data.Tuple (Tuple(Tuple))
 
-mkTokenName :: String -> Maybe TokenName
-mkTokenName = Value.mkTokenName <=< byteArrayFromAscii
+mkTokenName :: String -> Maybe AssetName
+mkTokenName = mkAssetName <=< byteArrayFromAscii
 
 allPositive :: Value -> Boolean
-allPositive = all (all (_ >= zero)) <<< getValue
+allPositive = Value.isPositive
 
-valueSubtraction :: Value -> Value -> Value
-valueSubtraction = unionWith sub
+valueSubtraction :: Value -> Value -> Maybe Value
+valueSubtraction = Value.unionWith BigNum.sub
 
-normaliseValue :: Value -> Value
-normaliseValue = go $ Array.filter \(_ /\ _ /\ amount) -> amount /= zero
-  where
-  go op = unflattenValue <<< op <<< flattenValue
+normaliseValue :: Value -> Maybe Value
+normaliseValue =
+  Value.unflatten
+    <<< Array.filter (\(Tuple _ amount) -> amount /= BigNum.zero)
+    <<< Value.flatten
 
-unflattenValue ::
-  forall f.
-  Foldable f =>
-  f (CurrencySymbol /\ TokenName /\ BigInt) ->
-  Value
-unflattenValue = foldMap $
-  \(symbol /\ tokenName /\ amount) -> singleton symbol tokenName amount
-
-countOfTokenInValue :: CurrencySymbol -> Value -> BigInt
-countOfTokenInValue symbol value =
-  let
-    maybeTotal = sum <$> AssocMap.elems <$> AssocMap.lookup symbol
-      (getValue value)
-  in
-    fromMaybe zero maybeTotal
+countOfTokenInValue :: ScriptHash -> Value -> BigNum
+countOfTokenInValue symbol val =
+  fromMaybe BigNum.zero
+    ( (foldl (\acc x -> BigNum.add x =<< acc) (Just BigNum.zero) <<< Map.values)
+        =<< Map.lookup symbol (unwrap $ Value.getMultiAsset val)
+    )

@@ -4,7 +4,16 @@ Description: Contract for disbursing treasury funds based on a general proposal
 -}
 module Dao.Workflow.TreasuryGeneral (treasuryGeneral) where
 
-import Contract.Address (Address, PaymentPubKeyHash, StakePubKeyHash(..))
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Address (toCardano) as Plutus.Address
+import Cardano.Types.BigNum (fromBigInt) as BigNum
+import Cardano.Types.Value (lovelaceValueOf)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash
+  , StakePubKeyHash
+  , getNetworkId
+  )
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (unitDatum)
@@ -21,22 +30,15 @@ import Contract.Prelude
   , (*)
   , (+)
   , (/)
+  , (=<<)
   , (>)
   , (>=)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, validatorHash)
-import Contract.Transaction
-  ( TransactionHash
-  , submitTxFromConstraints
-  )
+import Contract.Transaction (TransactionHash, submitTxFromConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( Value
-  , adaSymbol
-  , adaToken
-  , singleton
-  )
+import Contract.Value (Value)
 import Dao.Component.Config.Params (mkValidatorConfig)
 import Dao.Component.Config.Query (ConfigInfo, referenceConfigUtxo)
 import Dao.Component.Tally.Query (TallyInfo, referenceTallyUtxo)
@@ -101,8 +103,13 @@ treasuryGeneral params' = do
 
   {- Get the treasury payment info from the 'TallyStateDatum' -}
   -- The address of the user that will receive the payment
-  paymentAddress :: Address <- liftContractM "Not a general proposal" $
-    getPaymentAddress tallyDatum
+  (paymentAddress :: Address) <- do
+    paddr <- liftContractM "Not a general proposal" $ getPaymentAddress
+      tallyDatum
+    network <- getNetworkId
+    liftContractM "Could not convert payment address" $
+      Plutus.Address.toCardano network paddr
+
   -- The amount of Ada the user should receive
   paymentAmount :: BigInt <- liftContractM "Not a general proposal" $
     getPaymentAmount tallyDatum
@@ -113,7 +120,7 @@ treasuryGeneral params' = do
 
   let
     -- The SKH of the user
-    paymentStakeKey :: Maybe StakePubKeyHash 
+    paymentStakeKey :: Maybe StakePubKeyHash
     paymentStakeKey = addressToStakePubKeyHash paymentAddress
 
     -- The number of votes cast in favour of the proposal
@@ -162,6 +169,11 @@ treasuryGeneral params' = do
     disbursementAmount :: BigInt
     disbursementAmount = min configMaxGeneralDisbursement paymentAmount
 
+  disbursementAmountBigNum <-
+    liftContractM "Could not convert disbursementAmount to BigNum" $
+      BigNum.fromBigInt disbursementAmount
+
+  let
     -- The value held at the treasury input UTXO which
     -- must cover the disbursement amount
     treasuryInputAmount :: Value
@@ -169,13 +181,15 @@ treasuryGeneral params' = do
 
     -- The Ada amount to send to the receiver
     amountToSendToPaymentAddress :: Value
-    amountToSendToPaymentAddress = singleton adaSymbol adaToken
-      disbursementAmount
+    amountToSendToPaymentAddress = lovelaceValueOf disbursementAmountBigNum
 
-    -- The change to send back to the treasury
-    amountToSendBackToTreasury :: Value
-    amountToSendBackToTreasury = normaliseValue
-      (valueSubtraction treasuryInputAmount amountToSendToPaymentAddress)
+  -- The change to send back to the treasury
+  (amountToSendBackToTreasury :: Value) <-
+    liftContractM
+      "Could not subtract disbursement amount from treasury input amount"
+      ( normaliseValue =<<
+          valueSubtraction treasuryInputAmount amountToSendToPaymentAddress
+      )
 
   -- Check that the treasury input amount covers the payment amount
   guardContract "Not enough treasury funds to cover payment" $ allPositive
@@ -216,7 +230,8 @@ treasuryGeneral params' = do
             Constraints.DatumInline
             amountToSendBackToTreasury
         -- ^ Send the change back to the treasury
-        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey amountToSendToPaymentAddress
+        , mustPayToPubKeyStakeAddress paymentKey paymentStakeKey
+            amountToSendToPaymentAddress
         -- ^ Send the Ada to the user's key corresponding to
         -- the payment address specified in the tally datum
         , treasuryInfo.constraints
@@ -229,7 +244,7 @@ treasuryGeneral params' = do
   pure txHash
   where
   -- Get the user's address
-  getPaymentAddress :: TallyStateDatum -> Maybe Address
+  getPaymentAddress :: TallyStateDatum -> Maybe Plutus.Address
   getPaymentAddress tallyDatum =
     let
       proposalType = tallyDatum # unwrap # _.proposal

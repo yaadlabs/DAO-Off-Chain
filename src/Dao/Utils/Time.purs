@@ -14,6 +14,7 @@ module Dao.Utils.Time
 
 import Contract.Prelude
 
+import Cardano.Types (EraSummary)
 import Contract.Chain (ChainTip(ChainTip), Tip(Tip), currentTime, getTip)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedM)
@@ -28,10 +29,7 @@ import Contract.Time
   , slotToPosixTime
   , toOnchainPosixTimeRange
   )
-import Ctl.Internal.Types.EraSummaries (EraSummary)
-import Ctl.Internal.Types.Interval
-  ( Interval(FiniteInterval)
-  )
+import Ctl.Internal.Types.Interval (Interval(FiniteInterval))
 import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
 

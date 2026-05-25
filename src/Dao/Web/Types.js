@@ -2,4 +2,4 @@
 
 export const nullF = null;
 
-export const isNullOrUndefined = (x) => x == null;
+export const isNullOrUndefined = x => x == null;

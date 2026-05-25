@@ -1,9 +1,9 @@
 module Test.Data.Config (dummyNewConfig) where
 
+import Cardano.Plutus.Types.TokenName (adaToken)
 import Contract.Monad (Contract)
-import Contract.Prelude (bind, pure, unwrap, (#), ($))
+import Contract.Prelude (bind, pure, unwrap, ($))
 import Contract.Scripts (ScriptHash, validatorHash)
-import Contract.Value (adaSymbol, adaToken)
 import Dao.Scripts.Validator (alwaysSucceedsValidatorScript)
 import JS.BigInt as BigInt
 import LambdaBuffers.ApplicationTypes.Configuration
@@ -30,16 +30,16 @@ dummyNewConfig = do
     , maxTripDisbursement: BigInt.fromInt 0
     , agentDisbursementPercent: BigInt.fromInt 0
     , proposalTallyEndOffset: BigInt.fromInt 0
-    , tallyNft: adaSymbol
-    , voteCurrencySymbol: adaSymbol
-    , voteTokenName: adaToken
-    , voteNft: adaSymbol
-    , voteFungibleCurrencySymbol: adaSymbol
-    , voteFungibleTokenName: adaToken
+    , tallyNft: someScriptHash
+    , voteCurrencySymbol: someScriptHash
+    , voteTokenName: unwrap adaToken
+    , voteNft: someScriptHash
+    , voteFungibleCurrencySymbol: someScriptHash
+    , voteFungibleTokenName: unwrap adaToken
     , fungibleVotePercent: BigInt.fromInt 0
     }
 
 someScriptHash' :: Contract ScriptHash
 someScriptHash' = do
   validator <- alwaysSucceedsValidatorScript
-  pure $ validatorHash validator # unwrap
+  pure $ validatorHash validator

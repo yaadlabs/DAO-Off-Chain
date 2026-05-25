@@ -8,20 +8,18 @@ module Dao.Component.Vote.Params
   , CancelVoteParams(..)
   ) where
 
-import Contract.Address (Address)
-import Contract.Scripts (MintingPolicy)
-import Contract.Value (CurrencySymbol, TokenName)
+import Cardano.Types (AssetName, ScriptHash)
 import Data.Newtype (class Newtype)
 import JS.BigInt (BigInt)
 import LambdaBuffers.ApplicationTypes.Vote (VoteDirection)
 
 -- | Create proposal contract paramaters
 newtype VoteOnProposalParams = VoteOnProposalParams
-  { configSymbol :: CurrencySymbol
-  , configTokenName :: TokenName
-  , tallySymbol :: CurrencySymbol
+  { configSymbol :: ScriptHash
+  , configTokenName :: AssetName
+  , tallySymbol :: ScriptHash
   -- Vote datum fields
-  , proposalTokenName :: TokenName
+  , proposalTokenName :: AssetName
   , voteDirection :: VoteDirection
   , returnAda :: BigInt
   }
@@ -30,19 +28,19 @@ derive instance Newtype VoteOnProposalParams _
 
 -- | Count vote contract paramaters
 newtype CountVoteParams = CountVoteParams
-  { configSymbol :: CurrencySymbol
-  , configTokenName :: TokenName
-  , tallySymbol :: CurrencySymbol
-  , proposalTokenName :: TokenName
+  { configSymbol :: ScriptHash
+  , configTokenName :: AssetName
+  , tallySymbol :: ScriptHash
+  , proposalTokenName :: AssetName
   }
 
 derive instance Newtype CountVoteParams _
 
 -- | Cancel vote contract paramaters
 newtype CancelVoteParams = CancelVoteParams
-  { configSymbol :: CurrencySymbol
-  , configTokenName :: TokenName
-  , proposalTokenName :: TokenName
+  { configSymbol :: ScriptHash
+  , configTokenName :: AssetName
+  , proposalTokenName :: AssetName
   }
 
 derive instance Newtype CancelVoteParams _

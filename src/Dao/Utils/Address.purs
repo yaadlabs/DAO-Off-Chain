@@ -2,35 +2,54 @@ module Dao.Utils.Address
   ( addressToPaymentPubKeyHash
   , addressToStakePubKeyHash
   , paymentPubKeyHashToAddress
+  , plutusAddressToPaymentPubKeyHash
   ) where
 
-import Contract.Address
-  ( PaymentPubKeyHash(PaymentPubKeyHash)
-  , StakePubKeyHash(..)
+import Cardano.Plutus.Types.Address (Address) as Plutus
+import Cardano.Plutus.Types.Credential (Credential(PubKeyCredential)) as Plutus
+import Cardano.Types
+  ( Address
+  , Credential(PubKeyHashCredential)
+  , NetworkId
+  , PaymentCredential(PaymentCredential)
+  , PaymentPubKeyHash
+  , StakeCredential(StakeCredential)
+  , StakePubKeyHash
   )
-import Contract.Credential
-  ( Credential(PubKeyCredential)
-  , StakingCredential(..)
+import Cardano.Types.Address
+  ( getPaymentCredential
+  , getStakeCredential
+  , mkPaymentAddress
   )
 import Contract.Prelude (($))
-import Ctl.Internal.Plutus.Types.Address (Address(Address))
 import Data.Maybe (Maybe(Just, Nothing))
+import Data.Newtype (unwrap, wrap)
+
+plutusAddressToPaymentPubKeyHash :: Plutus.Address -> Maybe PaymentPubKeyHash
+plutusAddressToPaymentPubKeyHash addr =
+  case (unwrap addr).addressCredential of
+    Plutus.PubKeyCredential pkh ->
+      Just $ wrap $ unwrap pkh
+    _ ->
+      Nothing
 
 addressToPaymentPubKeyHash :: Address -> Maybe PaymentPubKeyHash
-addressToPaymentPubKeyHash (Address { addressCredential }) =
-  case addressCredential of
-    PubKeyCredential pubKeyHash -> Just $ PaymentPubKeyHash pubKeyHash
-    _ -> Nothing
+addressToPaymentPubKeyHash addr =
+  case getPaymentCredential addr of
+    Just (PaymentCredential (PubKeyHashCredential pkh)) ->
+      Just $ wrap pkh
+    _ ->
+      Nothing
 
 addressToStakePubKeyHash :: Address -> Maybe StakePubKeyHash
-addressToStakePubKeyHash (Address { addressStakingCredential }) =
-  case addressStakingCredential of
-    Just (StakingHash (PubKeyCredential pubKeyHash))-> Just $ StakePubKeyHash pubKeyHash
-    _ -> Nothing
+addressToStakePubKeyHash addr =
+  case getStakeCredential addr of
+    Just (StakeCredential (PubKeyHashCredential pkh)) ->
+      Just $ wrap pkh
+    _ ->
+      Nothing
 
-paymentPubKeyHashToAddress :: PaymentPubKeyHash -> Address
-paymentPubKeyHashToAddress (PaymentPubKeyHash pkh) =
-  Address
-    { addressCredential: PubKeyCredential pkh
-    , addressStakingCredential: Nothing
-    }
+paymentPubKeyHashToAddress :: NetworkId -> PaymentPubKeyHash -> Address
+paymentPubKeyHashToAddress network pkh =
+  mkPaymentAddress network (wrap $ PubKeyHashCredential $ unwrap pkh)
+    Nothing

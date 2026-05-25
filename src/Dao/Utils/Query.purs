@@ -7,7 +7,7 @@ module Dao.Utils.Query
   , QueryType(..)
   , SpendPubKeyResult
   , getAllWalletUtxos
-  , hasTokenWithSymbol
+  , hasTokenWithNonAdaSymbol
   , findScriptUtxoBySymbol
   , findScriptUtxoByToken
   , findScriptUtxoByTokenWithScriptRef
@@ -15,17 +15,20 @@ module Dao.Utils.Query
   , findScriptUtxoBySymbolWithScriptRef
   ) where
 
-import Contract.Address (PaymentPubKeyHash, scriptHashAddress)
-import Contract.Log (logInfo')
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , liftedM
-  , throwContractError
+import Cardano.Types
+  ( Credential(ScriptHashCredential)
+  , ScriptHash
+  , TransactionOutput(TransactionOutput)
   )
+import Cardano.Types.Address (mkPaymentAddress)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigNum (one) as BigNum
+import Cardano.Types.Value (flatten)
+import Contract.Address (PaymentPubKeyHash, getNetworkId)
+import Contract.Log (logInfo')
+import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
 import Contract.PlutusData
   ( class FromData
-  , Datum(Datum)
   , OutputDatum(OutputDatum)
   , Redeemer
   , fromData
@@ -37,7 +40,6 @@ import Contract.Prelude
   , bind
   , discard
   , mconcat
-  , one
   , pure
   , show
   , (#)
@@ -49,28 +51,19 @@ import Contract.Prelude
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, validatorHash)
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutput
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
+import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , symbols
-  , valueOf
-  )
+import Contract.Value (CurrencySymbol, TokenName, Value, valueOf)
 import Contract.Wallet (getWalletUtxos)
-import Dao.Utils.Address (addressToPaymentPubKeyHash)
+import Dao.Utils.Address (plutusAddressToPaymentPubKeyHash)
 import Data.Array (filter, head)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.Newtype (unwrap)
-import LambdaBuffers.ApplicationTypes.Vote (VoteDatum(VoteDatum))
+import Data.Newtype (unwrap, wrap)
+import Data.Tuple (fst)
+import LambdaBuffers.ApplicationTypes.Vote (VoteDatum)
 import Type.Proxy (Proxy(Proxy))
 
 -- | Result of querying UTXO
@@ -98,15 +91,20 @@ findScriptUtxoBySymbol ::
 findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
   logInfo' "Entering findScriptUtxoBySymbol contract"
 
+  network <- getNetworkId
   let
-    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+    scriptAddr =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ validatorHash validatorScript)
+        Nothing
   utxos <- utxosAt scriptAddr
 
-  (txIn /\ TransactionOutputWithRefScript txOut) ::
-    (TransactionInput /\ TransactionOutputWithRefScript) <-
+  (txIn /\ TransactionOutput txOut) ::
+    (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasTokenWithSymbol symbol)
+      $ filter (hasTokenWithNonAdaSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 
@@ -120,14 +118,14 @@ findScriptUtxoBySymbol _ spendOrReference redeemer symbol validatorScript = do
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
-          (TransactionOutputWithRefScript txOut)
+          (TransactionOutput txOut)
       , Lookups.validator validatorScript
       ]
 
     value :: Value
-    value = txOut.output # unwrap # _.amount
+    value = txOut.amount
 
-  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') $ wrap txOut
 
   pure { datum, value, lookups, constraints }
 
@@ -151,15 +149,20 @@ findScriptUtxoBySymbolWithScriptRef
   scriptRef = do
   logInfo' "Entering findScriptUtxoBySymbol contract"
 
+  network <- getNetworkId
   let
-    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+    scriptAddr =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ validatorHash validatorScript)
+        Nothing
   utxos <- utxosAt scriptAddr
 
-  (txIn /\ TransactionOutputWithRefScript txOut) ::
-    (TransactionInput /\ TransactionOutputWithRefScript) <-
+  (txIn /\ TransactionOutput txOut) ::
+    (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasTokenWithSymbol symbol)
+      $ filter (hasTokenWithNonAdaSymbol symbol)
       $ Map.toUnfoldable
       $ utxos
 
@@ -174,14 +177,14 @@ findScriptUtxoBySymbolWithScriptRef
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
-          (TransactionOutputWithRefScript txOut)
+          (TransactionOutput txOut)
       , Lookups.validator validatorScript
       ]
 
     value :: Value
-    value = txOut.output # unwrap # _.amount
+    value = txOut.amount
 
-  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') $ wrap txOut
 
   pure { datum, value, lookups, constraints }
 
@@ -206,15 +209,20 @@ findScriptUtxoByToken
   validatorScript = do
   logInfo' "Entering findScriptUtxoBySymbol contract"
 
+  network <- getNetworkId
   let
-    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+    scriptAddr =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ validatorHash validatorScript)
+        Nothing
   utxos <- utxosAt scriptAddr
 
-  (txIn /\ TransactionOutputWithRefScript txOut) ::
-    (TransactionInput /\ TransactionOutputWithRefScript) <-
+  (txIn /\ TransactionOutput txOut) ::
+    (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasOneOfToken symbol tokenName)
+      $ filter (hasOneOfToken (Asset symbol tokenName))
       $ Map.toUnfoldable
       $ utxos
 
@@ -228,14 +236,14 @@ findScriptUtxoByToken
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
-          (TransactionOutputWithRefScript txOut)
+          (TransactionOutput txOut)
       , Lookups.validator validatorScript
       ]
 
     value :: Value
-    value = txOut.output # unwrap # _.amount
+    value = txOut.amount
 
-  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') $ wrap txOut
 
   pure { datum, value, lookups, constraints }
 
@@ -262,15 +270,20 @@ findScriptUtxoByTokenWithScriptRef
   scriptRef = do
   logInfo' "Entering findScriptUtxoBySymbol contract"
 
+  network <- getNetworkId
   let
-    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+    scriptAddr =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ validatorHash validatorScript)
+        Nothing
   utxos <- utxosAt scriptAddr
 
-  (txIn /\ TransactionOutputWithRefScript txOut) ::
-    (TransactionInput /\ TransactionOutputWithRefScript) <-
+  (txIn /\ TransactionOutput txOut) ::
+    (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
-      $ filter (hasOneOfToken symbol tokenName)
+      $ filter (hasOneOfToken (Asset symbol tokenName))
       $ Map.toUnfoldable
       $ utxos
 
@@ -285,14 +298,14 @@ findScriptUtxoByTokenWithScriptRef
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
       [ Lookups.unspentOutputs $ Map.singleton txIn
-          (TransactionOutputWithRefScript txOut)
+          (TransactionOutput txOut)
       , Lookups.validator validatorScript
       ]
 
     value :: Value
-    value = txOut.output # unwrap # _.amount
+    value = txOut.amount
 
-  datum :: datum' <- extractDatum (Proxy :: Proxy datum') txOut.output
+  datum :: datum' <- extractDatum (Proxy :: Proxy datum') $ wrap txOut
 
   pure { datum, value, lookups, constraints }
 
@@ -306,9 +319,10 @@ extractDatum ::
   Contract datum'
 extractDatum _ txOut =
   case txOut # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: datum') -> pure datum
-      Nothing -> throwContractError "Cannot parse datum"
+    Just (OutputDatum rawInlineDatum) ->
+      case fromData rawInlineDatum of
+        Just (datum :: datum') -> pure datum
+        Nothing -> throwContractError "Cannot parse datum"
     dat -> throwContractError $ "Missing inline datum, got: " <> show dat
 
 -- | This function is called by the 'cancelVoteUtxo' function.
@@ -336,16 +350,21 @@ findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
   validatorScript = do
   logInfo' "Entering findScriptUtxoBySymbolAndPkhInDatum contract"
 
+  network <- getNetworkId
   let
-    scriptAddr = scriptHashAddress (validatorHash validatorScript) Nothing
+    scriptAddr =
+      mkPaymentAddress
+        network
+        (wrap $ ScriptHashCredential $ validatorHash validatorScript)
+        Nothing
   utxos <- utxosAt scriptAddr
 
-  (txIn /\ TransactionOutputWithRefScript txOut) ::
-    (TransactionInput /\ TransactionOutputWithRefScript) <-
+  (txIn /\ TransactionOutput txOut) ::
+    (TransactionInput /\ TransactionOutput) <-
     liftContractM "Cannot find UTxO with NFT"
       $ head
       $ filter
-          ( hasTokenWithSymbol symbol
+          ( hasTokenWithNonAdaSymbol symbol
               && hasPkhInVoteDatum userPkh
               &&
                 hasProposalTokenNameInVoteDatum proposalTokenName
@@ -359,15 +378,14 @@ findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
 
     lookups :: Lookups.ScriptLookups
     lookups = mconcat
-      [ Lookups.unspentOutputs $ Map.singleton txIn
-          (TransactionOutputWithRefScript txOut)
+      [ Lookups.unspentOutputs $ Map.singleton txIn $ TransactionOutput txOut
       , Lookups.validator validatorScript
       ]
 
     value :: Value
-    value = txOut.output # unwrap # _.amount
+    value = txOut.amount
 
-  datum :: VoteDatum <- extractDatum (Proxy :: Proxy VoteDatum) txOut.output
+  datum :: VoteDatum <- extractDatum (Proxy :: Proxy VoteDatum) $ wrap txOut
 
   pure { datum, value, lookups, constraints }
 
@@ -375,54 +393,56 @@ findScriptUtxoBySymbolAndPkhInDatumAndProposalTokenNameInDatum
 -- | the 'voteOwner' field of the 'VoteDatum'
 hasPkhInVoteDatum ::
   PaymentPubKeyHash ->
-  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  (TransactionInput /\ TransactionOutput) ->
   Boolean
-hasPkhInVoteDatum userPkh (_ /\ TransactionOutputWithRefScript txOut) =
-  case txOut.output # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: VoteDatum) ->
-        case
-          addressToPaymentPubKeyHash $ datum # unwrap # _.voteOwner
-          of
-          Just datumPkh -> datumPkh == userPkh
-          _ -> false
-      _ -> false
+hasPkhInVoteDatum userPkh (_ /\ TransactionOutput txOut) =
+  case txOut.datum of
+    Just (OutputDatum rawInlineDatum) ->
+      case fromData rawInlineDatum of
+        Just (datum :: VoteDatum) ->
+          case
+            plutusAddressToPaymentPubKeyHash $ datum # unwrap # _.voteOwner
+            of
+            Just datumPkh -> datumPkh == userPkh
+            _ -> false
+        _ -> false
     _ -> false
 
 -- | Check that the 'proposalTokenName' passed as an argument is equivalent
 -- | to the 'proposalTokenName' field of the 'VoteDatum'
 hasProposalTokenNameInVoteDatum ::
   TokenName ->
-  (TransactionInput /\ TransactionOutputWithRefScript) ->
+  (TransactionInput /\ TransactionOutput) ->
   Boolean
 hasProposalTokenNameInVoteDatum
   proposalTokenName
-  (_ /\ TransactionOutputWithRefScript txOut) =
-  case txOut.output # unwrap # _.datum of
-    OutputDatum (Datum rawInlineDatum) -> case fromData rawInlineDatum of
-      Just (datum :: VoteDatum) -> (datum # unwrap # _.proposalTokenName) ==
-        proposalTokenName
-      _ -> false
+  (_ /\ TransactionOutput txOut) =
+  case txOut.datum of
+    Just (OutputDatum rawInlineDatum) ->
+      case fromData rawInlineDatum of
+        Just (datum :: VoteDatum) -> (datum # unwrap # _.proposalTokenName) ==
+          proposalTokenName
+        _ -> false
     _ -> false
 
--- | Check for the presence of a token with the given symbol
+-- | Check for the presence of a token with the given non-ADA symbol
 -- | at the provided transactioun output
-hasTokenWithSymbol ::
-  CurrencySymbol ->
-  (TransactionInput /\ TransactionOutputWithRefScript) ->
-  Boolean
-hasTokenWithSymbol symbol (_ /\ TransactionOutputWithRefScript txOut) =
-  any (_ == symbol) $ symbols (txOut.output # unwrap # _.amount)
+hasTokenWithNonAdaSymbol ::
+  ScriptHash -> (TransactionInput /\ TransactionOutput) -> Boolean
+hasTokenWithNonAdaSymbol symbol (_ /\ TransactionOutput txOut) =
+  any
+    ( \x ->
+        case fst x of
+          Asset cs _ -> cs == symbol
+          _ -> false
+    )
+    (flatten txOut.amount)
 
 -- | Check for the presence of a token with the given symbol
 -- | at the provided transactioun output
-hasOneOfToken ::
-  CurrencySymbol ->
-  TokenName ->
-  (TransactionInput /\ TransactionOutputWithRefScript) ->
-  Boolean
-hasOneOfToken symbol tokenName (_ /\ TransactionOutputWithRefScript txOut) =
-  valueOf (txOut.output # unwrap # _.amount) symbol tokenName == one
+hasOneOfToken :: Asset -> (TransactionInput /\ TransactionOutput) -> Boolean
+hasOneOfToken asset (_ /\ TransactionOutput txOut) =
+  valueOf asset txOut.amount == BigNum.one
 
 -- | Result type for 'findKeyUtxoBySymbol' function
 type SpendPubKeyResult =
@@ -433,5 +453,5 @@ type SpendPubKeyResult =
 
 -- | Get all the utxos that are owned by the wallet.
 getAllWalletUtxos ::
-  Contract (Map TransactionInput TransactionOutputWithRefScript)
+  Contract (Map TransactionInput TransactionOutput)
 getAllWalletUtxos = liftedM "Could not get users UTxOs" getWalletUtxos
