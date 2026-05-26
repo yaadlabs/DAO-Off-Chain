@@ -1,6 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: build bundle ensure-portable-node-modules test format check-format clean generate-purs-scripts
+.PHONY: build bundle bundle-js ensure-portable-node-modules test format check-format clean generate-purs-scripts
 .SHELLFLAGS := -eu -o pipefail -c
 
 ps-sources := $(shell fd --no-ignore-parent -epurs)
@@ -13,19 +13,20 @@ ps-entrypoint := Dao.Web.Api
 
 purs-args := "--stash --censor-lib --censor-codes=ImplicitImport,ImplicitQualifiedImport,ImplicitQualifiedImportReExport,UserDefinedWarning,UnusedName,ShadowedName,MissingTypeDeclaration"
 
+# PureScript compile — use inside `nix develop` (needs spago / purs from the flake).
 build:
 	spago build --purs-args ${purs-args}
 
+# Guard: esbuild must not see the Nix dev shell's symlinked node_modules tree.
 ensure-portable-node-modules:
-	@node esbuild/check-node-modules.js || { \
-		echo "==> Installing project-local node_modules for a portable browser bundle..."; \
-		rm -rf node_modules; \
-		npm ci --ignore-scripts; \
-		node esbuild/check-node-modules.js; \
-	}
+	@node esbuild/check-node-modules.js
 
-bundle: build ensure-portable-node-modules
+# Browser bundle — run outside `nix develop` after `npm ci` (see README / fetch script).
+bundle-js: ensure-portable-node-modules
 	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js output/${ps-entrypoint}/index.js dist/index.js
+
+# Local convenience when spago and npm both work in the same environment.
+bundle: build bundle-js
 
 test:
 	spago run --main Test.Localnet

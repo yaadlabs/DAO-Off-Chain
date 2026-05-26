@@ -25,8 +25,10 @@ const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMain && !nodeModulesIsPortable()) {
   console.error(
-    "node_modules must live inside the project (not under /nix/store) before bundling.",
+    "node_modules is missing or is the Nix dev shell symlink tree under /nix/store.",
   );
-  console.error("Run: rm -rf node_modules && npm ci --ignore-scripts");
+  console.error(
+    "Run esbuild outside `nix develop`: rm -rf node_modules && npm ci --ignore-scripts && make bundle-js",
+  );
   process.exit(1);
 }
