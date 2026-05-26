@@ -1,6 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: build bundle test format check-format clean generate-purs-scripts
+.PHONY: build bundle ensure-portable-node-modules test format check-format clean generate-purs-scripts
 .SHELLFLAGS := -eu -o pipefail -c
 
 ps-sources := $(shell fd --no-ignore-parent -epurs)
@@ -16,7 +16,15 @@ purs-args := "--stash --censor-lib --censor-codes=ImplicitImport,ImplicitQualifi
 build:
 	spago build --purs-args ${purs-args}
 
-bundle: build
+ensure-portable-node-modules:
+	@node esbuild/check-node-modules.js || { \
+		echo "==> Installing project-local node_modules for a portable browser bundle..."; \
+		rm -rf node_modules; \
+		npm ci --ignore-scripts; \
+		node esbuild/check-node-modules.js; \
+	}
+
+bundle: build ensure-portable-node-modules
 	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js output/${ps-entrypoint}/index.js dist/index.js
 
 test:
